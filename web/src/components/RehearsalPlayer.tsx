@@ -447,7 +447,7 @@ function SpeedButton() {
   }, [open]);
   const fmt = (r: number) => `${String(Math.round(r * 100) / 100).replace(".", ",")}×`;
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative flex items-center">
       <button
         type="button"
         className="vds-button tnum text-[14px] leading-none font-semibold"
