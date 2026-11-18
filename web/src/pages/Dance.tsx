@@ -467,7 +467,7 @@ export function Dance() {
           {/* Description card, like YouTube's: short text, expands to the organizers' caption and sources. */}
           <div
             className={cn(
-              "mt-5 rounded-[var(--radius-sheet)] bg-surface-2 p-4 text-[16px] leading-normal lg:p-5 lg:text-[17px]",
+              "mt-5 rounded-[var(--radius-sheet)] bg-surface-2 p-4 text-[15px] leading-normal lg:p-5",
               !more && "cursor-pointer transition-colors hover:bg-line/60",
             )}
             onClick={() => !more && setMore(true)}
