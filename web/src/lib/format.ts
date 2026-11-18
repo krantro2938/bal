@@ -33,6 +33,9 @@ export function searchKey(s: string) {
 const compact = new Intl.NumberFormat("ru-RU", { notation: "compact", maximumFractionDigits: 1 });
 
 /** "1 просмотр", "12 просмотров", "1,2 тыс. просмотров" */
+/** "4", "1,2 тыс." — the number beside YouTube's ▷ views icon. */
+export const compactCount = (n: number) => compact.format(n);
+
 export function viewsLabel(n: number) {
   const word = plural(n, "просмотр", "просмотра", "просмотров");
   return `${n < 10000 ? n.toLocaleString("ru-RU") : compact.format(n)} ${n >= 10000 ? "просмотров" : word}`;

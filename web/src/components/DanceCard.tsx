@@ -1,9 +1,9 @@
-import { Bookmark, EllipsisVertical, Share2, ThumbsUp } from "lucide-react";
+import { Bookmark, EllipsisVertical, Play, Share2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { useCatalog } from "@/lib/catalog";
-import { ago, timecode, viewsLabel } from "@/lib/format";
+import { ago, compactCount, timecode, viewsLabel } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { shareLink } from "@/lib/share";
 import type { DanceSummary } from "@/lib/types";
@@ -79,6 +79,16 @@ export function Badge({ dance, size = 36 }: { dance: DanceSummary; size?: number
       aria-hidden
     >
       {dance.kind === "glossary" ? <Star className="size-[45%]" /> : String(dance.order).padStart(2, "0")}
+    </span>
+  );
+}
+
+/** Views the YouTube way: ▷ and a short number. */
+function Views({ n }: { n: number }) {
+  return (
+    <span className="inline-flex items-center gap-1" aria-label={viewsLabel(n)} title={viewsLabel(n)}>
+      <Play className="size-3 shrink-0" strokeWidth={2.25} aria-hidden />
+      {compactCount(n)}
     </span>
   );
 }
@@ -170,9 +180,10 @@ export function VideoCard({ dance, eager, badge }: { dance: DanceSummary; eager?
         <Link to={to} className="flex min-w-0 flex-1 gap-3 rounded-lg focus-visible:outline-offset-4">
           <Badge dance={dance} />
           <div className="min-w-0">
-            <h2 className="line-clamp-2 font-title text-[18px] leading-snug">{dance.title}</h2>
-            <p className="tnum mt-1 flex flex-wrap items-center gap-x-2 text-[13px] text-ink-3">
-              <span>{viewsLabel(dance.views)}</span>
+            <h2 className="line-clamp-2 font-title text-[16px] leading-snug sm:text-[18px]">{dance.title}</h2>
+            <p className="tnum mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-ink-3 sm:mt-1 sm:text-[13px]">
+              {dance.kind === "glossary" ? null : <span>Танец {String(dance.order).padStart(2, "0")}</span>}
+              <Views n={dance.views} />
               {dance.published ? <span>{ago(dance.published)}</span> : null}
               {badge ? <span className="text-accent">{badge}</span> : null}
             </p>
@@ -263,10 +274,8 @@ export function CompactCard({ dance, current }: { dance: DanceSummary; current?:
           <h3 className="line-clamp-2 text-[15px] leading-snug font-medium text-ink-soft">{dance.title}</h3>
           <p className="mt-1 text-[12px] text-ink-3">{dance.kind === "glossary" ? "Словарь движений" : `Танец ${String(dance.order).padStart(2, "0")}`}</p>
           <p className="tnum flex flex-wrap items-center gap-x-2 text-[12px] text-ink-3">
-            <span>{viewsLabel(dance.views)}</span>
-            <span className="inline-flex items-center gap-1">
-              <ThumbsUp className="size-3" /> {dance.likes}
-            </span>
+            <Views n={dance.views} />
+            {dance.published ? <span>{ago(dance.published)}</span> : null}
             {current ? <span className="text-accent">сейчас</span> : null}
           </p>
         </div>
