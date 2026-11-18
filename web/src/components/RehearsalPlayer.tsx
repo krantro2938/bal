@@ -157,7 +157,7 @@ function RehearsalBar({
   };
 
   return (
-    <div className="bg-bg px-4 pt-3 pb-1 sm:px-0">
+    <div className="bg-bg px-3 pt-3 pb-1 sm:px-0">
       <div className="flex flex-wrap items-center gap-2">
         <SplitPill label="Перемотка" className="h-10">
           <button type="button" onClick={() => seekBy(-5)} aria-label="Назад на 5 секунд" title="Назад на 5 секунд" className={cn(splitHalf("l"), "gap-1")}>

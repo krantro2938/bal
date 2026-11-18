@@ -20,7 +20,7 @@ export function Me() {
 
   if (ready && !user) return <Navigate to="/login?return=%2Fme" replace />;
   if (!ready || !state || !data) {
-    return <main className="mx-auto max-w-[1200px] px-4 pt-8 lg:px-8" aria-busy="true"><div className="h-8 w-56 rounded bg-surface-2" /></main>;
+    return <main className="mx-auto max-w-[1200px] px-3 pt-8 sm:px-4 lg:px-8" aria-busy="true"><div className="h-8 w-56 rounded bg-surface-2" /></main>;
   }
 
   const bySlug = new Map(data.dances.map((d) => [d.slug, d]));
@@ -59,7 +59,7 @@ export function Me() {
           {progress.length ? (
             <section>
               <Title>Продолжить</Title>
-              <ul className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-2 lg:px-0">
+              <ul className="-mx-3 flex snap-x gap-4 overflow-x-auto px-3 pb-2 sm:-mx-4 sm:px-4 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-2 lg:px-0">
                 {progress.map((p) => {
                   const d = bySlug.get(p.dance)!;
                   return (

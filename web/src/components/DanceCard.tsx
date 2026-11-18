@@ -90,32 +90,64 @@ export function NewBadge() {
   return <span className="rounded-md bg-white px-1.5 py-0.5 text-[12px] font-semibold text-[#0a1028] shadow-sm">Новое</span>;
 }
 
-const PREVIEW_EVENT = "bal:preview";
+/**
+ * Touch screens: one card plays at a time — the one under a line across the screen.
+ * The line sits a bit above the middle, moves down while scrolling up so the card coming
+ * into view wins, and at the bottom of the page the lowest visible card plays.
+ */
+const cards = new Map<HTMLElement, (on: boolean) => void>();
+let lastY = 0;
+let down = true;
+let frame = 0;
+function pickCard() {
+  frame = 0;
+  const y = window.scrollY;
+  if (y !== lastY) down = y > lastY;
+  lastY = y;
+  const h = window.innerHeight;
+  const atEnd = y + h >= document.documentElement.scrollHeight - 8;
+  const line = h * (down ? 0.4 : 0.55);
+  let best: HTMLElement | null = null;
+  let bestScore = Infinity;
+  for (const el of cards.keys()) {
+    const r = el.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > h) continue;
+    const visible = r.top >= 0 && r.bottom <= h;
+    // at the end of the page the lowest fully visible card wins; otherwise the closest to the line
+    const score = atEnd ? (visible ? -r.top : Infinity) : r.top <= line && r.bottom >= line ? 0 : Math.min(Math.abs(r.top - line), Math.abs(r.bottom - line)) + 1;
+    if (score < bestScore) {
+      bestScore = score;
+      best = el;
+    }
+  }
+  // only a card close to the line plays; gaps between cards play nothing
+  if (!atEnd && bestScore > 40) best = null;
+  for (const [el, set] of cards) set(el === best);
+}
+const schedule = () => (frame ||= requestAnimationFrame(pickCard));
 
-/** Plays the preview on mouse hover, or on touch screens when the card crosses the middle of the screen. */
-function usePreview(slug: string) {
+function usePreview() {
   const ref = useRef<HTMLDivElement>(null);
   const [on, setOn] = useState(false);
   const timer = useRef<number>(0);
   useEffect(() => {
     const el = ref.current;
     if (!el || !matchMedia("(hover: none)").matches) return;
-    const onOther = (e: Event) => setOn((e as CustomEvent<string>).detail === slug);
-    window.addEventListener(PREVIEW_EVENT, onOther);
-    // A thin band across the middle of the viewport: only the card passing through it plays.
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) window.dispatchEvent(new CustomEvent(PREVIEW_EVENT, { detail: slug }));
-        else setOn(false);
-      },
-      { rootMargin: "-45% 0px -45% 0px" },
-    );
-    io.observe(el);
+    cards.set(el, setOn);
+    if (cards.size === 1) {
+      lastY = window.scrollY;
+      window.addEventListener("scroll", schedule, { passive: true });
+      window.addEventListener("resize", schedule);
+    }
+    schedule();
     return () => {
-      io.disconnect();
-      window.removeEventListener(PREVIEW_EVENT, onOther);
+      cards.delete(el);
+      if (!cards.size) {
+        window.removeEventListener("scroll", schedule);
+        window.removeEventListener("resize", schedule);
+      }
     };
-  }, [slug]);
+  }, []);
   const handlers = {
     onPointerEnter: (e: React.PointerEvent) => {
       if (e.pointerType !== "mouse") return;
@@ -132,7 +164,7 @@ function usePreview(slug: string) {
 }
 
 export function VideoCard({ dance, eager, badge }: { dance: DanceSummary; eager?: boolean; badge?: string }) {
-  const { ref, on, handlers } = usePreview(dance.slug);
+  const { ref, on, handlers } = usePreview();
   const to = `/dance/${dance.slug}`;
   return (
     <div ref={ref} className="group relative isolate hover:z-10 has-[[data-open]]:z-20" {...handlers}>
@@ -225,7 +257,7 @@ function CardMenu({ dance }: { dance: DanceSummary }) {
 
 /** Small row for the "next" list beside the player. */
 export function CompactCard({ dance, current }: { dance: DanceSummary; current?: boolean }) {
-  const { ref, on, handlers } = usePreview(`compact-${dance.slug}`);
+  const { ref, on, handlers } = usePreview();
   return (
     <div ref={ref} {...handlers}>
       <Link

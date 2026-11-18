@@ -27,7 +27,7 @@
   --shadow-sheet: 0 -8px 32px #0b123014;
   --shadow-pop: 0 12px 40px #0b12301f, 0 2px 8px #0b123014;
   --card-hover: #f0f0ec;
-  --card-hover-shadow: 0 10px 30px #0b12301a, 0 2px 6px #0b123012;
+  --card-hover-shadow: none;
   --sheet: var(--bg);
   --scrim: #05091a8c;
   color-scheme: light;

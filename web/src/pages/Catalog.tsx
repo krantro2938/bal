@@ -61,8 +61,8 @@ export function Catalog() {
   };
 
   return (
-    <main className="px-4 pb-20 sm:px-6 lg:px-8">
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pt-2 pb-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+    <main className="px-3 pb-20 sm:px-6 lg:px-8">
+      <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pt-2 pb-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         {chips
           .filter((c) => c.show)
           .map((c) => (

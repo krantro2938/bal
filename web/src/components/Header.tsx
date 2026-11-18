@@ -22,14 +22,14 @@ export function Header() {
           <SearchBox autoFocus onClose={() => setMobileSearch(false)} />
         </div>
       ) : null}
-      <div className={`flex h-16 items-center gap-3 px-4 sm:h-[72px] sm:px-6 lg:px-8 ${mobileSearch ? "hidden sm:flex" : ""}`}>
-        <Link to="/" className="flex shrink-0 items-center gap-2.5 rounded-full py-1 pr-2" aria-label="Звёздная одиссея — все танцы">
-          <span className="grid size-8 place-items-center rounded-full bg-[#081028] text-[#e8ddc2]">
+      <div className={`flex h-16 items-center gap-1 px-3 sm:h-[72px] sm:gap-3 sm:px-6 lg:px-8 ${mobileSearch ? "hidden sm:flex" : ""}`}>
+        <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-full py-1 pr-2" aria-label="Звёздная одиссея — все танцы">
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#081028] text-[#e8ddc2]">
             <Star className="size-4" />
           </span>
-          <span className="leading-none">
-            <span className="block font-display text-[18px] font-semibold italic">Звёздная одиссея</span>
-            <span className="mt-0.5 block text-[11px] tracking-[0.08em] text-ink-3 uppercase">Репетиции бала</span>
+          <span className="min-w-0 leading-none">
+            <span className="block truncate font-display text-[18px] font-semibold italic">Звёздная одиссея</span>
+            <span className="mt-0.5 block truncate text-[11px] tracking-[0.08em] whitespace-nowrap text-ink-3 uppercase">Репетиции бала</span>
           </span>
         </Link>
 
@@ -41,23 +41,24 @@ export function Header() {
         <button
           type="button"
           onClick={() => setMobileSearch(true)}
-          className="grid size-10 place-items-center rounded-full text-ink hover:bg-hover sm:hidden"
+          className="grid size-10 shrink-0 place-items-center rounded-full text-ink hover:bg-hover sm:hidden"
           aria-label="Поиск"
         >
           <Search className="size-5" />
         </button>
         <ThemeToggle />
         {!ready ? (
-          <span className="size-9" />
+          <span className="size-10" />
         ) : user ? (
           <AccountMenu user={user} />
         ) : (
           <Link
             to={loginHref}
-            className="flex h-9 items-center gap-1.5 rounded-full border border-line-strong px-3 text-sm font-medium text-accent hover:bg-hover"
+            aria-label="Войти"
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line-strong px-3 text-sm font-medium text-accent hover:bg-hover max-[400px]:w-9 max-[400px]:justify-center max-[400px]:px-0"
           >
             <CircleUserRound className="size-5" />
-            Войти
+            <span className="max-[400px]:hidden">Войти</span>
           </Link>
         )}
       </div>
@@ -98,7 +99,7 @@ function AccountMenu({ user }: { user: User }) {
   }, [open]);
   return (
     <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="rounded-full p-0.5 hover:ring-2 hover:ring-line" aria-label="Аккаунт" aria-expanded={open}>
+      <button type="button" onClick={() => setOpen((o) => !o)} className="grid size-10 shrink-0 place-items-center rounded-full hover:bg-hover" aria-label="Аккаунт" aria-expanded={open}>
         <Avatar user={user} />
       </button>
       {open ? (

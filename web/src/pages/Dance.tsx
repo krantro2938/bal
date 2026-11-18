@@ -1,5 +1,5 @@
 import type { MediaPlayerInstance } from "@vidstack/react";
-import { Bookmark, Check, ChevronDown, ExternalLink, Film, Maximize2, Music, Pencil, ScrollText, Share2, Trash2 } from "lucide-react";
+import { Bookmark, ChevronDown, ExternalLink, Film, GraduationCap, Maximize2, Music, Pencil, ScrollText, Share2, Trash2 } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -248,7 +248,7 @@ export function Dance() {
 
   if (error) {
     return (
-      <main className="mx-auto max-w-[1200px] px-4 lg:px-8">
+      <main className="mx-auto max-w-[1200px] px-3 sm:px-4 lg:px-8">
         <StateBlock
           className="mt-6"
           title={error.status === 404 ? "Такого танца нет в каталоге" : "Страница не загрузилась"}
@@ -262,7 +262,7 @@ export function Dance() {
 
   if (!dance) {
     return (
-      <main className="grid gap-8 px-4 pt-2 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:pt-6" aria-busy="true">
+      <main className="grid gap-8 px-3 pt-2 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:pt-6" aria-busy="true">
         <div>
           <div className="aspect-video w-full rounded-[var(--radius-frame)] bg-player" />
           <div className="mt-5 h-8 w-2/3 rounded-lg bg-surface-2" />
@@ -284,9 +284,9 @@ export function Dance() {
   ].filter((f): f is string => !!f);
 
   return (
-    <main className="grid gap-x-8 px-4 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:pt-6 2xl:gap-x-10">
+    <main className="grid gap-x-8 px-3 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:pt-6 2xl:gap-x-10">
       <div className="min-w-0">
-        <div className="sticky top-16 z-20 -mx-4 bg-bg sm:static sm:mx-0">
+        <div className="sticky top-16 z-20 -mx-3 bg-bg sm:static sm:mx-0">
           {dance.video ? (
             <Suspense fallback={<div className="aspect-video w-full bg-player sm:rounded-[var(--radius-frame)]" />}>
               <RehearsalPlayer
@@ -301,7 +301,7 @@ export function Dance() {
               />
             </Suspense>
           ) : (
-            <div className="px-4 sm:px-0">
+            <div className="px-3 sm:px-0">
               <Cover dance={dance} quiet />
               <div className="py-4">
                 <p className="font-medium">Видео ещё не загружено на сайт</p>
@@ -331,7 +331,7 @@ export function Dance() {
                 </p>
               </div>
             </div>
-            <div className="-mr-4 flex flex-1 gap-2 overflow-x-auto pr-4 max-sm:min-w-0 [scrollbar-width:none] sm:mr-0 sm:flex-auto sm:overflow-visible sm:pr-0 2xl:justify-end">
+            <div className="-mr-3 flex flex-1 gap-2 overflow-x-auto pr-3 max-sm:min-w-0 [scrollbar-width:none] sm:mr-0 sm:flex-auto sm:justify-end sm:overflow-visible sm:pr-0">
               {/* On phones the actions sit at the right edge; the spacer collapses if they need to scroll. */}
               <span className="flex-1 sm:hidden" />
               <ReactionPill likes={dance.likes} dislikes={dance.dislikes} mine={dance.myReaction} onReact={react} />
@@ -346,7 +346,7 @@ export function Dance() {
               {!isGlossary ? (
                 <Pill
                   onClick={() => toggleMark("learned")}
-                  icon={<Check />}
+                  icon={<GraduationCap />}
                   pressed={learned}
                   strong={learned}
                   label={learned ? "Выучено" : "Отметить «Выучено»"}

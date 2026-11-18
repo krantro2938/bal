@@ -42,7 +42,7 @@ function Shell() {
 
 function NotFound() {
   return (
-    <main className="mx-auto max-w-[1200px] px-4 lg:px-8">
+    <main className="mx-auto max-w-[1200px] px-3 sm:px-4 lg:px-8">
       <StateBlock className="mt-6" title="Страница не найдена" action={<Link to="/" className="text-accent underline underline-offset-4">К списку танцев</Link>} />
     </main>
   );
