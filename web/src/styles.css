@@ -1,0 +1,156 @@
+@import "@fontsource/onest/400.css";
+@import "@fontsource/onest/500.css";
+@import "@fontsource/onest/600.css";
+@import "@fontsource/playfair-display/600.css";
+@import "@fontsource/playfair-display/600-italic.css";
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Palettes from docs/design-brief.md. Light is a true white base with poster
+   navy as accent; dark is its own midnight palette with moon-ivory accent. */
+:root {
+  --bg: #ffffff;
+  --surface: #f7f7f4;
+  --surface-2: #efefea;
+  --line: #e2e1da;
+  --line-strong: #c9c8bf;
+  --ink: #0b1230;
+  --ink-2: #4a5172;
+  --ink-3: #62677e;
+  --accent: #1c2b6e;
+  --accent-ink: #ffffff;
+  --accent-soft: #1c2b6e1f;
+  --danger: #a8322d;
+  --player-bg: #05091a;
+  --hover: #0b12300d;
+  --shadow-sheet: 0 -8px 32px #0b123014;
+  --shadow-pop: 0 12px 40px #0b12301f, 0 2px 8px #0b123014;
+  --card-hover: #f0f0ec;
+  --card-hover-shadow: none;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #070c1f;
+  --surface: #0d1430;
+  --surface-2: #141c3d;
+  --line: #232d57;
+  --line-strong: #34407a;
+  --ink: #ece6d6;
+  --ink-2: #a7aecb;
+  --ink-3: #8a91b3;
+  --accent: #e8ddc2;
+  --accent-ink: #0a1028;
+  --accent-soft: #e8ddc233;
+  --danger: #f0938a;
+  --hover: #ffffff0f;
+  --shadow-sheet: none;
+  --shadow-pop: 0 16px 48px #00000080;
+  --card-hover: var(--surface);
+  --card-hover-shadow: var(--shadow-pop);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-player: var(--player-bg);
+  --color-hover: var(--hover);
+  --font-sans: "Onest", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", "Times New Roman", serif;
+  --radius-frame: 12px;
+  --radius-sheet: 18px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    font-feature-settings: "tnum" 0;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--accent-soft);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+  }
+  button {
+    cursor: pointer;
+  }
+}
+
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility font-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+/* Vidstack default layout tuned to the palette. */
+.bal-player {
+  --video-brand: #e8ddc2;
+  --video-bg: var(--player-bg);
+  --video-border-radius: var(--radius-frame);
+  --video-border: none;
+  --video-font-family: var(--font-sans);
+  --video-slider-thumb-size: 16px;
+  --media-tooltip-font-size: 13px;
+  --video-time-font-size: 13px;
+  background: var(--player-bg);
+}
+.bal-player [data-media-provider] video {
+  object-fit: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Range input used by the practice audio player. */
+.bal-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.bal-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+}

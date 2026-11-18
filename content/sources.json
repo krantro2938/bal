@@ -1,0 +1,651 @@
+{
+  "channel": "https://t.me/bal_rtumirea",
+  "edition": "14-й Традиционный бал РТУ МИРЭА «Звёздная Одиссея», 2026",
+  "dances": [
+    {
+      "slug": "slovar-dvizheniy",
+      "order": 0,
+      "title": "Словарь движений",
+      "kind": "glossary",
+      "description": "Разбор двадцати базовых движений и позиций из схем бала: от алемана до шен де дам. Каждое движение отмечено тайм-кодом.",
+      "sourcePost": "https://t.me/bal_rtumirea/2082",
+      "captionPost": "https://t.me/bal_rtumirea/2079",
+      "caption": "Прежде чем перейти к схемам танцев, предлагаем тебе заглянуть в «бортовой словарь» — глоссарий с терминологией будущих схем. ✉️⭐\n \n#sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея #СхемаТанцев",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2082",
+          "originalFilename": "dvizheniya bala try 6.mp4",
+          "downloadedAs": "dvizheniya bala try 6.mp4",
+          "status": "obtained",
+          "sha256": "0feb1c104e3eb0f6d9f5a44b355a86eafc62f109d81b084d427c8384589728c5"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2079",
+          "originalFilename": "5379551928607516647.jpg",
+          "downloadedAs": "5379551928607516647.jpg",
+          "status": "obtained",
+          "sha256": "f29a55fcbc6b1ffd80a7fed22183025fe048adf7a65c27e9eabf3b35ee4b65d6"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2080",
+          "originalFilename": "5379551928607516648.jpg",
+          "downloadedAs": "5379551928607516648.jpg",
+          "status": "obtained",
+          "sha256": "c88900b1a3dfa7f0200c5a78430c0f6415678044f05c9b3f4b66b4ec9cd775fd"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2081",
+          "originalFilename": "5379551928607516649.jpg",
+          "downloadedAs": "5379551928607516649.jpg",
+          "status": "obtained",
+          "sha256": "4a727c94ffb5ebd88fe8e37fd0faeac2cb3384a67b4801334189a3b80deed1a7"
+        }
+      ],
+      "chapters": {
+        "source": "https://t.me/bal_rtumirea/2082",
+        "items": [
+          {
+            "start": 0,
+            "title": "Алеман"
+          },
+          {
+            "start": 15,
+            "title": "Балансе"
+          },
+          {
+            "start": 36,
+            "title": "Балансе-менуэт"
+          },
+          {
+            "start": 54,
+            "title": "Бегунок"
+          },
+          {
+            "start": 80,
+            "title": "Голубец"
+          },
+          {
+            "start": 98,
+            "title": "Дамский тур"
+          },
+          {
+            "start": 125,
+            "title": "Шен англез"
+          },
+          {
+            "start": 146,
+            "title": "Мулине"
+          },
+          {
+            "start": 157,
+            "title": "Траверсе"
+          },
+          {
+            "start": 175,
+            "title": "Па де баск"
+          },
+          {
+            "start": 196,
+            "title": "До-за-до"
+          },
+          {
+            "start": 219,
+            "title": "Шаг глиссад"
+          },
+          {
+            "start": 241,
+            "title": "Шаг польки"
+          },
+          {
+            "start": 270,
+            "title": "Полукотильон"
+          },
+          {
+            "start": 295,
+            "title": "Позиция «Лодочка»"
+          },
+          {
+            "start": 326,
+            "title": "Позиция «Окошечко»"
+          },
+          {
+            "start": 340,
+            "title": "Положение «Свечка»"
+          },
+          {
+            "start": 351,
+            "title": "Теневая позиция"
+          },
+          {
+            "start": 368,
+            "title": "Тур де ман"
+          },
+          {
+            "start": 392,
+            "title": "Шен де дам"
+          }
+        ]
+      },
+      "coverAt": 122,
+      "published": "2026-10-18T15:16:01+00:00"
+    },
+    {
+      "slug": "medlennyy-vals",
+      "order": 1,
+      "title": "Медленный вальс",
+      "kind": "dance",
+      "description": "Парный вальс в спокойном темпе. На репетиции удобно отработать перенос веса, плавность шагов и движение в паре.",
+      "sourcePost": "https://t.me/bal_rtumirea/2070",
+      "captionPost": "https://t.me/bal_rtumirea/2068",
+      "caption": "🖇️ Путь к звёздам начинается с первого шага \n\nЧтобы покорить танцпол, нужно освоить основы! Сегодня разбираем вальсовые шаги, правильные позиции и распространённые ошибки. \n\nНе уверены, что запомнили всё с первого раза? Смотрите видео и повторяйте под музыку⬇️\n\n#sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея #СхемаТанцев",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2070",
+          "originalFilename": "Медленный вальс.mp4",
+          "downloadedAs": "Медленный вальс.mp4",
+          "status": "obtained",
+          "sha256": "7937214dd5136dca7ea40db4c4745f410f8edbb612b21add04d66fcf629eed75"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2068",
+          "originalFilename": "5368796248166572199.jpg",
+          "downloadedAs": "5368796248166572199 (1).jpg",
+          "status": "obtained",
+          "sha256": "fc418dce961279325f9d6103778e011c66747140f21ac7e34a89b0d85986c5b6"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2069",
+          "originalFilename": "5368796248166572200.jpg",
+          "downloadedAs": "5368796248166572200.jpg",
+          "status": "obtained",
+          "sha256": "4de8e827ad127688fb2a73ed45b99546369d33d0e2a4773e8436c3da74e14ccb"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2071",
+          "originalFilename": "Медленный вальс 2.mp3",
+          "downloadedAs": "Медленный вальс 2.mp3",
+          "status": "obtained",
+          "sha256": "3f31e21fded75dab47fe5947ef5c8bd0b1a57e3522c7111d2bc19ff04e3bab22"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2072",
+          "originalFilename": "Медленный вальс 1.mp3",
+          "downloadedAs": "Медленный вальс 1.mp3",
+          "status": "obtained",
+          "sha256": "2b76d2925b76cbfbd307f1b3e28f8219c90d480d0ff53405e5ebb1de527df288"
+        }
+      ],
+      "coverAt": 120,
+      "published": "2026-10-15T14:10:41+00:00"
+    },
+    {
+      "slug": "vals-minon",
+      "order": 2,
+      "title": "Вальс-миньон",
+      "kind": "dance",
+      "description": "Фигурный парный вальс. Повторите порядок фигур и переходы между ними вместе с партнёром.",
+      "sourcePost": "https://t.me/bal_rtumirea/2096",
+      "captionPost": "https://t.me/bal_rtumirea/2095",
+      "caption": "Вальса много не бывает!\n\n🎀 Пришло время повторить один из первых танцев «Звёздной Одиссеи» — вальс миньон!\n\nВнимательно смотрите за движением танцмейстеров и тренируйтесь дома под музыку 🎀\n\n#sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея #СхемаТанцев",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2096",
+          "originalFilename": "Вальс Миньон.mp4",
+          "downloadedAs": "Вальс Миньон.mp4",
+          "status": "obtained",
+          "sha256": "060c8e5f2457f0df60ad6891c668e0d65f8af52151754c5e84b79d0bbe28734c"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2095",
+          "originalFilename": "5386713168098304286.jpg",
+          "downloadedAs": "5386713168098304286.jpg",
+          "status": "obtained",
+          "sha256": "c6d7d49621f9625b86d5b56c329a11bdc1cb35f1b3f2c5f4694c35989f5adaec"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2097",
+          "originalFilename": "Вальс-миньон.mp3",
+          "downloadedAs": "Вальс-миньон.mp3",
+          "status": "obtained",
+          "sha256": "100a8984584d4812d5245011089e189896bb118e121e87597e3edb76f9919fdb"
+        }
+      ],
+      "coverAt": 104,
+      "published": "2026-10-20T14:45:04+00:00"
+    },
+    {
+      "slug": "venskiy-vals",
+      "order": 3,
+      "title": "Венский вальс",
+      "kind": "dance",
+      "description": "Быстрый парный вальс. Сначала поймайте ритм, затем повторите по видео последовательность элементов.",
+      "sourcePost": "https://t.me/bal_rtumirea/2103",
+      "captionPost": "https://t.me/bal_rtumirea/2103",
+      "caption": "Венский вальс не прощает суеты — но щедро вознаграждает тех, кто поймал его ритм 🌟\n \n⭐ Элементов много, и за одну репетицию всё уложить в голове сложно. Поэтому лайфхак: включи видео и повторяй — движения запомнятся сами.\n \n#sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея #СхемаТанцев",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2103",
+          "originalFilename": "IMG_7202.MP4",
+          "downloadedAs": "IMG_7202.MP4",
+          "status": "obtained",
+          "sha256": "3ae0c2e84def1d64c444f498c0cad8ee1d501c52eb4c5ffc05f8cf4f90b62711"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2104",
+          "originalFilename": "Венский вальс 2.mp3",
+          "downloadedAs": "Венский вальс 2.mp3",
+          "status": "obtained",
+          "sha256": "b33f3457c24cda613a7519b6f4739240261b0701ed566f1648c64253bc7ae3cc"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2105",
+          "originalFilename": "731974811.mp3",
+          "downloadedAs": "731974811.mp3",
+          "status": "obtained",
+          "sha256": "4f287ef0ae0f5c7a52df3f0eab909f855f191c378a9ae11a860e0d0e7b3bd2d3"
+        }
+      ],
+      "coverAt": 104,
+      "published": "2026-10-22T13:21:33+00:00"
+    },
+    {
+      "slug": "shapeluaz",
+      "order": 4,
+      "title": "Шапелуаз",
+      "kind": "dance",
+      "description": "Коллективный парный танец со сменой партнёров. Отдельно потренируйте момент перехода к следующему партнёру.",
+      "sourcePost": "https://t.me/bal_rtumirea/2113",
+      "captionPost": "https://t.me/bal_rtumirea/2111",
+      "caption": "Самое простое позади\n\n🖇️ Вы уже изучили базовые танцы, а это значит, что пришло время для более сложных движений! \n\n⛓️‍💥 Смотрите видео и тренируйте Шапелуаз, повторяя за танцмейстерами!\n\n#СхемаТанцев #sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2113",
+          "originalFilename": "Шапелуаз.mp4",
+          "downloadedAs": "Шапелуаз.mp4",
+          "status": "obtained",
+          "sha256": "5a34ab7359b054659c74c8f27b0753781929a4be0a857b28352b2ba1e3194513"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2111",
+          "originalFilename": "5388644593416479078.jpg",
+          "downloadedAs": "5388644593416479078.jpg",
+          "status": "obtained",
+          "sha256": "3f25df85c140887f0dfebf2c6821f4e368df9effeba2c788ee5f54d135592a5e"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2112",
+          "originalFilename": "5395642121638847022.jpg",
+          "downloadedAs": "5395642121638847022.jpg",
+          "status": "obtained",
+          "sha256": "933a90c9994d86e9b983eddc7ac7d7d4c7ec3cc03e971f88a3d77cfeb2480ad9"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2114",
+          "originalFilename": "Шапелуаз.mp3",
+          "downloadedAs": "Шапелуаз.mp3",
+          "status": "obtained",
+          "sha256": "7f066a4623207b81b11ebf249118b38094889d577000c563d617b1500bbdb362"
+        }
+      ],
+      "coverAt": 40,
+      "published": "2026-10-24T13:10:31+00:00"
+    },
+    {
+      "slug": "bolshoy-figurnyy-vals",
+      "order": 5,
+      "title": "Большой фигурный вальс",
+      "kind": "dance",
+      "description": "Парный вальс с последовательностью фигур. Разберите каждую фигуру и соедините их в порядке из видео.",
+      "sourcePost": "https://t.me/bal_rtumirea/2131",
+      "captionPost": "https://t.me/bal_rtumirea/2129",
+      "caption": "Геометрия в танце!\n\n🐾 Большой фигурный вальс — утончённый танец, который включает в себя множество различных элементов! Освоить их все за одну репетицию получается не всегда. \n\n🎀 Чтобы точно изучить каждое движение, включайте видео и повторяйте!\n\n#СхемаТанцев #sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2131",
+          "originalFilename": "Большой фигурный вальс_1.1.mp4",
+          "downloadedAs": "Большой фигурный вальс_1.1.mp4",
+          "status": "obtained",
+          "sha256": "381b9cd8ea7219089726629860f41c6ee550a7f5fddae7c7a9e17550736400cf"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2129",
+          "originalFilename": "5388644593416479073.jpg",
+          "downloadedAs": "5388644593416479073.jpg",
+          "status": "obtained",
+          "sha256": "512d7eb80fcd2745dc242586dc345c8ecde71c214ca263789759fa0f389f1312"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2130",
+          "originalFilename": "5388644593416479074.jpg",
+          "downloadedAs": "5388644593416479074.jpg",
+          "status": "obtained",
+          "sha256": "3d97d721ec9d89bd889ca605831c779880be0b2d84f03d6747b23fefbf44852e"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2132",
+          "originalFilename": "Большой фигурный вальс.mp3",
+          "downloadedAs": "Большой фигурный вальс.mp3",
+          "status": "obtained",
+          "sha256": "5f0b219953231a66c2ede90b0a537b25bb343f1320bbe0baac6e300953228775"
+        }
+      ],
+      "coverAt": 56,
+      "published": "2026-10-27T11:08:48+00:00"
+    },
+    {
+      "slug": "russkiy-liricheskiy",
+      "order": 6,
+      "title": "Русский лирический",
+      "kind": "dance",
+      "description": "Лирический парный танец. При повторении следите за согласованностью движений и переходами между фигурами.",
+      "sourcePost": "https://t.me/bal_rtumirea/2141",
+      "captionPost": "https://t.me/bal_rtumirea/2139",
+      "caption": "Делу время, балу час!\n\n💙 На прошлых репетициях вы изучили самый народный танец «Звёздной Одиссеи». Пришла пора повторить схему Русского лирического. \n\n💙 Смотрите видео, чтобы запомнить каждое движение!\n\n#sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея #СхемыТанцев",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2141",
+          "originalFilename": "IMG_7619.MP4",
+          "downloadedAs": "IMG_7619.MP4",
+          "status": "obtained",
+          "sha256": "2ee197a10a2c2b54bd15f69e966a7522dcbbe4a0d550f54f4f4746bf5af34163"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2139",
+          "originalFilename": "5413680748058845461.jpg",
+          "downloadedAs": "5413680748058845461.jpg",
+          "status": "obtained",
+          "sha256": "15c425a647c22e3e3f82185c67f4fd657c6afbddbb4cce8fecdde6c260b4f032"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2140",
+          "originalFilename": "5413680748058845462.jpg",
+          "downloadedAs": "5413680748058845462.jpg",
+          "status": "obtained",
+          "sha256": "7e1ba0c305d5d4052b14c716baf306437636112da569bf6e03d4a1e7abeaae46"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2142",
+          "originalFilename": "Русский лирический .mp3",
+          "downloadedAs": "Русский лирический .mp3",
+          "status": "obtained",
+          "sha256": "639fa57f48a15b4c4d46ea741af99b04570d537504febabad7867e414a1b952f"
+        }
+      ],
+      "coverAt": 104,
+      "published": "2026-10-29T15:19:08+00:00"
+    },
+    {
+      "slug": "polka-troyka",
+      "order": 7,
+      "title": "Полька-тройка",
+      "kind": "dance",
+      "description": "Полька для тройки. Сначала пройдите рисунок танца в медленном темпе, затем повторите его под музыку.",
+      "sourcePost": "https://t.me/bal_rtumirea/2151",
+      "captionPost": "https://t.me/bal_rtumirea/2149",
+      "caption": "Дома — тоже репетиция! 🌟\n \nНа репетициях мы разучиваем танцы вместе, а дома можно спокойно повторить всё в своём темпе.\n \n✨ Продолжаем делиться с вами #СхемаТанцев: вчера разбирали польку-тройку — ещё один танец в коллекцию звёздной одиссеи.\n \nВидео и музыка внизу!\n \n#sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2151",
+          "originalFilename": "Полька-тройка.mp4",
+          "downloadedAs": "Полька-тройка.mp4",
+          "status": "obtained",
+          "sha256": "8aeb9f709a7e60cfa62a0c771fdb8677a0259f46478136f5726d22fc1a4250a3"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2149",
+          "originalFilename": "5415687610182608423.jpg",
+          "downloadedAs": "5415687610182608423.jpg",
+          "status": "obtained",
+          "sha256": "310b4ffe041bdbea22ce1691088ecd16f23c00ef2ab551813e2173735b14b326"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2150",
+          "originalFilename": "5368796248166572200.jpg",
+          "downloadedAs": "5368796248166572200 (1).jpg",
+          "status": "obtained",
+          "sha256": "6153e9237758edda65271cd40ad7064916d4420401339cb690f36555fb2eb1a0"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2152",
+          "originalFilename": "Полька-тройка.mp3",
+          "downloadedAs": "Полька-тройка.mp3",
+          "status": "obtained",
+          "sha256": "2c057dddf10da410b72d795a8cd05bce1aa53fa3de20018618a2948815af61bf"
+        }
+      ],
+      "coverAt": 200,
+      "published": "2026-10-31T11:02:55+00:00"
+    },
+    {
+      "slug": "russkiy-marsh",
+      "order": 8,
+      "title": "Русский марш",
+      "kind": "dance",
+      "description": "Танец в маршевом ритме. Для начала разберите последовательность шагов и поворотов под счёт.",
+      "sourcePost": "https://t.me/bal_rtumirea/2167",
+      "captionPost": "https://t.me/bal_rtumirea/2164",
+      "caption": "В этом танце нет вальсового шага \n\n🖇️ На первый взгляд, русский марш — серьёзный и холодный. Однако в нём скрывается истинная нежность: взгляд кавалера прикован к даме и они движутся в унисон! \n\n⛓️‍💥 Чтобы повторить русский марш или освоить его самостоятельно, изучите видео-инструкцию!\n\n#sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея #СхемыТанцев",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2167",
+          "originalFilename": "IMG_3864.MP4",
+          "downloadedAs": "IMG_3864.MP4",
+          "status": "obtained",
+          "sha256": "685c4cf0efea467979c2270cb1f9cd427de7ea6bf443fe18f815720a5e3c53e7"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2164",
+          "originalFilename": "5422695244463021958.jpg",
+          "downloadedAs": "5422695244463021958.jpg",
+          "status": "obtained",
+          "sha256": "a0424b9f8bd6be7d74a9285258f7e2ce859fa99b4f939e41ffec4623082b821d"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2165",
+          "originalFilename": "5422695244463021959.jpg",
+          "downloadedAs": "5422695244463021959.jpg",
+          "status": "obtained",
+          "sha256": "20067f41bb437c9ff07a0e4cc828e72804b06f5f4493e0a1ba4f5f7524d6a67d"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2166",
+          "originalFilename": "5422695244463021960.jpg",
+          "downloadedAs": "5422695244463021960.jpg",
+          "status": "obtained",
+          "sha256": "33d7d32d05a483c6e71cfe8c711b97c54cfb5f7b9e3a1223a8f73ae5d8da979a"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2168",
+          "originalFilename": "Русский марш.mp3",
+          "downloadedAs": "Русский марш.mp3",
+          "status": "obtained",
+          "sha256": "1237ca7aab893e065b947479d7c893ff21b119f96d87bc1900f6c622666a4460"
+        }
+      ],
+      "coverAt": 72,
+      "published": "2026-11-03T11:05:20+00:00"
+    },
+    {
+      "slug": "mazurka-5-pa",
+      "order": 9,
+      "title": "Мазурка 5 па",
+      "kind": "dance",
+      "description": "Мазурка из программы бала. Начните с шагов и ритма, затем соедините фигуры в порядке из видео.",
+      "sourcePost": "https://t.me/bal_rtumirea/2185",
+      "captionPost": "https://t.me/bal_rtumirea/2182",
+      "caption": "Время голубцов, и мы не про еду!\n\n🩶 Для многих участников Мазурка 5 Па — самый трудный и самый любимый танец бала!\n\n🌌Действительно, чтобы освоить его нужно несколько раз потренироваться дома. \n\n⛓️‍💥 Смотрите видео-инструкцию и станьте профессионалом мазурки!\n\n#sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея #СхемыТанцев",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2185",
+          "originalFilename": "IMG_3914.MP4",
+          "downloadedAs": "IMG_3914.MP4",
+          "status": "obtained",
+          "sha256": "2d544e4f09345d782f3a75b75ff51d3e045e79e2182930cab02f18d557ba0216"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2182",
+          "originalFilename": "5431658278569058257.jpg",
+          "downloadedAs": "5431658278569058257.jpg",
+          "status": "obtained",
+          "sha256": "9768cfc5e9ddb146ee23e87ca8d169d30a760661629576d072c60ca29e924c82"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2183",
+          "originalFilename": "5431658278569058258.jpg",
+          "downloadedAs": "5431658278569058258.jpg",
+          "status": "obtained",
+          "sha256": "b5ec9dfaef007ed729338b62a39d6e5430292710bcd1445217a1b9248e30843b"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2184",
+          "originalFilename": "5431658278569058259.jpg",
+          "downloadedAs": "5431658278569058259.jpg",
+          "status": "obtained",
+          "sha256": "6f270aeb929861f2ce84806afe8050faab3aef3021b0548e297ad262b28d38dc"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2186",
+          "originalFilename": "Мазурка 5 па.mp3",
+          "downloadedAs": "Мазурка 5 па.mp3",
+          "status": "obtained",
+          "sha256": "5919376f1daac50a6f38c8d2224dcbb660399ef54afb7094214b19417fadf784"
+        }
+      ],
+      "coverAt": 56,
+      "published": "2026-11-07T11:02:58+00:00"
+    },
+    {
+      "slug": "vals-gavot",
+      "order": 10,
+      "title": "Вальс-гавот",
+      "kind": "dance",
+      "description": "Парный танец с диагональными шагами, сменами позиций и поворотами, после которых партнёры снова сходятся.",
+      "sourcePost": "https://t.me/bal_rtumirea/2214",
+      "captionPost": "https://t.me/bal_rtumirea/2211",
+      "caption": "Вальс, в котором не всё так просто 🌟\n\nВальс-гавот приготовил для вас небольшое испытание: шаги по диагонали, смены позиций и повороты, после которых нужно снова оказаться рядом с партнёром.\n\n🌙 Изучайте схему и повторяйте движения, чтобы на балу думать не о шагах, а о самом танце!\n\n#sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея #СхемыТанцев",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2214",
+          "originalFilename": "Вальс-Гавот.mp4",
+          "downloadedAs": "Вальс-Гавот.mp4",
+          "status": "obtained",
+          "sha256": "033d5af569af21a4cce6a83b6ab77d2f2c4863fd652d6109c624cf7d818b70e6"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2211",
+          "originalFilename": "5454003344142704277.jpg",
+          "downloadedAs": "5454003344142704277.jpg",
+          "status": "obtained",
+          "sha256": "a9e2b8e61b5994adbe650c1d04fb96cb62c7bc10bc9d74ed1a3c448eccebfd19"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2212",
+          "originalFilename": "5454003344142704278.jpg",
+          "downloadedAs": "5454003344142704278.jpg",
+          "status": "obtained",
+          "sha256": "021fe8feec07d4cf073f954d0e76768d841b52cf5541b845b1265881858f3cf1"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2213",
+          "originalFilename": "5454003344142704279.jpg",
+          "downloadedAs": "5454003344142704279.jpg",
+          "status": "obtained",
+          "sha256": "1d73ae9bbe34f9aa5576385854704290324285f5850b7e052532d6c53fa2e6e8"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2215",
+          "originalFilename": "Вальс Гавот.mp3",
+          "downloadedAs": "Вальс Гавот.mp3",
+          "status": "obtained",
+          "sha256": "f4f6e3915e56a2d7f0607b60cb0408dfaa58b0585ef920e617de3bf08e3b137c"
+        }
+      ],
+      "coverAt": 78,
+      "published": "2026-11-12T16:03:53+00:00"
+    },
+    {
+      "slug": "kontrdans-zimniy-son",
+      "order": 11,
+      "title": "Контрданс «Зимний сон»",
+      "kind": "dance",
+      "description": "Коллективный танец. При разучивании отмечайте своё место в построении и переходы между фигурами.",
+      "sourcePost": "https://t.me/bal_rtumirea/2220",
+      "captionPost": "https://t.me/bal_rtumirea/2219",
+      "caption": "Пора просыпаться!\n\n💙 Контрданс «Зимний сон» — один из самых сложных и интересных танцев Звёздной Одиссеи! \n\nЧтобы насладиться им на балу, советуем повторять движения дома. \n\n💙 Смотрите видео-инструкцию и репетируйте самостоятельно!\n\n#sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея #СхемыТанцев",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2220",
+          "originalFilename": "КД «Зимний сон».mp4",
+          "downloadedAs": "КД «Зимний сон».mp4",
+          "status": "obtained",
+          "sha256": "deb5b97857c18b143abb67bddc0482d24121d7b5066d3544d90b6f1bfb221212"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2219",
+          "originalFilename": "5458500076117368576.jpg",
+          "downloadedAs": "5458500076117368576.jpg",
+          "status": "obtained",
+          "sha256": "a1bbd42b2f3e87e7a839b63dbb35f1cef033b3c40c06ecdee488b875c6861d75"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2221",
+          "originalFilename": "КД Зимний сон.mp3",
+          "downloadedAs": "КД Зимний сон.mp3",
+          "status": "obtained",
+          "sha256": "6955df02c2a887b384fc81f97f824a59dc494fe005cc317446ca70f44b2efcc9"
+        }
+      ],
+      "coverAt": 240,
+      "published": "2026-11-14T17:01:20+00:00"
+    }
+  ]
+}

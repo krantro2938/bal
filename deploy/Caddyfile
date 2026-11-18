@@ -1,0 +1,7 @@
+# Site block for the host's Caddy (/etc/caddy/Caddyfile). Caddy obtains the
+# HTTPS certificate itself; the DNS record must point at the VPS (not proxied).
+bal.aansl.com {
+	# The default encode matcher skips video/audio/images, so Range responses stay byte-exact.
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:18090
+}

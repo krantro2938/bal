@@ -1,0 +1,9 @@
+var/
+node_modules/
+web/dist/
+/bal
+*.db
+.env
+.env
+.env.*
+!deploy/bal.env.example

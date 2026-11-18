@@ -1,0 +1,27 @@
+# Alternative to Docker: run the static binary under systemd.
+# Install: sudo cp deploy/bal.service /etc/systemd/system/ && sudo systemctl enable --now bal
+[Unit]
+Description=Звёздная одиссея — репетиции
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=bal
+Group=bal
+WorkingDirectory=/opt/bal
+EnvironmentFile=/srv/bal/bal.env
+Environment=BAL_ADDR=127.0.0.1:8080
+Environment=BAL_STATIC_DIR=/opt/bal/web
+Environment=BAL_SOURCES=/opt/bal/content/sources.json
+Environment=BAL_MEDIA_DIR=/srv/bal/media
+Environment=BAL_DB=/srv/bal/db/bal.db
+ExecStart=/opt/bal/bal serve
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/srv/bal/db
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

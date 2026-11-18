@@ -1,0 +1,125 @@
+import { CircleUserRound, LogOut, NotebookPen, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router";
+import { useSession } from "@/lib/session";
+import type { User } from "@/lib/types";
+import { SearchBox } from "./SearchBox";
+import { Star } from "./Star";
+import { ThemeToggle } from "./ThemeToggle";
+
+export function Header() {
+  const { user, ready } = useSession();
+  const loc = useLocation();
+  const [mobileSearch, setMobileSearch] = useState(false);
+  const loginHref = `/login?return=${encodeURIComponent(loc.pathname + loc.search)}`;
+
+  useEffect(() => setMobileSearch(false), [loc.pathname]);
+
+  return (
+    <header className="sticky top-0 z-40 bg-bg">
+      {mobileSearch ? (
+        <div className="flex h-16 items-center gap-2 px-2 sm:hidden">
+          <SearchBox autoFocus onClose={() => setMobileSearch(false)} />
+        </div>
+      ) : null}
+      <div className={`flex h-16 items-center gap-3 px-4 sm:h-[72px] sm:px-6 lg:px-8 ${mobileSearch ? "hidden sm:flex" : ""}`}>
+        <Link to="/" className="flex shrink-0 items-center gap-2.5 rounded-full py-1 pr-2" aria-label="Звёздная одиссея — все танцы">
+          <span className="grid size-8 place-items-center rounded-full bg-[#081028] text-[#e8ddc2]">
+            <Star className="size-4" />
+          </span>
+          <span className="leading-none">
+            <span className="block font-display text-[18px] font-semibold italic">Звёздная одиссея</span>
+            <span className="mt-0.5 block text-[11px] tracking-[0.08em] text-ink-3 uppercase">Репетиции бала</span>
+          </span>
+        </Link>
+
+        <div className="hidden flex-1 justify-center sm:flex">
+          <SearchBox className="max-w-[680px]" />
+        </div>
+        <span className="flex-1 sm:hidden" />
+
+        <button
+          type="button"
+          onClick={() => setMobileSearch(true)}
+          className="grid size-10 place-items-center rounded-full text-ink hover:bg-hover sm:hidden"
+          aria-label="Поиск"
+        >
+          <Search className="size-5" />
+        </button>
+        <ThemeToggle />
+        {!ready ? (
+          <span className="size-9" />
+        ) : user ? (
+          <AccountMenu user={user} />
+        ) : (
+          <Link
+            to={loginHref}
+            className="flex h-9 items-center gap-1.5 rounded-full border border-line-strong px-3 text-sm font-medium text-accent hover:bg-hover"
+          >
+            <CircleUserRound className="size-5" />
+            Войти
+          </Link>
+        )}
+      </div>
+    </header>
+  );
+}
+
+export function Avatar({ user, size = 32 }: { user: Pick<User, "name" | "picture">; size?: number }) {
+  return user.picture ? (
+    <img src={user.picture} alt="" className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} referrerPolicy="no-referrer" />
+  ) : (
+    <span
+      className="grid shrink-0 place-items-center rounded-full bg-accent font-medium text-accent-ink"
+      style={{ width: size, height: size, fontSize: size * 0.45 }}
+      aria-hidden
+    >
+      {user.name.trim().charAt(0).toUpperCase() || "?"}
+    </span>
+  );
+}
+
+function AccountMenu({ user }: { user: User }) {
+  const { logout } = useSession();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const loc = useLocation();
+  useEffect(() => setOpen(false), [loc.pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="rounded-full p-0.5 hover:ring-2 hover:ring-line" aria-label="Аккаунт" aria-expanded={open}>
+        <Avatar user={user} />
+      </button>
+      {open ? (
+        <div className="absolute top-12 right-0 z-50 w-72 overflow-hidden rounded-[var(--radius-sheet)] border border-line bg-bg py-2 shadow-[var(--shadow-pop)]">
+          <div className="flex items-center gap-3 px-4 pt-2 pb-3">
+            <Avatar user={user} size={40} />
+            <div className="min-w-0">
+              <p className="truncate font-medium">{user.name}</p>
+              <p className="truncate text-[13px] text-ink-3">{user.email || (user.username ? `@${user.username}` : "")}</p>
+            </div>
+          </div>
+          <div className="border-t border-line pt-2">
+            <Link to="/me" className="flex items-center gap-3 px-4 py-2.5 text-[15px] hover:bg-hover">
+              <NotebookPen className="size-5 text-ink-2" /> Мои репетиции
+            </Link>
+            <button type="button" onClick={logout} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-hover">
+              <LogOut className="size-5 text-ink-2" /> Выйти
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
