@@ -17,7 +17,7 @@ export function ReactionPill({
   onReact: (v: -1 | 0 | 1) => void;
 }) {
   return (
-    <SplitPill label="Оценка">
+    <SplitPill label="Оценка" className="sm:h-10 sm:text-[15px] sm:[&_svg]:size-5">
       <button type="button" onClick={() => onReact(mine === 1 ? 0 : 1)} aria-pressed={mine === 1} className={splitHalf("l")} title="Нравится">
         <ThumbsUp className={cn("size-[18px]", mine === 1 && "fill-current")} />
         <span className="tnum">{fmt.format(likes)}</span>

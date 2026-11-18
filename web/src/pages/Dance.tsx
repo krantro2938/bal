@@ -811,8 +811,8 @@ function Pill({
       aria-pressed={pressed}
       aria-label={label}
       className={cn(
-        "group/tip relative flex h-9 shrink-0 items-center gap-2 rounded-full text-sm font-medium [&_svg]:size-[18px]",
-        iconOnly ? "w-9 justify-center" : "px-2.5 sm:px-3.5",
+        "group/tip relative flex h-9 shrink-0 items-center gap-2 rounded-full text-sm font-medium sm:h-10 sm:text-[15px] [&_svg]:size-[18px] sm:[&_svg]:size-5",
+        iconOnly ? "w-9 justify-center sm:w-10" : "px-2.5 sm:px-4",
         strong ? "bg-accent text-accent-ink" : "bg-surface-2 hover:bg-line",
       )}
     >

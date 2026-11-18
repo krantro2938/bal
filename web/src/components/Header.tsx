@@ -72,16 +72,26 @@ export function Header() {
   );
 }
 
+/** Profile picture, or the first letter of the name when there is none or it fails to load
+ *  (Google's image host is not always reachable from Russia). */
 export function Avatar({ user, size = 32 }: { user: Pick<User, "name" | "picture">; size?: number }) {
-  return user.picture ? (
-    <img src={user.picture} alt="" className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} referrerPolicy="no-referrer" />
+  const [broken, setBroken] = useState(false);
+  return user.picture && !broken ? (
+    <img
+      src={user.picture}
+      alt=""
+      className="shrink-0 rounded-full object-cover"
+      style={{ width: size, height: size }}
+      referrerPolicy="no-referrer"
+      onError={() => setBroken(true)}
+    />
   ) : (
     <span
       className="grid shrink-0 place-items-center rounded-full bg-accent font-medium text-accent-ink"
       style={{ width: size, height: size, fontSize: size * 0.45 }}
       aria-hidden
     >
-      {user.name.trim().charAt(0).toUpperCase() || "?"}
+      {user.name.trim().charAt(0).toUpperCase() || <CircleUserRound className="size-[60%]" />}
     </span>
   );
 }
