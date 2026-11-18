@@ -90,16 +90,19 @@ func TestComments(t *testing.T) {
 		t.Fatalf("approved comment hidden: %s", body)
 	}
 
-	// Replies to replies join the top-level thread.
+	// Replies nest up to maxDepth; deeper ones join their parent's level.
 	id := jsonNum(created.Comment.ID)
-	_, body = boris.do("POST", "/api/dances/demo/comments", `{"body":"спасибо","parentId":`+id+`}`)
-	var reply struct{ Comment store.Comment }
-	json.Unmarshal([]byte(body), &reply)
-	_, body = anna.do("POST", "/api/dances/demo/comments", `{"body":"пожалуйста","parentId":`+jsonNum(reply.Comment.ID)+`}`)
-	var reply2 struct{ Comment store.Comment }
-	json.Unmarshal([]byte(body), &reply2)
-	if reply2.Comment.ParentID != created.Comment.ID {
-		t.Fatalf("nested reply parent %d", reply2.Comment.ParentID)
+	parent := created.Comment.ID
+	var chain []int64
+	for i := 0; i < maxDepth+1; i++ {
+		_, body = boris.do("POST", "/api/dances/demo/comments", `{"body":"ответ","parentId":`+jsonNum(parent)+`}`)
+		var r struct{ Comment store.Comment }
+		json.Unmarshal([]byte(body), &r)
+		chain = append(chain, r.Comment.ParentID)
+		parent = r.Comment.ID
+	}
+	if chain[1] == created.Comment.ID || chain[maxDepth] != chain[maxDepth-1] {
+		t.Fatalf("reply parents %v (top %d)", chain, created.Comment.ID)
 	}
 
 	if code, body := boris.do("PUT", "/api/comments/"+id+"/like", `{"on":true}`); code != 200 || !strings.Contains(body, `"likes":1`) {
@@ -111,7 +114,7 @@ func TestComments(t *testing.T) {
 	if code, _ := anna.do("DELETE", "/api/comments/"+id, ""); code != 204 {
 		t.Fatalf("anna delete: %d", code)
 	}
-	if _, body := guest.do("GET", "/api/dances/demo/comments", ""); strings.Contains(body, "спасибо") {
+	if _, body := guest.do("GET", "/api/dances/demo/comments", ""); strings.Contains(body, `"ответ"`) {
 		t.Fatalf("replies survived their thread: %s", body)
 	}
 }

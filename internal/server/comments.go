@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	maxDepth      = 3 // replies to replies to replies; top-level comments are depth 0
 	maxComment    = 2000
 	hideAtReports = 3 // reports from different people that send a comment back to moderation
 )
@@ -100,8 +101,14 @@ func (s *Server) handleCreateComment(w http.ResponseWriter, r *http.Request, u *
 			httpError(w, err)
 			return
 		}
-		// One level of replies, like YouTube: a reply to a reply joins the same thread.
-		if p.ParentID != 0 {
+		// Replies nest like YouTube's, up to maxDepth; below that a reply joins its
+		// parent's level (the box pre-fills an @mention so it still reads as an answer).
+		depth, err := s.commentDepth(r.Context(), p)
+		if err != nil {
+			httpError(w, err)
+			return
+		}
+		if depth >= maxDepth {
 			in.ParentID = p.ParentID
 		}
 	}
@@ -125,6 +132,20 @@ func (s *Server) handleCreateComment(w http.ResponseWriter, r *http.Request, u *
 		out["notice"] = v.Reason
 	}
 	writeJSON(w, http.StatusCreated, out)
+}
+
+// commentDepth counts c's ancestors (0 for a top-level comment).
+func (s *Server) commentDepth(ctx context.Context, c store.Comment) (int, error) {
+	depth := 0
+	for c.ParentID != 0 && depth <= maxDepth {
+		p, err := s.store.Comment(ctx, c.ParentID, 0)
+		if err != nil {
+			return 0, err
+		}
+		c = p
+		depth++
+	}
+	return depth, nil
 }
 
 // commentFor loads the {id} comment for an action by u.

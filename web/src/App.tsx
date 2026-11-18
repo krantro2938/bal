@@ -27,11 +27,16 @@ function Shell() {
         position="bottom-center"
         offset={16}
         mobileOffset={{ bottom: "max(16px, env(safe-area-inset-bottom))" }}
+        swipeDirections={["left", "right", "bottom"]}
+        closeButton
         toastOptions={{
           unstyled: true,
+          closeButtonAriaLabel: "Закрыть",
+          // The toast itself is the pill, centred, with its ✕ inside on the right.
           classNames: {
-            toast: "flex w-full items-center justify-center gap-2 font-sans",
-            content: "rounded-full bg-ink px-4 py-2.5 text-sm text-bg shadow-lg",
+            toast: "!right-0 !left-0 mx-auto flex !w-fit max-w-full items-center gap-1 rounded-full bg-ink py-1.5 pr-1.5 pl-4 font-sans text-sm text-bg shadow-lg",
+            content: "py-1",
+            closeButton: "order-last grid size-7 shrink-0 place-items-center rounded-full text-bg/70 hover:bg-bg/15 hover:text-bg [&_svg]:size-3.5",
             icon: "hidden",
           },
         }}

@@ -1,4 +1,4 @@
-import { Check, Pencil } from "lucide-react";
+import { Check, NotebookPen, Pencil, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate } from "react-router";
 import { toast } from "sonner";
@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { useCatalog } from "@/lib/catalog";
 
 export function Me() {
-  const { user, ready, state, logout } = useSession();
+  const { user, ready, state } = useSession();
   const { data } = useCatalog();
 
   useEffect(() => {
@@ -40,9 +40,6 @@ export function Me() {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-3">
           <span>{user!.name}</span>
           <UsernameEditor username={user!.username} />
-          <button type="button" onClick={logout} className="underline underline-offset-4 hover:text-ink">
-            Выйти
-          </button>
         </div>
       </div>
 
@@ -85,7 +82,7 @@ export function Me() {
 
           {state.notes.length ? (
             <section>
-              <Title>Заметки</Title>
+              <Title icon={<NotebookPen className="size-3.5 text-accent" />}>Заметки</Title>
               <div className="space-y-6">
                 {[...notesByDance.entries()].map(([slug, notes]) => {
                   const d = bySlug.get(slug);
@@ -151,10 +148,10 @@ export function Me() {
   );
 }
 
-function Title({ children }: { children: ReactNode }) {
+function Title({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
   return (
     <h2 className="mb-4 flex items-center gap-2 text-[13px] font-semibold tracking-[0.06em] text-ink-3 uppercase">
-      <Star className="size-2.5 text-accent" />
+      {icon ?? <Star className="size-2.5 text-accent" />}
       {children}
     </h2>
   );
@@ -216,6 +213,19 @@ function UsernameEditor({ username }: { username: string }) {
         />
         <button type="submit" disabled={!ok} className="h-7 rounded-full bg-accent px-3 text-[13px] font-medium text-accent-ink disabled:opacity-40">
           Сохранить
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setValue(username);
+            setError("");
+            setEdit(false);
+          }}
+          className="ml-0.5 grid size-7 place-items-center rounded-full text-ink-3 hover:bg-hover hover:text-ink"
+          aria-label="Отмена"
+          title="Отмена"
+        >
+          <X className="size-4" />
         </button>
       </label>
       {hint ? <span className={check?.free && !error ? "text-accent" : "text-danger"}>{hint}</span> : null}

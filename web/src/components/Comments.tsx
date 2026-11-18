@@ -23,6 +23,18 @@ type Props = {
 
 type Action = "delete" | "report" | "approve" | "pin" | "unpin";
 
+const MAX_DEPTH = 3; // as on the server: top-level comments are depth 0
+
+/** Drops a comment and everything under it. */
+function without(list: Comment[], id: number) {
+  const gone = new Set([id]);
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const c of list) if (c.parentId && gone.has(c.parentId) && !gone.has(c.id)) (gone.add(c.id), (grew = true));
+  }
+  return list.filter((c) => !gone.has(c.id));
+}
+
 /**
  * YouTube-style comments: top or newest first, one level of replies drawn as a tree,
  * likes, a pinned comment from the organizers, @mentions. New comments from others
@@ -70,9 +82,8 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
         });
         if (!direct) setPending((p) => (p.some((x) => x.id === c.id) ? p : [...p, c]));
       } else if (e.type === "removed") {
-        const gone = (c: Comment) => c.id === e.id || c.parentId === e.id;
-        setList((l) => l && l.filter((c) => !gone(c)));
-        setPending((p) => p.filter((c) => !gone(c)));
+        setList((l) => l && without(l, e.id));
+        setPending((p) => without(p, e.id));
       } else if (e.type === "likes") {
         setList((l) => l && l.map((c) => (c.id === e.id ? { ...c, likes: e.likes } : c)));
       } else if (e.type === "pinned") {
@@ -151,7 +162,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
     try {
       if (what === "delete") {
         await api.deleteComment(c.id);
-        setList((l) => l && l.filter((x) => x.id !== c.id && x.parentId !== c.id));
+        setList((l) => l && without(l, c.id));
         toast("Комментарий удалён");
       } else if (what === "report") {
         await api.reportComment(c.id);
@@ -167,7 +178,15 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
     }
   };
 
-  const ctx: ThreadCtx = { user, moderator, duration, now, people, flash, onSeek, post, like, act, askLogin };
+  // Threads to open so a linked comment is visible: all of its ancestors.
+  const expand = useMemo(() => {
+    const out = new Set<number>();
+    const byId = new Map((list ?? []).map((c) => [c.id, c]));
+    for (let c = focusId ? byId.get(focusId) : undefined; c?.parentId; c = byId.get(c.parentId)) out.add(c.parentId);
+    return out;
+  }, [focusId, list]);
+
+  const ctx: ThreadCtx = { user, moderator, duration, now, people, flash, expand, children: replies, onSeek, post, like, act, askLogin };
   const first = threads[0];
   return (
     <div>
@@ -244,7 +263,9 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
 
         <ul className="mt-6 space-y-5">
           {threads.map((c) => (
-            <Thread key={c.id} c={c} replies={replies.get(c.id) ?? []} ctx={ctx} focusId={focusId} />
+            <li key={c.id}>
+              <Thread c={c} depth={0} ctx={ctx} />
+            </li>
           ))}
         </ul>
       </div>
@@ -259,6 +280,8 @@ type ThreadCtx = {
   now: () => number;
   people: Author[];
   flash: number | null;
+  expand: Set<number>;
+  children: Map<number, Comment[]>;
   onSeek: (t: number) => void;
   post: (body: string, parentId?: number) => Promise<boolean>;
   like: (c: Comment) => void;
@@ -267,44 +290,58 @@ type ThreadCtx = {
 };
 
 /**
- * One top-level comment and its replies, joined YouTube-style by a line from the
- * parent's avatar with a rounded elbow into each row. The reply box opens right
- * under the comment being answered.
+ * A comment and its replies, recursively, joined YouTube-style by a line from the
+ * comment's avatar with a rounded elbow into each row. Replies stay folded behind
+ * "N ответов"; unfolded, a "Скрыть ответы" row closes the branch. The reply box
+ * opens right under the comment being answered.
  */
-function Thread({ c, replies, ctx, focusId }: { c: Comment; replies: Comment[]; ctx: ThreadCtx; focusId?: number }) {
-  const [show, setShow] = useState(() => replies.some((r) => r.id === focusId));
+function Thread({ c, depth, ctx }: { c: Comment; depth: number; ctx: ThreadCtx }) {
+  const replies = ctx.children.get(c.id) ?? [];
+  const [show, setShow] = useState(() => ctx.expand.has(c.id));
   useEffect(() => {
-    if (replies.some((r) => r.id === focusId)) setShow(true);
-  }, [focusId, replies]);
-  // `after`: the comment the box sits under (the parent itself, or one of the replies).
-  const [replyTo, setReplyTo] = useState<{ after: number; prefill: string } | null>(null);
-  const startReply = (to: Comment) => {
+    if (ctx.expand.has(c.id)) setShow(true);
+  }, [ctx.expand, c.id]);
+  const [replying, setReplying] = useState(false);
+  const startReply = () => {
     if (!ctx.user) return ctx.askLogin("Чтобы отвечать на комментарии.");
-    setShow(true);
-    setReplyTo({ after: to.id, prefill: to.parentId && to.author.id !== ctx.user.id ? `@${to.author.username} ` : "" });
+    setReplying(true);
   };
-  const composer = replyTo ? (
-    <Composer
-      key={`${replyTo.after}:${replyTo.prefill}`}
-      user={ctx.user}
-      now={ctx.now}
-      people={ctx.people}
-      small
-      autoFocus
-      initial={replyTo.prefill}
-      placeholder="Ваш ответ…"
-      onGuest={() => ctx.askLogin("Чтобы отвечать на комментарии.")}
-      onCancel={() => setReplyTo(null)}
-      onSubmit={async (b) => {
-        const ok = await ctx.post(b, c.id);
-        if (ok) setReplyTo(null);
-        return ok;
-      }}
-    />
-  ) : null;
+  // At the deepest level a reply lands beside this comment, so it names whom it answers.
+  const prefill = depth >= MAX_DEPTH && c.author.id !== ctx.user?.id ? `@${c.author.username} ` : "";
+
+  const avatar = depth === 0 ? 36 : 28;
+  const indent = avatar + 12;
+  const trunk = avatar / 2 - 1; // x of the line under this comment's avatar
 
   const rows: { key: string; node: ReactNode; elbow: number }[] = [];
-  if (replyTo?.after === c.id) rows.push({ key: "composer", node: composer, elbow: 14 });
+  if (replying) {
+    rows.push({
+      key: "composer",
+      elbow: 14,
+      node: (
+        <Composer
+          user={ctx.user}
+          now={ctx.now}
+          people={ctx.people}
+          small
+          autoFocus
+          initial={prefill}
+          placeholder="Ваш ответ…"
+          onGuest={() => ctx.askLogin("Чтобы отвечать на комментарии.")}
+          onCancel={() => setReplying(false)}
+          onSubmit={async (b) => {
+            const ok = await ctx.post(b, c.id);
+            if (ok) {
+              setReplying(false);
+              setShow(true);
+            }
+            return ok;
+          }}
+        />
+      ),
+    });
+  }
+  if (replies.length && show) for (const r of replies) rows.push({ key: `r${r.id}`, elbow: 14, node: <Thread c={r} depth={depth + 1} ctx={ctx} /> });
   if (replies.length) {
     rows.push({
       key: "toggle",
@@ -313,36 +350,33 @@ function Thread({ c, replies, ctx, focusId }: { c: Comment; replies: Comment[]; 
         <button
           type="button"
           onClick={() => setShow((s) => !s)}
+          aria-expanded={show}
           className="flex h-9 items-center gap-1.5 rounded-full px-3 text-[14px] font-medium text-accent hover:bg-accent-soft"
         >
           {show ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-          {replyCount(replies.length)}
+          {show ? "Скрыть ответы" : replyCount(replies.length)}
         </button>
       ),
     });
   }
-  if (show) {
-    for (const r of replies) {
-      rows.push({ key: `r${r.id}`, elbow: 14, node: <CommentItem c={r} ctx={ctx} onReply={() => startReply(r)} /> });
-      if (replyTo?.after === r.id) rows.push({ key: "composer", node: composer, elbow: 14 });
-    }
-  }
 
   return (
-    <li>
+    <div>
       <div className="relative">
-        {rows.length ? <span className="absolute top-11 bottom-0 left-[17px] w-0.5 bg-line" aria-hidden /> : null}
-        <CommentItem c={c} ctx={ctx} onReply={() => startReply(c)} />
+        {rows.length ? <span className="absolute bottom-0 w-0 border-l-2 border-line" style={{ left: trunk, top: avatar + 8 }} aria-hidden /> : null}
+        <CommentItem c={c} ctx={ctx} onReply={startReply} />
       </div>
       {rows.length ? (
-        <ul className="pl-12">
+        <ul style={{ paddingLeft: indent }}>
           {rows.map((row, i) => (
             <li key={row.key} className="relative pt-3">
-              {/* the trunk continues past every row but the last; each row gets an elbow */}
-              {i < rows.length - 1 ? <span className="absolute top-0 bottom-0 -left-[31px] w-0.5 bg-line" aria-hidden /> : null}
+              {/* the line continues past every row but the last; each row gets an elbow */}
+              {i < rows.length - 1 ? (
+                <span className="absolute top-0 bottom-0 w-0 border-l-2 border-line" style={{ left: trunk - indent }} aria-hidden />
+              ) : null}
               <span
-                className="absolute top-0 -left-[31px] w-6 rounded-bl-[14px] border-b-2 border-l-2 border-line"
-                style={{ height: 12 + row.elbow }}
+                className="absolute top-0 rounded-bl-[14px] border-b-2 border-l-2 border-line"
+                style={{ left: trunk - indent, width: indent - trunk - 6, height: 12 + row.elbow }}
                 aria-hidden
               />
               {row.node}
@@ -350,7 +384,7 @@ function Thread({ c, replies, ctx, focusId }: { c: Comment; replies: Comment[]; 
           ))}
         </ul>
       ) : null}
-    </li>
+    </div>
   );
 }
 
