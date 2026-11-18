@@ -1,8 +1,10 @@
-import { CircleUserRound, LogOut, NotebookPen, Search } from "lucide-react";
+import { CircleUserRound, LogOut, Moon, NotebookPen, Search, Sun } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useSession } from "@/lib/session";
+import { useTheme } from "@/lib/theme";
 import type { User } from "@/lib/types";
+import { NotificationsBell } from "./Notifications";
 import { SearchBox } from "./SearchBox";
 import { Star } from "./Star";
 import { ThemeToggle } from "./ThemeToggle";
@@ -46,7 +48,11 @@ export function Header() {
         >
           <Search className="size-5" />
         </button>
-        <ThemeToggle />
+        {/* Signed in on phones, the theme switch moves into the account menu to make room for the bell. */}
+        <div className={user ? "max-sm:hidden" : undefined}>
+          <ThemeToggle />
+        </div>
+        {user ? <NotificationsBell /> : null}
         {!ready ? (
           <span className="size-10" />
         ) : user ? (
@@ -82,6 +88,7 @@ export function Avatar({ user, size = 32 }: { user: Pick<User, "name" | "picture
 
 function AccountMenu({ user }: { user: User }) {
   const { logout } = useSession();
+  const [theme, toggleTheme] = useTheme();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const loc = useLocation();
@@ -108,13 +115,17 @@ function AccountMenu({ user }: { user: User }) {
             <Avatar user={user} size={40} />
             <div className="min-w-0">
               <p className="truncate font-medium">{user.name}</p>
-              <p className="truncate text-[13px] text-ink-3">{user.email || (user.username ? `@${user.username}` : "")}</p>
+              <p className="truncate text-[13px] text-ink-3">@{user.username}</p>
             </div>
           </div>
           <div className="border-t border-line pt-2">
             <Link to="/me" className="flex items-center gap-3 px-4 py-2.5 text-[15px] hover:bg-hover">
               <NotebookPen className="size-5 text-ink-2" /> Мои репетиции
             </Link>
+            <button type="button" onClick={toggleTheme} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-hover sm:hidden">
+              {theme === "dark" ? <Sun className="size-5 text-ink-2" /> : <Moon className="size-5 text-ink-2" />}
+              {theme === "dark" ? "Светлая тема" : "Тёмная тема"}
+            </button>
             <button type="button" onClick={logout} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-hover">
               <LogOut className="size-5 text-ink-2" /> Выйти
             </button>

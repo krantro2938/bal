@@ -162,6 +162,11 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("POST /api/comments/{id}/report", s.requireUser(s.handleReportComment))
 	mux.Handle("POST /api/comments/{id}/approve", s.requireUser(s.handleApproveComment))
 	mux.Handle("PUT /api/comments/{id}/pin", s.requireUser(s.handlePinComment))
+	mux.Handle("GET /api/me/events", s.requireUser(s.handleMyEvents))
+	mux.Handle("PATCH /api/me", s.requireUser(s.handleUpdateMe))
+	mux.Handle("GET /api/me/username", s.requireUser(s.handleUsernameFree))
+	mux.Handle("GET /api/notifications", s.requireUser(s.handleNotifications))
+	mux.Handle("POST /api/notifications/read", s.requireUser(s.handleReadNotifications))
 
 	mux.Handle("GET /media/", http.StripPrefix("/media/", mediaHandler(s.cfg.MediaDir)))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })

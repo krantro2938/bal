@@ -122,6 +122,18 @@ CREATE TABLE comment_reports (
   created_at  INTEGER NOT NULL,
   PRIMARY KEY (comment_id, user_id)
 ) WITHOUT ROWID;`,
+
+	// 6: notifications: someone replied to your comment or mentioned your @username.
+	`CREATE TABLE notifications (
+  id          INTEGER PRIMARY KEY,
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind        TEXT NOT NULL CHECK (kind IN ('reply','mention')),
+  comment_id  INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  created_at  INTEGER NOT NULL,
+  read_at     INTEGER,
+  UNIQUE (user_id, comment_id)
+);
+CREATE INDEX notifications_user ON notifications(user_id, created_at);`,
 }
 
 // migrate applies pending migrations on one connection with foreign keys

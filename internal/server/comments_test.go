@@ -115,3 +115,52 @@ func TestComments(t *testing.T) {
 		t.Fatalf("replies survived their thread: %s", body)
 	}
 }
+
+func TestMentionsAndUsernames(t *testing.T) {
+	ts := newTestServer(t)
+	anna, boris := newClient(t, ts), newClient(t, ts)
+	anna.do("POST", "/api/auth/dev", `{"name":"Анна Петрова"}`)
+	boris.do("POST", "/api/auth/dev", `{"name":"Борис"}`)
+
+	var me struct{ User store.User }
+	_, body := anna.do("GET", "/api/me", "")
+	json.Unmarshal([]byte(body), &me)
+	if !strings.HasPrefix(me.User.Username, "annapetrova") {
+		t.Fatalf("generated username %q", me.User.Username)
+	}
+	if code, _ := anna.do("PATCH", "/api/me", `{"username":"@Anna.Dance"}`); code != 200 {
+		t.Fatalf("rename: %d", code)
+	}
+	if code, _ := boris.do("PATCH", "/api/me", `{"username":"anna.dance"}`); code != 409 {
+		t.Fatalf("duplicate username: %d", code)
+	}
+	if code, _ := boris.do("PATCH", "/api/me", `{"username":"1x"}`); code != 400 {
+		t.Fatalf("invalid username: %d", code)
+	}
+
+	// A comment by Anna, a reply by Boris that also mentions her: one notification.
+	_, body = anna.do("POST", "/api/dances/demo/comments", `{"body":"Вопрос про 0:30"}`)
+	var c struct{ Comment store.Comment }
+	json.Unmarshal([]byte(body), &c)
+	boris.do("POST", "/api/dances/demo/comments", `{"body":"@anna.dance смотри на 0:31","parentId":`+jsonNum(c.Comment.ID)+`}`)
+	boris.do("POST", "/api/dances/demo/comments", `{"body":"Кстати, @Anna.Dance, спасибо"}`)
+	_, body = anna.do("GET", "/api/notifications", "")
+	var n struct {
+		Items []struct {
+			Kind       string
+			DanceTitle string
+		}
+		Unread int
+	}
+	json.Unmarshal([]byte(body), &n)
+	if n.Unread != 2 || len(n.Items) != 2 || n.Items[0].Kind != "mention" || n.Items[1].Kind != "reply" || n.Items[0].DanceTitle != "Демо" {
+		t.Fatalf("notifications: %s", body)
+	}
+	anna.do("POST", "/api/notifications/read", "")
+	if _, body := anna.do("GET", "/api/notifications", ""); !strings.Contains(body, `"unread":0`) {
+		t.Fatalf("after read: %s", body)
+	}
+	if _, body := boris.do("GET", "/api/notifications", ""); !strings.Contains(body, `"items":[]`) {
+		t.Fatalf("boris notified about himself: %s", body)
+	}
+}

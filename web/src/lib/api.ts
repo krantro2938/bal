@@ -1,4 +1,4 @@
-import type { AuthConfig, Catalog, Comment, DanceDetail, Note, User, UserState } from "./types";
+import type { AuthConfig, Catalog, Comment, DanceDetail, Note, Notification, User, UserState } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -61,6 +61,10 @@ export const api = {
   reportComment: (id: number) => request<void>("POST", `/api/comments/${id}/report`),
   approveComment: (id: number) => request<Comment>("POST", `/api/comments/${id}/approve`),
   pinComment: (id: number, on: boolean) => request<void>("PUT", `/api/comments/${id}/pin`, { on }),
+  notifications: () => request<{ items: Notification[]; unread: number }>("GET", "/api/notifications"),
+  readNotifications: () => request<void>("POST", "/api/notifications/read"),
+  setUsername: (username: string) => request<{ user: User }>("PATCH", "/api/me", { username }),
+  usernameFree: (u: string) => request<{ valid: boolean; free: boolean }>("GET", `/api/me/username?u=${encodeURIComponent(u)}`),
   progress: (slug: string, version: string, position: number) =>
     request<void>("PUT", `/api/progress/${encodeURIComponent(slug)}`, { version, position }, { keepalive: true }),
 };

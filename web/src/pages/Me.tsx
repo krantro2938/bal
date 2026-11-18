@@ -1,9 +1,11 @@
-import { Check } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { Check, Pencil } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate } from "react-router";
+import { toast } from "sonner";
 import { Cover, VideoCard } from "@/components/DanceCard";
 import { Star } from "@/components/Star";
 import { Button } from "@/components/ui/button";
+import { api, ApiError } from "@/lib/api";
 import { timecode } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import type { DanceSummary } from "@/lib/types";
@@ -35,13 +37,13 @@ export function Me() {
     <main className="mx-auto max-w-[1600px] px-3 pt-6 pb-16 sm:px-5 lg:px-6 lg:pt-8">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="font-title text-[28px] lg:text-[40px]">Мои репетиции</h1>
-        <p className="text-sm text-ink-3">
-          {user!.name}
-          {user!.username ? ` · @${user!.username}` : ""} ·{" "}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-3">
+          <span>{user!.name}</span>
+          <UsernameEditor username={user!.username} />
           <button type="button" onClick={logout} className="underline underline-offset-4 hover:text-ink">
             Выйти
           </button>
-        </p>
+        </div>
       </div>
 
       {empty ? (
@@ -155,5 +157,68 @@ function Title({ children }: { children: ReactNode }) {
       <Star className="size-2.5 text-accent" />
       {children}
     </h2>
+  );
+}
+
+/** The public @handle used in comments and mentions; unique, checked while typing. */
+function UsernameEditor({ username }: { username: string }) {
+  const { refresh } = useSession();
+  const [edit, setEdit] = useState(false);
+  const [value, setValue] = useState(username);
+  const [check, setCheck] = useState<{ valid: boolean; free: boolean } | null>(null);
+  const [error, setError] = useState("");
+  const clean = value.trim().replace(/^@/, "").toLowerCase();
+  useEffect(() => {
+    if (!edit || clean === username) return setCheck(null);
+    const t = setTimeout(() => api.usernameFree(clean).then(setCheck, () => setCheck(null)), 300);
+    return () => clearTimeout(t);
+  }, [clean, edit, username]);
+  if (!edit) {
+    return (
+      <button type="button" onClick={() => setEdit(true)} className="group flex items-center gap-1 hover:text-ink" title="Изменить имя пользователя">
+        @{username} <Pencil className="size-3.5 opacity-60 group-hover:opacity-100" />
+      </button>
+    );
+  }
+  const hint = error || (check ? (!check.valid ? "3–30 символов: a–z, цифры, «_» и «.», первая — буква" : check.free ? "Свободно" : "Уже занято") : "");
+  const ok = clean === username || (check?.valid && check.free);
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (clean === username) return setEdit(false);
+        try {
+          await api.setUsername(clean);
+          await refresh();
+          setEdit(false);
+          toast(`Теперь вы @${clean}`);
+        } catch (err) {
+          setError(err instanceof ApiError ? err.message : "Не удалось сохранить");
+        }
+      }}
+    >
+      <label className="flex h-9 items-center rounded-full bg-surface-2 pr-1 pl-3 text-ink focus-within:ring-2 focus-within:ring-accent">
+        <span className="text-ink-3">@</span>
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setError("");
+          }}
+          onKeyDown={(e) => e.key === "Escape" && (setValue(username), setEdit(false))}
+          maxLength={31}
+          spellCheck={false}
+          autoCapitalize="none"
+          className="w-40 bg-transparent px-0.5 text-[14px] outline-none"
+          aria-label="Имя пользователя"
+        />
+        <button type="submit" disabled={!ok} className="h-7 rounded-full bg-accent px-3 text-[13px] font-medium text-accent-ink disabled:opacity-40">
+          Сохранить
+        </button>
+      </label>
+      {hint ? <span className={check?.free && !error ? "text-accent" : "text-danger"}>{hint}</span> : null}
+    </form>
   );
 }

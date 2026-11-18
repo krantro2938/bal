@@ -2,10 +2,10 @@ import "@vidstack/react/player/styles/default/theme.css";
 import "@vidstack/react/player/styles/default/layouts/video.css";
 import { MediaPlayer, MediaProvider, Poster, Track, useMediaRemote, useMediaState, type MediaPlayerInstance } from "@vidstack/react";
 import { DefaultVideoLayout, defaultLayoutIcons, type DefaultLayoutTranslations } from "@vidstack/react/player/layouts/default";
-import { Minus, Plus, Repeat, RotateCcw, RotateCw, X } from "lucide-react";
+import { Minus, NotebookPen, Plus, Repeat, RotateCcw, RotateCw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from "react";
 import { SplitPill, splitHalf } from "@/components/SplitPill";
-import { Star } from "@/components/Star";
+import { Tip } from "@/components/Tip";
 import { timecode } from "@/lib/format";
 import type { DanceDetail, Note } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -158,13 +158,13 @@ function RehearsalBar({
 
   return (
     <div className="bg-bg px-3 pt-3 pb-1 sm:px-0">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         <SplitPill label="Перемотка" className="h-10">
-          <button type="button" onClick={() => seekBy(-5)} aria-label="Назад на 5 секунд" title="Назад на 5 секунд" className={cn(splitHalf("l"), "gap-1")}>
+          <button type="button" onClick={() => seekBy(-5)} aria-label="Назад на 5 секунд" title="Назад на 5 секунд" className={cn(splitHalf("l"), "gap-1 max-sm:px-2.5")}>
             <RotateCcw className="size-[18px]" />
             <span className="tnum text-[13px]">5</span>
           </button>
-          <button type="button" onClick={() => seekBy(5)} aria-label="Вперёд на 5 секунд" title="Вперёд на 5 секунд" className={cn(splitHalf("r"), "gap-1")}>
+          <button type="button" onClick={() => seekBy(5)} aria-label="Вперёд на 5 секунд" title="Вперёд на 5 секунд" className={cn(splitHalf("r"), "gap-1 max-sm:px-2.5")}>
             <RotateCw className="size-[18px]" />
             <span className="tnum text-[13px]">5</span>
           </button>
@@ -179,7 +179,7 @@ function RehearsalBar({
                 if (player.current) player.current.playbackRate = r;
               }}
               aria-pressed={rate === r}
-              className={cn("tnum h-full rounded-full px-2.5 text-[13px] font-medium", rate === r ? "bg-accent text-accent-ink" : "text-ink-2 hover:text-ink")}
+              className={cn("tnum h-full rounded-full px-2 text-[13px] font-medium sm:px-2.5", rate === r ? "bg-accent text-accent-ink" : "text-ink-2 hover:text-ink")}
             >
               {String(r).replace(".", ",")}×
             </button>
@@ -190,22 +190,24 @@ function RehearsalBar({
           type="button"
           onClick={toggleLoop}
           aria-pressed={!!loop}
+          aria-label={loop ? "Выключить повтор" : "Повтор фрагмента"}
           className={cn(
-            "flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium",
+            "group/tip relative grid size-10 place-items-center rounded-full",
             loop ? "bg-accent text-accent-ink" : "bg-surface-2 text-ink hover:bg-line",
           )}
         >
           <Repeat className="size-[18px]" />
-          {loop ? "Повтор включён" : "Повтор фрагмента"}
+          <Tip label={loop ? "Выключить повтор" : "Повтор фрагмента"} />
         </button>
 
         <button
           type="button"
           onClick={onNote}
-          className="flex h-10 items-center gap-1.5 rounded-full bg-surface-2 px-4 text-sm font-medium hover:bg-line sm:ml-auto"
+          aria-label={`Заметка на ${timecode(time)}`}
+          className="group/tip relative grid size-10 place-items-center rounded-full bg-surface-2 hover:bg-line sm:ml-auto"
         >
-          <Star className="size-3.5 text-accent" />
-          <span className="tnum">Заметка на {timecode(time)}</span>
+          <NotebookPen className="size-[18px]" />
+          <Tip label={`Заметка на ${timecode(time)}`} />
         </button>
       </div>
 
@@ -366,7 +368,7 @@ function Strip({
         ) : null}
         {notes.map((n) => (
           <span key={n.id} className="pointer-events-none absolute -top-1 -translate-x-1/2 text-accent" style={{ left: pct(n.t) }}>
-            <Star className="size-2.5" />
+            <span className="block size-1.5 rounded-full bg-accent" />
           </span>
         ))}
         <div className="pointer-events-none absolute top-1/2 z-20 h-5 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink" style={{ left: pct(time) }} />

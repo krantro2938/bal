@@ -22,18 +22,19 @@ type Comment struct {
 }
 
 type Author struct {
-	ID      int64  `json:"id"`
-	Name    string `json:"name"`
-	Picture string `json:"picture,omitempty"`
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	Picture  string `json:"picture,omitempty"`
 }
 
-const commentCols = `c.id, c.dance, COALESCE(c.parent_id, 0), u.id, u.name, u.picture, c.body, c.status, c.score, c.pinned, c.created_at,
+const commentCols = `c.id, c.dance, COALESCE(c.parent_id, 0), u.id, u.name, u.username, u.picture, c.body, c.status, c.score, c.pinned, c.created_at,
   (SELECT count(*) FROM comment_likes l WHERE l.comment_id = c.id),
   EXISTS(SELECT 1 FROM comment_likes l WHERE l.comment_id = c.id AND l.user_id = ?)`
 
 func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
 	var c Comment
-	err := row.Scan(&c.ID, &c.Dance, &c.ParentID, &c.Author.ID, &c.Author.Name, &c.Author.Picture, &c.Body, &c.Status,
+	err := row.Scan(&c.ID, &c.Dance, &c.ParentID, &c.Author.ID, &c.Author.Name, &c.Author.Username, &c.Author.Picture, &c.Body, &c.Status,
 		&c.Score, &c.Pinned, &c.CreatedAt, &c.Likes, &c.Liked)
 	return c, err
 }
@@ -141,4 +142,55 @@ func (s *Store) PinComment(ctx context.Context, dance string, id int64, on bool)
 		}
 	}
 	return tx.Commit()
+}
+
+type Notification struct {
+	ID        int64   `json:"id"`
+	Kind      string  `json:"kind"` // "reply" or "mention"
+	CreatedAt int64   `json:"createdAt"`
+	Read      bool    `json:"read"`
+	Comment   Comment `json:"comment"`
+}
+
+// Notify records one notification per user and comment (a reply that also mentions
+// you counts once). It reports whether a new one was added.
+func (s *Store) Notify(ctx context.Context, userID int64, kind string, commentID int64) (bool, error) {
+	res, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO notifications(user_id, kind, comment_id, created_at) VALUES (?,?,?,?)`,
+		userID, kind, commentID, time.Now().UnixMilli())
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
+// Notifications returns the user's latest notifications for published comments and the unread count.
+func (s *Store) Notifications(ctx context.Context, userID int64) ([]Notification, int, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT n.id, n.kind, n.created_at, n.read_at IS NOT NULL, `+commentCols+`
+FROM notifications n JOIN comments c ON c.id = n.comment_id JOIN users u ON u.id = c.user_id
+WHERE n.user_id = ? AND c.status = 'published' ORDER BY n.created_at DESC LIMIT 50`, userID, userID)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	out := []Notification{}
+	unread := 0
+	for rows.Next() {
+		var n Notification
+		c := &n.Comment
+		if err := rows.Scan(&n.ID, &n.Kind, &n.CreatedAt, &n.Read, &c.ID, &c.Dance, &c.ParentID, &c.Author.ID, &c.Author.Name,
+			&c.Author.Username, &c.Author.Picture, &c.Body, &c.Status, &c.Score, &c.Pinned, &c.CreatedAt, &c.Likes, &c.Liked); err != nil {
+			return nil, 0, err
+		}
+		if !n.Read {
+			unread++
+		}
+		out = append(out, n)
+	}
+	return out, unread, rows.Err()
+}
+
+func (s *Store) MarkNotificationsRead(ctx context.Context, userID int64) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE notifications SET read_at = ? WHERE user_id = ? AND read_at IS NULL`, time.Now().UnixMilli(), userID)
+	return err
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
 import { VideoCard } from "@/components/DanceCard";
+import { PixelSearch } from "@/components/PixelSearch";
 import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
 import { useCatalog } from "@/lib/catalog";
@@ -105,11 +106,12 @@ export function Catalog() {
       ) : results.length === 0 ? (
         <StateBlock
           title={q ? `Ничего не нашлось по «${q}»` : "Здесь пока пусто"}
+          art={<PixelSearch className="w-[min(360px,80vw)]" />}
           action={
             q ? (
-              <Link to="/dance/slovar-dvizheniy" className="text-accent underline underline-offset-4">
-                Открыть словарь движений
-              </Link>
+              <Button asChild>
+                <Link to="/dance/slovar-dvizheniy">Открыть словарь движений</Link>
+              </Button>
             ) : (
               <Button onClick={() => setFilter("all")}>Показать все танцы</Button>
             )

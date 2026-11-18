@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 export type Theme = "light" | "dark";
 const KEY = "bal-theme";
+const EVENT = "bal:theme";
 const mq = () => window.matchMedia("(prefers-color-scheme: dark)");
 
 function stored(): Theme | null {
@@ -19,6 +20,12 @@ export function useTheme() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+  // Several toggles (header, account menu) stay in step.
+  useEffect(() => {
+    const onSet = (e: Event) => setTheme((e as CustomEvent<Theme>).detail);
+    window.addEventListener(EVENT, onSet);
+    return () => window.removeEventListener(EVENT, onSet);
+  }, []);
   useEffect(() => {
     if (stored()) return;
     const m = mq();
@@ -28,7 +35,7 @@ export function useTheme() {
   }, []);
   const toggle = () => {
     const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
+    window.dispatchEvent(new CustomEvent(EVENT, { detail: next }));
     try {
       localStorage.setItem(KEY, next);
     } catch {

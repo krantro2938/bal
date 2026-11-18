@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -87,5 +88,41 @@ func TestReactions(t *testing.T) {
 	c, _ = s.ReactionCounts(ctx, 0)
 	if c["d"] != (Reactions{Likes: 0, Dislikes: 1}) {
 		t.Fatalf("after unlike %+v", c["d"])
+	}
+}
+
+// Older accounts get valid, unique usernames: duplicates and invalid Telegram handles are replaced.
+func TestEnsureUsernames(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "u.db")
+	db, err := sql.Open("sqlite", "file:"+path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(migrations[0]); err != nil {
+		t.Fatal(err)
+	}
+	db.Exec(`INSERT INTO users(id, provider, subject, name, username, created_at) VALUES
+  (1, 'telegram', '1', 'Анна', 'Anna_K', 1), (2, 'telegram', '2', 'Анна', 'anna_k', 1),
+  (3, 'telegram', '3', 'Борис', '', 1), (4, 'telegram', '4', 'Ёж', '9lives', 1)`)
+	db.Close()
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	got := map[int64]string{}
+	rows, _ := s.db.Query(`SELECT id, username FROM users`)
+	for rows.Next() {
+		var id int64
+		var u string
+		rows.Scan(&id, &u)
+		got[id] = u
+	}
+	rows.Close()
+	if got[1] != "anna_k" || got[2] == "anna_k" || !ValidUsername(got[2]) || !strings.HasPrefix(got[3], "boris") || !ValidUsername(got[4]) {
+		t.Fatalf("usernames %v", got)
+	}
+	if err := s.SetUsername(context.Background(), 3, "anna_k"); err != ErrUsernameTaken {
+		t.Fatalf("duplicate allowed: %v", err)
 	}
 }

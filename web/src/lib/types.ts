@@ -37,7 +37,7 @@ export type DanceDetail = DanceSummary & {
   assets: { kind: "video" | "scheme" | "audio"; post: string; status: string; originalFilename: string }[];
 };
 
-export type User = { id: number; name: string; username?: string; picture?: string; email?: string };
+export type User = { id: number; name: string; username: string; picture?: string; email?: string };
 
 export type AuthConfig = { google: boolean; password: boolean; dev: boolean };
 
@@ -55,11 +55,13 @@ export type Progress = { dance: string; version: string; position: number; updat
 
 export type UserState = { favorites: string[]; learned: string[]; progress: Progress[]; notes: Note[] };
 
+export type Author = { id: number; name: string; username: string; picture?: string };
+
 export type Comment = {
   id: number;
   dance: string;
   parentId?: number;
-  author: { id: number; name: string; picture?: string };
+  author: Author;
   body: string;
   /** "held" comments wait for a moderator; only their author and moderators get them. */
   status: "published" | "held";
@@ -74,3 +76,12 @@ export type CommentEvent =
   | { type: "removed"; id: number }
   | { type: "likes"; id: number; likes: number }
   | { type: "pinned"; id?: number };
+
+export type Notification = {
+  id: number;
+  kind: "reply" | "mention";
+  createdAt: number;
+  read: boolean;
+  comment: Comment;
+  danceTitle: string;
+};

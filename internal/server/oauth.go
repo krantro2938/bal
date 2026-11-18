@@ -152,7 +152,7 @@ func (s *Server) frontend(path string) string {
 //  3. otherwise a new user is created.
 func (s *Server) userForClaims(ctx context.Context, provider string, c *auth.Claims) (*store.User, error) {
 	if u, err := s.store.UserByAccount(ctx, provider, c.Sub); err == nil {
-		s.store.RefreshProfile(ctx, u.ID, c.DisplayName(), c.PreferredUsername, c.Picture)
+		s.store.RefreshProfile(ctx, u.ID, c.DisplayName(), c.Picture)
 		return u, nil
 	} else if !errors.Is(err, store.ErrNotFound) {
 		return nil, err
@@ -165,7 +165,7 @@ func (s *Server) userForClaims(ctx context.Context, provider string, c *auth.Cla
 			if err := s.store.ClaimVerifiedEmail(ctx, existing.ID); err != nil {
 				return nil, err
 			}
-			s.store.RefreshProfile(ctx, existing.ID, "", c.PreferredUsername, c.Picture)
+			s.store.RefreshProfile(ctx, existing.ID, "", c.Picture)
 			u = existing
 		case !errors.Is(err, store.ErrNotFound):
 			return nil, err

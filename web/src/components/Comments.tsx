@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { since, timecode } from "@/lib/format";
-import type { Comment, CommentEvent, User } from "@/lib/types";
+import type { Author, Comment, CommentEvent, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Avatar } from "./Header";
 import { NoteInput } from "./NoteInput";
@@ -16,20 +16,27 @@ type Props = {
   now: () => number;
   onSeek: (t: number) => void;
   askLogin: (why: string) => void;
+  onCount?: (n: number) => void;
+  /** A comment to scroll to and highlight (from a notification link). */
+  focusId?: number;
 };
 
+type Action = "delete" | "report" | "approve" | "pin" | "unpin";
+
 /**
- * YouTube-style comments: newest or top first, one level of replies, likes, a pinned
- * comment from the organizers. New comments from others arrive live over SSE; top-level
- * ones wait behind a "show" pill so the list doesn't jump while someone is reading.
+ * YouTube-style comments: top or newest first, one level of replies drawn as a tree,
+ * likes, a pinned comment from the organizers, @mentions. New comments from others
+ * arrive live over SSE; top-level ones wait behind a "show" pill so the list doesn't
+ * jump while someone is reading.
  */
-export function Comments({ slug, user, duration, now, onSeek, askLogin }: Props) {
+export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount, focusId }: Props) {
   const [list, setList] = useState<Comment[] | null>(null);
   const [moderator, setModerator] = useState(false);
   const [pending, setPending] = useState<Comment[]>([]);
   const [sort, setSort] = useState<"top" | "new">("top");
   const [error, setError] = useState(false);
-  const [open, setOpen] = useState(false); // phones: the list opens from a teaser card
+  const [open, setOpen] = useState(!!focusId); // phones: the list opens from a teaser card
+  const userId = user?.id;
 
   const load = useCallback(() => {
     api.comments(slug).then(
@@ -44,7 +51,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin }: Props)
   }, [slug]);
 
   // Refetch on sign-in/out: held comments and "liked" depend on who is looking.
-  useEffect(load, [load, user?.id]);
+  useEffect(load, [load, userId]);
 
   useEffect(() => {
     const es = new EventSource(`/api/dances/${encodeURIComponent(slug)}/events`);
@@ -55,14 +62,13 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin }: Props)
       const e = JSON.parse(m.data) as CommentEvent;
       if (e.type === "comment") {
         const c = e.comment;
+        const direct = !!c.parentId || c.author.id === userId;
         setList((l) => {
           if (!l) return l;
-          const i = l.findIndex((x) => x.id === c.id);
-          if (i >= 0) return l.map((x) => (x.id === c.id ? { ...x, ...c, liked: x.liked } : x));
-          if (c.parentId || c.author.id === user?.id) return [...l, c];
-          setPending((p) => (p.some((x) => x.id === c.id) ? p : [...p, c]));
-          return l;
+          if (l.some((x) => x.id === c.id)) return l.map((x) => (x.id === c.id ? { ...x, ...c, liked: x.liked } : x));
+          return direct ? [...l, c] : l;
         });
+        if (!direct) setPending((p) => (p.some((x) => x.id === c.id) ? p : [...p, c]));
       } else if (e.type === "removed") {
         const gone = (c: Comment) => c.id === e.id || c.parentId === e.id;
         setList((l) => l && l.filter((c) => !gone(c)));
@@ -74,7 +80,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin }: Props)
       }
     };
     return () => es.close();
-  }, [slug, load, user?.id]);
+  }, [slug, load, userId]);
 
   const replies = useMemo(() => {
     const m = new Map<number, Comment[]>();
@@ -82,13 +88,39 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin }: Props)
     return m;
   }, [list]);
   const threads = useMemo(() => {
-    const top = (list ?? []).filter((c) => !c.parentId);
+    const top = (list ?? []).filter((c) => !c.parentId && !pending.some((p) => p.id === c.id));
     const score = (c: Comment) => c.likes * 2 + (replies.get(c.id)?.length ?? 0);
     return top.sort(
       (a, b) => Number(!!b.pinned) - Number(!!a.pinned) || (sort === "top" ? score(b) - score(a) : 0) || b.createdAt - a.createdAt,
     );
-  }, [list, replies, sort]);
+  }, [list, replies, sort, pending]);
+  // People to suggest after "@": everyone who wrote here, newest first.
+  const people = useMemo(() => {
+    const seen = new Map<number, Author>();
+    for (const c of [...(list ?? [])].reverse()) if (c.author.id !== userId && !seen.has(c.author.id)) seen.set(c.author.id, c.author);
+    return [...seen.values()];
+  }, [list, userId]);
+
   const count = (list ?? []).filter((c) => c.status === "published").length;
+  useEffect(() => onCount?.(count), [count, onCount]);
+
+  // Notification links: open the thread, scroll to the comment, flash it.
+  const [flash, setFlash] = useState<number | null>(null);
+  useEffect(() => {
+    if (!focusId || !list) return;
+    if (!list.some((c) => c.id === focusId)) return;
+    setOpen(true);
+    setFlash(focusId);
+    const t = setTimeout(() => {
+      const el = document.getElementById(`comment-${focusId}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    const off = setTimeout(() => setFlash(null), 2600);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(off);
+    };
+  }, [focusId, list]);
 
   const patch = (id: number, p: Partial<Comment>) => setList((l) => l && l.map((c) => (c.id === id ? { ...c, ...p } : c)));
 
@@ -109,21 +141,19 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin }: Props)
     const on = !c.liked;
     patch(c.id, { liked: on, likes: c.likes + (on ? 1 : -1) });
     try {
-      const r = await api.likeComment(c.id, on);
-      patch(c.id, r);
+      patch(c.id, await api.likeComment(c.id, on));
     } catch {
       patch(c.id, { liked: c.liked, likes: c.likes });
     }
   };
 
-  const act = async (c: Comment, what: "delete" | "report" | "approve" | "pin" | "unpin") => {
+  const act = async (c: Comment, what: Action) => {
     try {
       if (what === "delete") {
         await api.deleteComment(c.id);
         setList((l) => l && l.filter((x) => x.id !== c.id && x.parentId !== c.id));
         toast("Комментарий удалён");
       } else if (what === "report") {
-        if (!user) return askLogin("Чтобы пожаловаться на комментарий.");
         await api.reportComment(c.id);
         toast("Спасибо, организаторы посмотрят");
       } else if (what === "approve") {
@@ -137,39 +167,21 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin }: Props)
     }
   };
 
-  const item = (c: Comment, reply?: { onReply: () => void }) => (
-    <CommentItem
-      key={c.id}
-      c={c}
-      reply={!!c.parentId}
-      mine={c.author.id === user?.id}
-      moderator={moderator}
-      signedIn={!!user}
-      duration={duration}
-      onSeek={onSeek}
-      onLike={() => like(c)}
-      onReply={reply?.onReply}
-      onAction={(w) => act(c, w)}
-    />
-  );
-
+  const ctx: ThreadCtx = { user, moderator, duration, now, people, flash, onSeek, post, like, act, askLogin };
   const first = threads[0];
   return (
-    <section className="mt-10">
+    <div>
       {/* Phones: a teaser card like YouTube's app; tapping it opens the list. */}
       {!open ? (
         <button type="button" onClick={() => setOpen(true)} className="w-full rounded-[var(--radius-sheet)] bg-surface-2 p-3.5 text-left lg:hidden">
-          <span className="text-[15px] font-semibold">
-            Комментарии <span className="tnum ml-1 font-normal text-ink-3">{count || ""}</span>
-          </span>
-          <span className="mt-2 flex items-center gap-2.5 text-[14px]">
+          <span className="flex items-center gap-2.5 text-[14px]">
             {first ? (
               <>
                 <Avatar user={first.author} size={24} />
                 <span className="line-clamp-1 min-w-0 flex-1">{first.body}</span>
               </>
             ) : (
-              <span className="text-ink-3">{list ? "Напишите первый комментарий" : "Загрузка…"}</span>
+              <span className="flex-1 text-ink-3">{list ? "Напишите первый комментарий" : "Загрузка…"}</span>
             )}
             <ChevronDown className="size-4 shrink-0 text-ink-3" />
           </span>
@@ -177,34 +189,30 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin }: Props)
       ) : null}
 
       <div className={cn(!open && "max-lg:hidden")}>
-        <header className="mb-5 flex items-center gap-6">
-          <h2 className="text-[20px] font-semibold">
-            Комментарии <span className="tnum ml-1 font-normal text-ink-3">{count || ""}</span>
-          </h2>
-          <div className="flex gap-1 text-[14px]">
-            {(["top", "new"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setSort(s)}
-                aria-pressed={sort === s}
-                className={cn("h-8 rounded-lg px-3 font-medium", sort === s ? "bg-ink text-bg" : "bg-surface-2 hover:bg-line")}
-              >
-                {s === "top" ? "Популярные" : "Новые"}
-              </button>
-            ))}
-          </div>
+        <div className="mb-5 flex items-center gap-1 text-[14px]">
+          {(["top", "new"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setSort(s)}
+              aria-pressed={sort === s}
+              className={cn("h-8 rounded-lg px-3 font-medium", sort === s ? "bg-ink text-bg" : "bg-surface-2 hover:bg-line")}
+            >
+              {s === "top" ? "Популярные" : "Новые"}
+            </button>
+          ))}
           {open ? (
             <button type="button" onClick={() => setOpen(false)} className="ml-auto grid size-9 place-items-center rounded-full hover:bg-hover lg:hidden" aria-label="Свернуть комментарии">
               <ChevronUp className="size-5" />
             </button>
           ) : null}
-        </header>
+        </div>
 
         <Composer
           user={user}
           now={now}
-          placeholder="Напишите комментарий… Время вида 1:20 станет ссылкой на момент видео"
+          people={people}
+          placeholder="Напишите комментарий…"
           onGuest={() => askLogin("Чтобы писать комментарии. Пишите уважительно — грубые комментарии не публикуются.")}
           onSubmit={(b) => post(b)}
         />
@@ -214,7 +222,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin }: Props)
             <button
               type="button"
               onClick={() => {
-                setList((l) => [...(l ?? []), ...pending]);
+                setList((l) => [...(l ?? []).filter((c) => !pending.some((p) => p.id === c.id)), ...pending]);
                 setPending([]);
                 setSort("new");
               }}
@@ -234,78 +242,114 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin }: Props)
           </p>
         ) : null}
 
-        <ul className="mt-6 space-y-6">
+        <ul className="mt-6 space-y-5">
           {threads.map((c) => (
-            <Thread key={c.id} c={c} replies={replies.get(c.id) ?? []} item={item} user={user} now={now} onGuest={() => askLogin("Чтобы отвечать на комментарии.")} onPost={post} />
+            <Thread key={c.id} c={c} replies={replies.get(c.id) ?? []} ctx={ctx} focusId={focusId} />
           ))}
         </ul>
       </div>
-    </section>
+    </div>
   );
 }
 
-function Thread({
-  c,
-  replies,
-  item,
-  user,
-  now,
-  onGuest,
-  onPost,
-}: {
-  c: Comment;
-  replies: Comment[];
-  item: (c: Comment, reply?: { onReply: () => void }) => ReactNode;
+type ThreadCtx = {
   user: User | null;
+  moderator: boolean;
+  duration: number;
   now: () => number;
-  onGuest: () => void;
-  onPost: (body: string, parentId?: number) => Promise<boolean>;
-}) {
-  const [show, setShow] = useState(false);
-  const [replyTo, setReplyTo] = useState<{ prefill: string } | null>(null);
-  const startReply = (to?: Comment) => {
-    if (!user) return onGuest();
+  people: Author[];
+  flash: number | null;
+  onSeek: (t: number) => void;
+  post: (body: string, parentId?: number) => Promise<boolean>;
+  like: (c: Comment) => void;
+  act: (c: Comment, a: Action) => void;
+  askLogin: (why: string) => void;
+};
+
+/**
+ * One top-level comment and its replies, joined YouTube-style by a line from the
+ * parent's avatar with a rounded elbow into each row. The reply box opens right
+ * under the comment being answered.
+ */
+function Thread({ c, replies, ctx, focusId }: { c: Comment; replies: Comment[]; ctx: ThreadCtx; focusId?: number }) {
+  const [show, setShow] = useState(() => replies.some((r) => r.id === focusId));
+  useEffect(() => {
+    if (replies.some((r) => r.id === focusId)) setShow(true);
+  }, [focusId, replies]);
+  // `after`: the comment the box sits under (the parent itself, or one of the replies).
+  const [replyTo, setReplyTo] = useState<{ after: number; prefill: string } | null>(null);
+  const startReply = (to: Comment) => {
+    if (!ctx.user) return ctx.askLogin("Чтобы отвечать на комментарии.");
     setShow(true);
-    setReplyTo({ prefill: to && to.author.id !== user.id ? `@${to.author.name} ` : "" });
+    setReplyTo({ after: to.id, prefill: to.parentId && to.author.id !== ctx.user.id ? `@${to.author.username} ` : "" });
   };
+  const composer = replyTo ? (
+    <Composer
+      key={`${replyTo.after}:${replyTo.prefill}`}
+      user={ctx.user}
+      now={ctx.now}
+      people={ctx.people}
+      small
+      autoFocus
+      initial={replyTo.prefill}
+      placeholder="Ваш ответ…"
+      onGuest={() => ctx.askLogin("Чтобы отвечать на комментарии.")}
+      onCancel={() => setReplyTo(null)}
+      onSubmit={async (b) => {
+        const ok = await ctx.post(b, c.id);
+        if (ok) setReplyTo(null);
+        return ok;
+      }}
+    />
+  ) : null;
+
+  const rows: { key: string; node: ReactNode; elbow: number }[] = [];
+  if (replyTo?.after === c.id) rows.push({ key: "composer", node: composer, elbow: 14 });
+  if (replies.length) {
+    rows.push({
+      key: "toggle",
+      elbow: 18,
+      node: (
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          className="flex h-9 items-center gap-1.5 rounded-full px-3 text-[14px] font-medium text-accent hover:bg-accent-soft"
+        >
+          {show ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+          {replyCount(replies.length)}
+        </button>
+      ),
+    });
+  }
+  if (show) {
+    for (const r of replies) {
+      rows.push({ key: `r${r.id}`, elbow: 14, node: <CommentItem c={r} ctx={ctx} onReply={() => startReply(r)} /> });
+      if (replyTo?.after === r.id) rows.push({ key: "composer", node: composer, elbow: 14 });
+    }
+  }
+
   return (
     <li>
-      {item(c, { onReply: () => startReply() })}
-      <div className="pl-12">
-        {replyTo ? (
-          <div className="mt-3">
-            <Composer
-              key={replyTo.prefill}
-              user={user}
-              now={now}
-              small
-              autoFocus
-              initial={replyTo.prefill}
-              placeholder="Ваш ответ…"
-              onGuest={onGuest}
-              onCancel={() => setReplyTo(null)}
-              onSubmit={async (b) => {
-                const ok = await onPost(b, c.id);
-                if (ok) setReplyTo(null);
-                return ok;
-              }}
-            />
-          </div>
-        ) : null}
-        {replies.length ? (
-          <>
-            <button
-              type="button"
-              onClick={() => setShow((s) => !s)}
-              className="mt-1.5 -ml-3 flex h-9 items-center gap-1.5 rounded-full px-3 text-[14px] font-medium text-accent hover:bg-accent-soft"
-            >
-              {show ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-              {replyCount(replies.length)}
-            </button>
-            {show ? <ul className="mt-2 space-y-4">{replies.map((r) => <li key={r.id}>{item(r, { onReply: () => startReply(r) })}</li>)}</ul> : null}
-          </>
-        ) : null}
+      <div className="relative">
+        {rows.length ? <span className="absolute top-11 bottom-0 left-[17px] w-0.5 bg-line" aria-hidden /> : null}
+        <CommentItem c={c} ctx={ctx} onReply={() => startReply(c)} />
       </div>
+      {rows.length ? (
+        <ul className="pl-12">
+          {rows.map((row, i) => (
+            <li key={row.key} className="relative pt-3">
+              {/* the trunk continues past every row but the last; each row gets an elbow */}
+              {i < rows.length - 1 ? <span className="absolute top-0 bottom-0 -left-[31px] w-0.5 bg-line" aria-hidden /> : null}
+              <span
+                className="absolute top-0 -left-[31px] w-6 rounded-bl-[14px] border-b-2 border-l-2 border-line"
+                style={{ height: 12 + row.elbow }}
+                aria-hidden
+              />
+              {row.node}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </li>
   );
 }
@@ -317,29 +361,10 @@ const replyCount = (n: number) => {
   return `${n} ${word}`;
 };
 
-function CommentItem({
-  c,
-  reply,
-  mine,
-  moderator,
-  signedIn,
-  duration,
-  onSeek,
-  onLike,
-  onReply,
-  onAction,
-}: {
-  c: Comment;
-  reply: boolean;
-  mine: boolean;
-  moderator: boolean;
-  signedIn: boolean;
-  duration: number;
-  onSeek: (t: number) => void;
-  onLike: () => void;
-  onReply?: () => void;
-  onAction: (w: "delete" | "report" | "approve" | "pin" | "unpin") => void;
-}) {
+function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply: () => void }) {
+  const { user, moderator } = ctx;
+  const reply = !!c.parentId;
+  const mine = c.author.id === user?.id;
   const [long, setLong] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const body = useRef<HTMLParagraphElement>(null);
@@ -347,13 +372,17 @@ function CommentItem({
     const el = body.current;
     if (el) setLong(el.scrollHeight > el.clientHeight + 2);
   }, [c.body]);
-  const items: { label: string; icon: ReactNode; run: () => void; danger?: boolean }[] = [];
-  if (moderator && c.status === "held") items.push({ label: "Опубликовать", icon: <ShieldCheck />, run: () => onAction("approve") });
-  if (moderator && !reply) items.push(c.pinned ? { label: "Открепить", icon: <PinOff />, run: () => onAction("unpin") } : { label: "Закрепить", icon: <Pin />, run: () => onAction("pin") });
-  if (!mine && signedIn) items.push({ label: "Пожаловаться", icon: <Flag />, run: () => onAction("report") });
-  if (mine || moderator) items.push({ label: "Удалить", icon: <Trash2 />, run: () => onAction("delete"), danger: true });
+  const items: MenuItem[] = [];
+  if (moderator && c.status === "held") items.push({ label: "Опубликовать", icon: <ShieldCheck />, run: () => ctx.act(c, "approve") });
+  if (moderator && !reply)
+    items.push(c.pinned ? { label: "Открепить", icon: <PinOff />, run: () => ctx.act(c, "unpin") } : { label: "Закрепить", icon: <Pin />, run: () => ctx.act(c, "pin") });
+  if (!mine && user) items.push({ label: "Пожаловаться", icon: <Flag />, run: () => ctx.act(c, "report") });
+  if (mine || moderator) items.push({ label: "Удалить", icon: <Trash2 />, run: () => ctx.act(c, "delete"), danger: true });
   return (
-    <div className="group flex gap-3">
+    <div
+      id={`comment-${c.id}`}
+      className={cn("group -mx-2 flex scroll-mt-40 gap-3 rounded-xl px-2 transition-colors duration-700", ctx.flash === c.id && "bg-accent-soft")}
+    >
       <Avatar user={c.author} size={reply ? 28 : 36} />
       <div className="min-w-0 flex-1">
         {c.pinned ? (
@@ -362,14 +391,16 @@ function CommentItem({
           </p>
         ) : null}
         <p className="flex flex-wrap items-baseline gap-x-2 text-[13px]">
-          <span className="font-medium">{c.author.name}</span>
+          <span className="font-medium" title={c.author.name}>
+            @{c.author.username}
+          </span>
           <span className="text-ink-3" title={new Date(c.createdAt).toLocaleString("ru-RU")}>
             {since(c.createdAt)}
           </span>
           {c.status === "held" ? <span className="rounded-md bg-accent-soft px-1.5 text-[12px] font-medium text-accent">на проверке</span> : null}
         </p>
-        <p ref={body} className={cn("mt-0.5 text-[15px] leading-snug break-words whitespace-pre-wrap", !expanded && "line-clamp-4")}>
-          {linkify(c.body, duration, onSeek)}
+        <p ref={body} className={cn("mt-0.5 text-[15px] leading-normal break-words whitespace-pre-wrap", !expanded && "line-clamp-4")}>
+          {richText(c.body, ctx.duration, ctx.onSeek)}
         </p>
         {long || expanded ? (
           <button type="button" onClick={() => setExpanded((e) => !e)} className="mt-1 text-[14px] font-medium text-ink-2 hover:text-ink">
@@ -379,7 +410,7 @@ function CommentItem({
         <div className="mt-1 -ml-2 flex items-center gap-1">
           <button
             type="button"
-            onClick={onLike}
+            onClick={() => ctx.like(c)}
             aria-pressed={!!c.liked}
             aria-label="Нравится"
             className="flex h-8 items-center gap-1.5 rounded-full px-2 text-[13px] text-ink-2 hover:bg-hover hover:text-ink"
@@ -387,7 +418,7 @@ function CommentItem({
             <ThumbsUp className={cn("size-4", c.liked && "fill-current text-ink")} />
             {c.likes ? <span className="tnum">{c.likes}</span> : null}
           </button>
-          {onReply && c.status === "published" ? (
+          {c.status === "published" ? (
             <button type="button" onClick={onReply} className="h-8 rounded-full px-3 text-[13px] font-medium hover:bg-hover">
               Ответить
             </button>
@@ -399,28 +430,46 @@ function CommentItem({
   );
 }
 
-/** Timecodes like 1:20 inside a comment become buttons that seek the video. */
-function linkify(text: string, duration: number, onSeek: (t: number) => void) {
+/** Timecodes like 1:20 become chips that seek the video; @mentions are highlighted. */
+function richText(text: string, duration: number, onSeek: (t: number) => void) {
   const out: ReactNode[] = [];
-  const re = /(^|[^\d:])(\d{1,2}):([0-5]\d)(?![\d:])/g;
+  const re = /(^|[^\p{L}\d_.@:])(?:(\d{1,2}):([0-5]\d)(?![\d:])|@([a-z][a-z0-9_.]{2,29}))/giu;
   let last = 0;
   for (let m = re.exec(text); m; m = re.exec(text)) {
+    const start = m.index + m[1].length;
+    const end = m.index + m[0].length;
+    if (m[4]) {
+      out.push(text.slice(last, start));
+      out.push(
+        <span key={start} className="rounded-md bg-accent-soft px-1 font-medium text-accent">
+          @{m[4]}
+        </span>,
+      );
+      last = end;
+      continue;
+    }
     const t = Number(m[2]) * 60 + Number(m[3]);
     if (duration && t > duration) continue;
-    const start = m.index + m[1].length;
     out.push(text.slice(last, start));
     out.push(
-      <button key={start} type="button" onClick={() => onSeek(t)} className="tnum font-medium text-accent hover:underline">
+      <button
+        key={start}
+        type="button"
+        onClick={() => onSeek(t)}
+        className="tnum rounded-md bg-accent-soft px-1 font-medium text-accent transition-colors hover:bg-accent hover:text-accent-ink"
+      >
         {timecode(t)}
       </button>,
     );
-    last = start + m[2].length + 1 + m[3].length;
+    last = end;
   }
   out.push(text.slice(last));
   return out;
 }
 
-function ItemMenu({ items }: { items: { label: string; icon: ReactNode; run: () => void; danger?: boolean }[] }) {
+type MenuItem = { label: string; icon: ReactNode; run: () => void; danger?: boolean };
+
+function ItemMenu({ items }: { items: MenuItem[] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -474,6 +523,7 @@ function ItemMenu({ items }: { items: { label: string; icon: ReactNode; run: () 
 function Composer({
   user,
   now,
+  people,
   placeholder,
   small,
   autoFocus,
@@ -484,6 +534,7 @@ function Composer({
 }: {
   user: User | null;
   now: () => number;
+  people: Author[];
   placeholder: string;
   small?: boolean;
   autoFocus?: boolean;
@@ -493,6 +544,7 @@ function Composer({
   onSubmit: (body: string) => Promise<boolean>;
 }) {
   const [text, setText] = useState(initial);
+  const [caret, setCaret] = useState(initial.length);
   const [active, setActive] = useState(!!autoFocus);
   const [busy, setBusy] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -501,19 +553,24 @@ function Composer({
     setActive(false);
     onCancel?.();
   };
-  const insertTime = () => {
-    const el = input.current;
-    const t = `${timecode(now())} `;
-    const at = el?.selectionStart ?? text.length;
-    const before = text.slice(0, at);
-    const pad = before && !/\s$/.test(before) ? " " : "";
-    setText(before + pad + t + text.slice(at));
+  const putAt = (from: number, to: number, insert: string) => {
+    setText(text.slice(0, from) + insert + text.slice(to));
+    const pos = from + insert.length;
     requestAnimationFrame(() => {
-      el?.focus();
-      const pos = at + pad.length + t.length;
-      el?.setSelectionRange(pos, pos);
+      input.current?.focus();
+      input.current?.setSelectionRange(pos, pos);
+      setCaret(pos);
     });
   };
+  const insertTime = () => {
+    const at = input.current?.selectionStart ?? text.length;
+    const pad = at > 0 && !/\s$/.test(text.slice(0, at)) ? " " : "";
+    putAt(at, at, `${pad}${timecode(now())} `);
+  };
+  // "@an" right before the caret: suggest people who wrote in this discussion.
+  const typed = /(^|\s)@([a-z0-9_.]*)$/i.exec(text.slice(0, caret));
+  const suggestions = typed ? people.filter((p) => p.username.startsWith(typed[2].toLowerCase()) || p.name.toLowerCase().includes(typed[2].toLowerCase())).slice(0, 5) : [];
+
   if (!user) {
     return (
       <div className="flex gap-3">
@@ -537,15 +594,50 @@ function Composer({
       }}
     >
       <Avatar user={user} size={small ? 28 : 36} />
-      <div className="min-w-0 flex-1" onFocus={() => setActive(true)}>
-        <NoteInput ref={input} autoFocus={autoFocus} value={text} onChange={setText} onCancel={cancel} placeholder={placeholder} />
+      <div
+        className="relative min-w-0 flex-1"
+        onFocus={() => setActive(true)}
+        onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+        onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+      >
+        <NoteInput
+          ref={input}
+          autoFocus={autoFocus}
+          value={text}
+          onChange={(v) => {
+            setText(v);
+            setCaret(input.current?.selectionStart ?? v.length);
+          }}
+          onCancel={cancel}
+          placeholder={placeholder}
+        />
+        {suggestions.length ? (
+          <ul className="absolute top-full left-0 z-30 mt-1 w-64 overflow-hidden rounded-xl bg-[var(--sheet)] py-1.5 shadow-[var(--shadow-pop)]">
+            {suggestions.map((p) => (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => putAt(caret - typed![2].length - 1, caret, `@${p.username} `)}
+                  className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left hover:bg-hover"
+                >
+                  <Avatar user={p} size={24} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[14px] font-medium">@{p.username}</span>
+                    <span className="block truncate text-[12px] text-ink-3">{p.name}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {active ? (
           <div className="mt-2 flex items-center gap-2">
             <button
               type="button"
               onClick={insertTime}
               className="tnum flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium text-accent hover:bg-accent-soft"
-              title="Вставить текущее время видео"
+              title="Вставить текущее время видео — оно станет ссылкой"
             >
               <Timer className="size-4" /> {timecode(now())}
             </button>

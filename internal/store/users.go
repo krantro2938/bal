@@ -60,6 +60,20 @@ func (s *Store) CreateUser(ctx context.Context, n NewUser) (*User, error) {
 	if e := NormalizeEmail(n.Email); e != "" {
 		email = e
 	}
+	// The provider's handle (Telegram) is kept when it is valid and free; otherwise one is made from the name.
+	username := NormalizeUsername(n.Username)
+	if free, err := s.UsernameFree(ctx, username, 0); err != nil {
+		return nil, err
+	} else if !ValidUsername(username) || !free {
+		seed := usernameSeed(n.Name)
+		if ValidUsername(username) {
+			seed = username[:min(len(username), 16)]
+		}
+		if username, err = s.freeUsername(ctx, seed); err != nil {
+			return nil, err
+		}
+	}
+	n.Username = username
 	var id int64
 	err := s.db.QueryRowContext(ctx, `INSERT INTO users(name, username, picture, email, email_verified, password_hash, created_at)
 VALUES (?,?,?,?,?,?,?) RETURNING id`, n.Name, n.Username, n.Picture, email, n.EmailVerified, n.PasswordHash, time.Now().Unix()).Scan(&id)
@@ -79,14 +93,13 @@ ON CONFLICT(provider, subject) DO UPDATE SET user_id = excluded.user_id`, provid
 	return err
 }
 
-// RefreshProfile updates name/username/picture from a sign-in provider,
-// keeping existing values where the provider sent nothing.
-func (s *Store) RefreshProfile(ctx context.Context, userID int64, name, username, picture string) error {
+// RefreshProfile updates name/picture from a sign-in provider, keeping existing
+// values where the provider sent nothing. The @username belongs to the user now.
+func (s *Store) RefreshProfile(ctx context.Context, userID int64, name, picture string) error {
 	_, err := s.db.ExecContext(ctx, `UPDATE users SET
   name = CASE WHEN ? <> '' THEN ? ELSE name END,
-  username = CASE WHEN ? <> '' THEN ? ELSE username END,
   picture = CASE WHEN ? <> '' THEN ? ELSE picture END
-WHERE id = ?`, name, name, username, username, picture, picture, userID)
+WHERE id = ?`, name, name, picture, picture, userID)
 	return err
 }
 

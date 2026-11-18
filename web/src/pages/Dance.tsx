@@ -1,5 +1,5 @@
 import type { MediaPlayerInstance } from "@vidstack/react";
-import { Bookmark, ChevronDown, ExternalLink, Film, GraduationCap, Maximize2, Music, Pencil, ScrollText, Share2, Trash2 } from "lucide-react";
+import { Bookmark, ChevronDown, ExternalLink, Film, GraduationCap, Maximize2, Music, NotebookPen, Pencil, ScrollText, Share2, Trash2, X } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -11,7 +11,7 @@ import { Avatar } from "@/components/Header";
 import { ReactionPill } from "@/components/ReactionPill";
 import { SchemeViewer } from "@/components/SchemeViewer";
 import type { Loop } from "@/components/RehearsalPlayer";
-import { Star } from "@/components/Star";
+import { Tip } from "@/components/Tip";
 import { TelegramIcon } from "@/components/TelegramIcon";
 import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,27 @@ export function Dance() {
   const player = useRef<MediaPlayerInstance>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const startAt = useMemo(() => parseTime(params.get("t")), [params]);
+  const focusComment = Number(params.get("c")) || undefined;
+  const [tab, setTab] = useState<"comments" | "notes">(() => {
+    try {
+      return localStorage.getItem(TAB_KEY) === "notes" ? "notes" : "comments";
+    } catch {
+      return "comments";
+    }
+  });
+  const pickTab = (t: "comments" | "notes") => {
+    setTab(t);
+    try {
+      localStorage.setItem(TAB_KEY, t);
+    } catch {
+      /* storage blocked: the choice lasts for this page */
+    }
+  };
+  // A notification link opens the comments.
+  useEffect(() => {
+    if (focusComment) setTab("comments");
+  }, [focusComment]);
+  const [commentCount, setCommentCount] = useState(0);
   const cues = useThumbs(dance?.thumbnails);
 
   useEffect(() => {
@@ -178,6 +199,7 @@ export function Dance() {
     const t = currentTime();
     player.current?.pause();
     if (!user) return askLogin(`Чтобы сохранить заметку на ${timecode(t)}. Заметки видны только вам.`);
+    pickTab("notes");
     setNoteDraft((d) => (d && !d.id ? { ...d, t } : { t, text: "" }));
     window.setTimeout(() => {
       composer.current?.focus();
@@ -369,8 +391,20 @@ export function Dance() {
               >
                 Продолжить
               </button>
-              <button type="button" onClick={() => setResumeDismissed(true)} className="rounded-full px-2 py-1.5 text-sm text-ink-2 hover:text-ink">
+              <button
+                type="button"
+                onClick={() => setResumeDismissed(true)}
+                className="rounded-full px-2 py-1.5 text-sm text-ink-2 hover:text-ink"
+              >
                 Сначала
+              </button>
+              <button
+                type="button"
+                onClick={() => setResumeDismissed(true)}
+                className="-mr-2 grid size-8 place-items-center rounded-full text-ink-3 hover:bg-hover hover:text-ink"
+                aria-label="Скрыть"
+              >
+                <X className="size-4" />
               </button>
             </div>
           ) : null}
@@ -378,7 +412,7 @@ export function Dance() {
           {/* Description card, like YouTube's: short text, expands to the organizers' caption and sources. */}
           <div
             className={cn(
-              "mt-5 rounded-[var(--radius-sheet)] bg-surface-2 p-4 text-[16px] leading-relaxed lg:p-5 lg:text-[17px]",
+              "mt-5 rounded-[var(--radius-sheet)] bg-surface-2 p-4 text-[16px] leading-normal lg:p-5 lg:text-[17px]",
               !more && "cursor-pointer transition-colors hover:bg-line/60",
             )}
             onClick={() => !more && setMore(true)}
@@ -448,121 +482,147 @@ export function Dance() {
             </div>
           ) : null}
 
+          {/* Comments and private notes share one place; the last choice is remembered. */}
           <section className="mt-10">
-            <h2 className="mb-4 text-[20px] font-semibold">
-              Мои заметки{notes.length ? <span className="tnum ml-2 font-normal text-ink-3">{notes.length}</span> : null}
-            </h2>
-            <div className="flex gap-3">
-              {user ? (
-                <Avatar user={user} size={36} />
-              ) : (
-                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2">
-                  <Star className="size-4 text-accent" />
-                </span>
-              )}
-              {noteDraft && !noteDraft.id ? (
-                <form
-                  className="min-w-0 flex-1"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    saveNote();
-                  }}
+            <div role="tablist" className="mb-5 flex gap-6 border-b border-line">
+              {(
+                [
+                  ["comments", "Комментарии", commentCount],
+                  ["notes", "Мои заметки", notes.length],
+                ] as const
+              ).map(([id, label, n]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === id}
+                  onClick={() => pickTab(id)}
+                  className={cn(
+                    "-mb-px border-b-2 pb-2.5 text-[18px] font-semibold transition-colors",
+                    tab === id ? "border-ink text-ink" : "border-transparent text-ink-3 hover:text-ink-2",
+                  )}
                 >
-                  <span className="tnum mb-1.5 inline-block rounded-md bg-accent-soft px-1.5 py-0.5 text-[13px] font-medium text-accent">{timecode(noteDraft.t)}</span>
-                  <NoteInput
-                    ref={composer}
-                    value={noteDraft.text}
-                    onChange={(text) => setNoteDraft((d) => (d ? { ...d, text } : d))}
-                    onCancel={() => setNoteDraft(null)}
-                    placeholder="Например: на «три» — поворот под рукой, не забегать"
-                  />
-                  <div className="mt-2 flex justify-end gap-2">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setNoteDraft(null)}>
-                      Отмена
-                    </Button>
-                    <Button type="submit" variant="primary" size="sm" disabled={!noteDraft.text.trim()}>
-                      Сохранить
-                    </Button>
-                  </div>
-                </form>
-              ) : (
-                <button type="button" onClick={startNote} className="group min-w-0 flex-1 text-left">
-                  <span className="block border-b border-line pt-2 pb-2 text-[15px] text-ink-3 group-hover:border-ink-2">
-                    {user ? "Добавить заметку к текущему моменту…" : "Войдите, чтобы оставлять заметки — их видите только вы"}
-                  </span>
+                  {label}
+                  {n ? <span className="tnum ml-1.5 font-normal text-ink-3">{n}</span> : null}
                 </button>
-              )}
+              ))}
             </div>
-            {notes.length > 0 ? (
-              <ul className="mt-6 space-y-5">
-                {notes.map((n) => (
-                  <li key={n.id} className="group flex gap-3">
-                    {user ? <Avatar user={user} size={36} /> : null}
-                    <div className="min-w-0 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => seek(n.t, false)}
-                        className="tnum rounded-md bg-accent-soft px-1.5 py-0.5 text-[13px] font-medium text-accent hover:underline"
-                      >
-                        {timecode(n.t)}
-                      </button>
-                      {n.version !== dance.version ? <span className="ml-2 text-[12px] text-ink-3">к прошлой версии видео</span> : null}
-                      {noteDraft?.id === n.id ? (
-                        <form
-                          className="mt-1.5"
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            saveNote();
-                          }}
+            <div className={cn(tab !== "comments" && "hidden")}>
+              <Comments
+                slug={slug}
+                user={user}
+                duration={dance.video?.duration ?? dance.duration ?? 0}
+                now={currentTime}
+                onSeek={(t) => seek(t)}
+                askLogin={askLogin}
+                onCount={setCommentCount}
+                focusId={focusComment}
+              />
+            </div>
+            <div className={cn(tab !== "notes" && "hidden")}>
+              <div className="flex gap-3">
+                {user ? (
+                  <Avatar user={user} size={36} />
+                ) : (
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2">
+                    <NotebookPen className="size-4 text-accent" />
+                  </span>
+                )}
+                {noteDraft && !noteDraft.id ? (
+                  <form
+                    className="min-w-0 flex-1"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      saveNote();
+                    }}
+                  >
+                    <span className="tnum mb-1.5 inline-block rounded-md bg-accent-soft px-1.5 py-0.5 text-[13px] font-medium text-accent">{timecode(noteDraft.t)}</span>
+                    <NoteInput
+                      ref={composer}
+                      value={noteDraft.text}
+                      onChange={(text) => setNoteDraft((d) => (d ? { ...d, text } : d))}
+                      onCancel={() => setNoteDraft(null)}
+                      placeholder="Например: на «три» — поворот под рукой, не забегать"
+                    />
+                    <div className="mt-2 flex justify-end gap-2">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setNoteDraft(null)}>
+                        Отмена
+                      </Button>
+                      <Button type="submit" variant="primary" size="sm" disabled={!noteDraft.text.trim()}>
+                        Сохранить
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <button type="button" onClick={startNote} className="group min-w-0 flex-1 text-left">
+                    <span className="block border-b border-line pt-2 pb-2 text-[15px] text-ink-3 group-hover:border-ink-2">
+                      {user ? "Добавить заметку к текущему моменту…" : "Войдите, чтобы оставлять заметки — их видите только вы"}
+                    </span>
+                  </button>
+                )}
+              </div>
+              {notes.length > 0 ? (
+                <ul className="mt-6 space-y-5">
+                  {notes.map((n) => (
+                    <li key={n.id} className="group flex gap-3">
+                      {user ? <Avatar user={user} size={36} /> : null}
+                      <div className="min-w-0 flex-1">
+                        <button
+                          type="button"
+                          onClick={() => seek(n.t, false)}
+                          className="tnum rounded-md bg-accent-soft px-1.5 py-0.5 text-[13px] font-medium text-accent hover:underline"
                         >
-                          <NoteInput autoFocus value={noteDraft.text} onChange={(text) => setNoteDraft((d) => (d ? { ...d, text } : d))} onCancel={() => setNoteDraft(null)} />
-                          <div className="mt-2 flex justify-end gap-2">
-                            <Button type="button" variant="ghost" size="sm" onClick={() => setNoteDraft(null)}>
-                              Отмена
-                            </Button>
-                            <Button type="submit" variant="primary" size="sm" disabled={!noteDraft.text.trim()}>
-                              Сохранить
-                            </Button>
-                          </div>
-                        </form>
-                      ) : (
-                        <p className="mt-1 text-[15px] break-words whitespace-pre-wrap">{n.text}</p>
-                      )}
-                    </div>
-                    <div className={cn("flex shrink-0 gap-0.5 lg:opacity-0 lg:group-hover:opacity-100", noteDraft?.id === n.id && "hidden")}>
-                      <button
-                        type="button"
-                        onClick={() => setNoteDraft({ t: n.t, id: n.id, text: n.text })}
-                        className="grid size-9 place-items-center rounded-full text-ink-3 hover:bg-hover hover:text-ink"
-                        aria-label="Изменить заметку"
-                      >
-                        <Pencil className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteNote(n.id)}
-                        className="grid size-9 place-items-center rounded-full text-ink-3 hover:bg-hover hover:text-danger"
-                        aria-label="Удалить заметку"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : user ? (
-              <p className="mt-3 text-[14px] text-ink-3">Поставьте видео на паузу в трудном месте и нажмите «Заметка» — она откроется ровно на этой секунде.</p>
-            ) : null}
+                          {timecode(n.t)}
+                        </button>
+                        {n.version !== dance.version ? <span className="ml-2 text-[12px] text-ink-3">к прошлой версии видео</span> : null}
+                        {noteDraft?.id === n.id ? (
+                          <form
+                            className="mt-1.5"
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              saveNote();
+                            }}
+                          >
+                            <NoteInput autoFocus value={noteDraft.text} onChange={(text) => setNoteDraft((d) => (d ? { ...d, text } : d))} onCancel={() => setNoteDraft(null)} />
+                            <div className="mt-2 flex justify-end gap-2">
+                              <Button type="button" variant="ghost" size="sm" onClick={() => setNoteDraft(null)}>
+                                Отмена
+                              </Button>
+                              <Button type="submit" variant="primary" size="sm" disabled={!noteDraft.text.trim()}>
+                                Сохранить
+                              </Button>
+                            </div>
+                          </form>
+                        ) : (
+                          <p className="mt-1 text-[15px] break-words whitespace-pre-wrap">{n.text}</p>
+                        )}
+                      </div>
+                      <div className={cn("flex shrink-0 gap-0.5 lg:opacity-0 lg:group-hover:opacity-100", noteDraft?.id === n.id && "hidden")}>
+                        <button
+                          type="button"
+                          onClick={() => setNoteDraft({ t: n.t, id: n.id, text: n.text })}
+                          className="grid size-9 place-items-center rounded-full text-ink-3 hover:bg-hover hover:text-ink"
+                          aria-label="Изменить заметку"
+                        >
+                          <Pencil className="size-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteNote(n.id)}
+                          className="grid size-9 place-items-center rounded-full text-ink-3 hover:bg-hover hover:text-danger"
+                          aria-label="Удалить заметку"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : user ? (
+                <p className="mt-3 text-[14px] text-ink-3">Поставьте видео на паузу в трудном месте и нажмите «Заметка» — она откроется ровно на этой секунде.</p>
+              ) : null}
+            </div>
           </section>
-
-          <Comments
-            slug={slug}
-            user={user}
-            duration={dance.video?.duration ?? dance.duration ?? 0}
-            now={currentTime}
-            onSeek={(t) => seek(t)}
-            askLogin={askLogin}
-          />
         </div>
       </div>
 
@@ -652,6 +712,8 @@ export function Dance() {
 }
 
 /** Pill button; `iconOnly` drops the text and shows it as a tooltip after a short hover. */
+const TAB_KEY = "bal:discussion-tab";
+
 function Pill({
   onClick,
   icon,
@@ -674,16 +736,14 @@ function Pill({
       aria-pressed={pressed}
       aria-label={label}
       className={cn(
-        "group/pill relative flex h-9 shrink-0 items-center gap-2 rounded-full text-sm font-medium [&_svg]:size-[18px]",
+        "group/tip relative flex h-9 shrink-0 items-center gap-2 rounded-full text-sm font-medium [&_svg]:size-[18px]",
         iconOnly ? "w-9 justify-center" : "px-2.5 sm:px-3.5",
         strong ? "bg-accent text-accent-ink" : "bg-surface-2 hover:bg-line",
       )}
     >
       {icon}
       {iconOnly ? (
-        <span className="pointer-events-none absolute top-full left-1/2 z-30 mt-2 -translate-x-1/2 rounded-md bg-ink px-2 py-1 text-[12px] whitespace-nowrap text-bg opacity-0 transition-opacity [@media(hover:hover)]:group-hover/pill:opacity-100 [@media(hover:hover)]:group-hover/pill:delay-500">
-          {label}
-        </span>
+        <Tip label={label} />
       ) : (
         <span className="max-sm:hidden">{label}</span>
       )}

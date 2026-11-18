@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -117,6 +118,7 @@ func (s *Server) handleCreateComment(w http.ResponseWriter, r *http.Request, u *
 	}
 	if c.Status == "published" {
 		s.events.publish(slug, event{Type: "comment", Comment: &c})
+		s.notify(r.Context(), c)
 	}
 	out := map[string]any{"comment": c}
 	if v.Status == moderation.Held {
@@ -222,6 +224,7 @@ func (s *Server) handleApproveComment(w http.ResponseWriter, r *http.Request, u 
 	}
 	c.Status, c.Liked = "published", false
 	s.events.publish(c.Dance, event{Type: "comment", Comment: &c})
+	s.notify(r.Context(), c)
 	writeJSON(w, http.StatusOK, c)
 }
 
@@ -323,7 +326,18 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	ch, done, ok := s.events.subscribe(slug)
+	s.stream(w, r, slug)
+}
+
+// handleMyEvents streams the signed-in user's own events (new notifications).
+func (s *Server) handleMyEvents(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s.stream(w, r, userChannel(u.ID))
+}
+
+func userChannel(id int64) string { return "user:" + strconv.FormatInt(id, 10) }
+
+func (s *Server) stream(w http.ResponseWriter, r *http.Request, key string) {
+	ch, done, ok := s.events.subscribe(key)
 	if !ok {
 		w.Header().Set("Retry-After", "60")
 		http.Error(w, "too many watchers", http.StatusServiceUnavailable)
@@ -355,4 +369,126 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+}
+
+// --- mentions and notifications ---
+
+var mentionRe = regexp.MustCompile(`(?i)(?:^|[^\p{L}\d_.@])@([a-z][a-z0-9_.]{2,29})`)
+
+// mentions returns the distinct @handles in a comment, lower-cased.
+func mentions(body string) []string {
+	var out []string
+	for _, m := range mentionRe.FindAllStringSubmatch(body, 20) {
+		u := strings.TrimRight(strings.ToLower(m[1]), ".")
+		if !slices.Contains(out, u) {
+			out = append(out, u)
+		}
+	}
+	return out
+}
+
+// notify tells the thread's author about a reply and everyone @mentioned, never the writer.
+func (s *Server) notify(ctx context.Context, c store.Comment) {
+	who := map[int64]string{}
+	if c.ParentID != 0 {
+		if p, err := s.store.Comment(ctx, c.ParentID, 0); err == nil {
+			who[p.Author.ID] = "reply"
+		}
+	}
+	if names := mentions(c.Body); len(names) > 0 {
+		ids, err := s.store.UserIDsByUsername(ctx, names)
+		if err != nil {
+			logErr(err)
+		}
+		for _, id := range ids {
+			if _, ok := who[id]; !ok {
+				who[id] = "mention"
+			}
+		}
+	}
+	delete(who, c.Author.ID)
+	for id, kind := range who {
+		added, err := s.store.Notify(ctx, id, kind, c.ID)
+		if err != nil {
+			logErr(err)
+			continue
+		}
+		if added {
+			s.events.publish(userChannel(id), event{Type: "notification"})
+		}
+	}
+}
+
+type notificationDTO struct {
+	store.Notification
+	DanceTitle string `json:"danceTitle"`
+}
+
+func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request, u *store.User) {
+	list, unread, err := s.store.Notifications(r.Context(), u.ID)
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+	src, _, err := s.lib.Snapshot()
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+	out := make([]notificationDTO, 0, len(list))
+	for _, n := range list {
+		d := notificationDTO{Notification: n}
+		if dance := src.Find(n.Comment.Dance); dance != nil {
+			d.DanceTitle = dance.Title
+		}
+		out = append(out, d)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": out, "unread": unread})
+}
+
+func (s *Server) handleReadNotifications(w http.ResponseWriter, r *http.Request, u *store.User) {
+	if err := s.store.MarkNotificationsRead(r.Context(), u.ID); err != nil {
+		httpError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleUpdateMe changes the user's @username.
+func (s *Server) handleUpdateMe(w http.ResponseWriter, r *http.Request, u *store.User) {
+	var in struct {
+		Username string `json:"username"`
+	}
+	if err := decodeJSON(r, &in); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Неверный запрос"})
+		return
+	}
+	name := store.NormalizeUsername(in.Username)
+	if !store.ValidUsername(name) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "3–30 символов: латинские буквы, цифры, «_» и «.», начинается с буквы", "field": "username"})
+		return
+	}
+	if err := s.store.SetUsername(r.Context(), u.ID, name); errors.Is(err, store.ErrUsernameTaken) {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "Это имя уже занято", "field": "username"})
+		return
+	} else if err != nil {
+		httpError(w, err)
+		return
+	}
+	u.Username = name
+	writeJSON(w, http.StatusOK, map[string]any{"user": u})
+}
+
+// handleUsernameFree answers the live check in the username field.
+func (s *Server) handleUsernameFree(w http.ResponseWriter, r *http.Request, u *store.User) {
+	name := store.NormalizeUsername(r.URL.Query().Get("u"))
+	free := false
+	if store.ValidUsername(name) {
+		var err error
+		if free, err = s.store.UsernameFree(r.Context(), name, u.ID); err != nil {
+			httpError(w, err)
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"valid": store.ValidUsername(name), "free": free})
 }
