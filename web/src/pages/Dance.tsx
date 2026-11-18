@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { AudioTrack } from "@/components/AudioTrack";
 import { ChaptersCarousel, ChaptersPanel } from "@/components/ChaptersPanel";
 import { Comments } from "@/components/Comments";
-import { Badge, CompactCard, Cover, isNew, NewBadge } from "@/components/DanceCard";
+import { Badge, CompactCard, Cover, isNew, NewBadge, Views } from "@/components/DanceCard";
 import { Avatar } from "@/components/Header";
 import { ReactionPill } from "@/components/ReactionPill";
 import { SchemeViewer } from "@/components/SchemeViewer";
@@ -19,7 +19,7 @@ import { AuthPrompt } from "@/components/AuthPrompt";
 import { NoteInput } from "@/components/NoteInput";
 import { api, ApiError } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
-import { ago, fullDate, parseTime, timecode, viewsLabel } from "@/lib/format";
+import { ago, fullDate, parseTime, timecode } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { shareLink } from "@/lib/share";
 import { useThumbs } from "@/lib/thumbs";
@@ -386,7 +386,7 @@ export function Dance() {
           <h1 className="font-title mt-4 text-[24px] leading-tight sm:mt-6 lg:text-[30px]">{dance.title}</h1>
           {/* Phones: views and date under the title, like YouTube's app; the description card drops them. */}
           <p className="tnum mt-1 flex flex-wrap gap-x-2 text-[13px] text-ink-3 sm:hidden">
-            <span>{viewsLabel(dance.views)}</span>
+            <Views n={dance.views} />
             {dance.published ? <span>{ago(dance.published)}</span> : null}
             {facts.map((f) => (
               <span key={f}>{f}</span>
@@ -473,7 +473,7 @@ export function Dance() {
             onClick={() => !more && setMore(true)}
           >
             <p className={cn("tnum flex flex-wrap gap-x-2.5 text-[14px] font-semibold", !more && "max-sm:hidden")}>
-              <span>{viewsLabel(dance.views)}</span>
+              <Views n={dance.views} />
               {dance.published ? <span title={fullDate(dance.published)}>{more ? fullDate(dance.published) : ago(dance.published)}</span> : null}
               {isNew(dance) ? (
                 <span className="self-center">

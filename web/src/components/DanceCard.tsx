@@ -84,7 +84,7 @@ export function Badge({ dance, size = 36 }: { dance: DanceSummary; size?: number
 }
 
 /** Views the YouTube way: ▷ and a short number. */
-function Views({ n }: { n: number }) {
+export function Views({ n }: { n: number }) {
   return (
     <span className="inline-flex items-center gap-1" aria-label={viewsLabel(n)} title={viewsLabel(n)}>
       <Play className="size-3 shrink-0" strokeWidth={2.25} aria-hidden />
