@@ -48,6 +48,9 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   const [sort, setSort] = useState<"top" | "new">("top");
   const [error, setError] = useState(false);
   const [open, setOpen] = useState(!!focusId); // phones: the list opens from a teaser card
+  // On computers the list is always open; on phones only after the teaser is tapped.
+  const openRef = useRef(open);
+  openRef.current = open || matchMedia("(min-width: 1024px)").matches;
   const userId = user?.id;
 
   const load = useCallback(() => {
@@ -74,13 +77,15 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       const e = JSON.parse(m.data) as CommentEvent;
       if (e.type === "comment") {
         const c = e.comment;
-        const direct = !!c.parentId || c.author.id === userId;
         setList((l) => {
           if (!l) return l;
           if (l.some((x) => x.id === c.id)) return l.map((x) => (x.id === c.id ? { ...x, ...c, liked: c.deleted ? false : x.liked } : x));
+          // Someone else's new thread waits behind the "new comments" pill only while the open list
+          // has threads that someone might be reading; otherwise (empty, or folded on a phone) it goes straight in.
+          const direct = !!c.parentId || c.author.id === userId || !openRef.current || !l.some((x) => !x.parentId);
+          if (!direct) setPending((p) => (p.some((x) => x.id === c.id) ? p : [...p, c]));
           return direct ? [...l, c] : l;
         });
-        if (!direct) setPending((p) => (p.some((x) => x.id === c.id) ? p : [...p, c]));
       } else if (e.type === "removed") {
         setList((l) => l && without(l, e.id));
         setPending((p) => without(p, e.id));
