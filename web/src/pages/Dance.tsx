@@ -465,12 +465,12 @@ export function Dance() {
                     })}
                   </ul>
                 </div>
-                <button type="button" onClick={() => setMore(false)} className="mt-5 text-[15px] font-medium">
+                <button type="button" onClick={() => setMore(false)} className="mt-5 text-[15px] font-medium underline-offset-4 hover:underline">
                   Свернуть
                 </button>
               </>
             ) : (
-              <span className="mt-2 flex items-center gap-1 text-[15px] font-medium">
+              <span className="mt-2 flex w-fit items-center gap-1 text-[15px] font-medium underline-offset-4 hover:underline">
                 ещё <ChevronDown className="size-4" />
               </span>
             )}

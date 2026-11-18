@@ -42,8 +42,10 @@ function AuthCard({ title, subtitle, children }: { title: string; subtitle: stri
     <main className="grid min-h-[calc(100dvh-72px)] overflow-hidden md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       {/* Art panel: the posters' night sky as pixel art, slanted on its right edge */}
       <div className="relative h-56 md:h-auto md:py-4">
-        <div className="absolute inset-0 overflow-hidden rounded-b-[32px] md:inset-y-4 md:-left-24 md:right-6 md:-skew-x-[7deg] md:rounded-[40px]">
-          <div className="absolute inset-0 md:-inset-x-16 md:skew-x-[7deg]">
+        {/* The slanted box starts far enough left that its rounded left corners stay off-screen; the
+            counter-skewed sky inside is wide enough to fill the slant's corners. */}
+        <div className="absolute inset-0 overflow-hidden rounded-b-[32px] md:inset-y-4 md:-left-48 md:right-6 md:-skew-x-[7deg] md:rounded-[40px]">
+          <div className="absolute inset-0 md:-inset-x-48 md:skew-x-[7deg]">
             <PixelSky className="size-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#05091a]/90 via-[#05091a]/10 to-[#05091a]/30" />
           </div>
