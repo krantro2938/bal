@@ -425,9 +425,10 @@ function Strip({
 }
 
 /**
- * When the video ends (not while a fragment repeats), YouTube-style: the picture dims a little
- * and a card offers the next dance ("Смотреть" or ✕). Closed, only replay remains, between
- * previous and next. The layer lets clicks through, so the timeline still works.
+ * When the video ends (not while a fragment repeats), like YouTube's end screen: big cards for
+ * the next dances in the corners and a round replay button, over the last frame (no dimming).
+ * On phones, one compact card with ✕; closed, replay between previous and next. Clicks pass
+ * through everywhere else, so the timeline keeps working; seeking back hides the screen.
  */
 function EndScreen({ next, prev, onReplay }: { next: DanceSummary[]; prev?: DanceSummary; onReplay: () => void }) {
   const ended = useMediaState("ended");
@@ -435,78 +436,100 @@ function EndScreen({ next, prev, onReplay }: { next: DanceSummary[]; prev?: Danc
   useEffect(() => {
     if (!ended) setClosed(false);
   }, [ended]);
-  if (!ended) return null;
-  const [up, ...more] = next;
+  if (!ended || !next.length) return null;
+  const [up, second, third] = next;
   const round = "pointer-events-auto grid place-items-center rounded-full text-white transition-colors hover:bg-white/15";
   return (
-    <div className="pointer-events-none absolute inset-0 z-20 bg-black/40">
-      <div className="absolute inset-x-0 top-0 bottom-14 flex items-center justify-center p-2.5 sm:bottom-16 sm:p-3">
-        {up && !closed ? (
-          <div className="pointer-events-auto relative w-[min(100%,420px)] rounded-xl bg-[#05091a]/90 p-2.5 text-[#ece6d6] shadow-2xl sm:p-4">
+    <div className="pointer-events-none absolute inset-0 z-20 @container">
+      {/* Tablets and computers: the YouTube layout, sized by the player's width. */}
+      <div className="absolute inset-x-[7%] top-[7%] bottom-[18%] max-sm:hidden">
+        <EndCard d={up} label="Следующий" className="top-0 left-0" />
+        {second ? <EndCard d={second} className="bottom-0 left-0" /> : null}
+        {third ? <EndCard d={third} className="top-0 right-0" /> : null}
+        <button
+          type="button"
+          onClick={onReplay}
+          className="pointer-events-auto absolute right-[4%] bottom-0 grid aspect-square w-[13cqw] place-items-center rounded-full bg-[#ece6d6] text-[#0a1028] shadow-xl transition-transform hover:scale-105"
+          aria-label="Смотреть снова"
+          title="Смотреть снова"
+        >
+          <RotateCcw className="size-[45%]" />
+        </button>
+      </div>
+
+      {/* Phones: one card. */}
+      <div className="absolute inset-x-0 top-0 bottom-14 flex items-center justify-center p-2.5 sm:hidden">
+        {!closed ? (
+          <div className="pointer-events-auto relative w-full max-w-[420px] rounded-xl bg-[#05091a]/90 p-2.5 text-[#ece6d6] shadow-2xl">
             <button
               type="button"
               onClick={() => setClosed(true)}
-              className="absolute top-2 right-2 grid size-8 place-items-center rounded-full text-[#ece6d6]/70 hover:bg-white/10 hover:text-white"
+              className="absolute top-1.5 right-1.5 grid size-8 place-items-center rounded-full text-[#ece6d6]/70 hover:bg-white/10 hover:text-white"
               aria-label="Закрыть"
             >
               <X className="size-4" />
             </button>
-            <p className="text-[12px] text-[#ece6d6]/60 max-sm:hidden">Следующий</p>
-            <Link to={`/dance/${up.slug}`} className="group flex gap-3 pr-7 sm:mt-1.5">
-              <span className="relative block aspect-video w-24 shrink-0 overflow-hidden rounded-md bg-black/40 sm:w-36">
+            <Link to={`/dance/${up.slug}`} className="group flex gap-3 pr-7">
+              <span className="relative block aspect-video w-36 shrink-0 overflow-hidden rounded-md bg-black/40">
                 {up.posterSmall ? <img src={up.posterSmall} alt="" className="size-full object-cover" /> : null}
                 {up.duration ? <span className="tnum absolute right-1 bottom-1 rounded bg-black/75 px-1 text-[11px]">{timecode(up.duration)}</span> : null}
               </span>
               <span className="self-center">
-                <span className="block text-[11px] text-[#ece6d6]/60 sm:hidden">Следующий</span>
-                <span className="line-clamp-2 text-[14px] leading-snug font-medium group-hover:underline sm:text-[16px]">{up.title}</span>
+                <span className="block text-[11px] text-[#ece6d6]/60">Следующий</span>
+                <span className="line-clamp-2 text-[14px] leading-snug font-medium group-hover:underline">{up.title}</span>
               </span>
             </Link>
-            <div className="mt-2.5 flex gap-2 sm:mt-3">
-              <button type="button" onClick={onReplay} className="flex h-8 flex-1 sm:h-9 items-center justify-center gap-1.5 rounded-full bg-white/10 text-[13px] font-medium hover:bg-white/20">
+            <div className="mt-2.5 flex gap-2">
+              <button type="button" onClick={onReplay} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-full bg-white/10 text-[13px] font-medium hover:bg-white/20">
                 <RotateCcw className="size-4" /> Ещё раз
               </button>
               <Link
                 to={`/dance/${up.slug}`}
-                className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#e8ddc2] sm:h-9 text-[13px] font-semibold text-[#0a1028] hover:bg-white"
+                className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#e8ddc2] text-[13px] font-semibold text-[#0a1028] hover:bg-white"
               >
                 <Play className="size-4 fill-current" /> Смотреть
               </Link>
             </div>
-            {more.length ? (
-              <ul className="mt-3 hidden gap-2 border-t border-white/10 pt-3 sm:flex">
-                {more.slice(0, 2).map((d) => (
-                  <li key={d.slug} className="min-w-0 flex-1">
-                    <Link to={`/dance/${d.slug}`} className="group flex items-center gap-2">
-                      <span className="block aspect-video w-16 shrink-0 overflow-hidden rounded bg-black/40">
-                        {d.posterSmall ? <img src={d.posterSmall} alt="" className="size-full object-cover" /> : null}
-                      </span>
-                      <span className="line-clamp-2 text-[12px] leading-snug text-[#ece6d6]/80 group-hover:underline">{d.title}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
           </div>
         ) : (
-          <div className="flex items-center gap-6 sm:gap-10">
+          <div className="flex items-center gap-6">
             {prev ? (
-              <Link to={`/dance/${prev.slug}`} className={cn(round, "size-11")} aria-label={`Предыдущий: ${prev.title}`} title={prev.title}>
+              <Link to={`/dance/${prev.slug}`} className={cn(round, "size-11 bg-black/40")} aria-label={`Предыдущий: ${prev.title}`} title={prev.title}>
                 <SkipBack className="size-6 fill-current" />
               </Link>
             ) : null}
-            <button type="button" onClick={onReplay} className={cn(round, "size-16 bg-black/30")} aria-label="Смотреть снова" title="Смотреть снова">
+            <button type="button" onClick={onReplay} className={cn(round, "size-16 bg-black/50")} aria-label="Смотреть снова" title="Смотреть снова">
               <RotateCcw className="size-8" />
             </button>
-            {up ? (
-              <Link to={`/dance/${up.slug}`} className={cn(round, "size-11")} aria-label={`Следующий: ${up.title}`} title={up.title}>
-                <SkipForward className="size-6 fill-current" />
-              </Link>
-            ) : null}
+            <Link to={`/dance/${up.slug}`} className={cn(round, "size-11 bg-black/40")} aria-label={`Следующий: ${up.title}`} title={up.title}>
+              <SkipForward className="size-6 fill-current" />
+            </Link>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+/** A big end-screen card: the poster with the title over its top edge and the length in the corner. */
+function EndCard({ d, label, className }: { d: DanceSummary; label?: string; className: string }) {
+  return (
+    <Link
+      to={`/dance/${d.slug}`}
+      className={cn(
+        "group pointer-events-auto absolute block aspect-video w-[30cqw] overflow-hidden rounded-[1cqw] bg-black text-white shadow-xl ring-1 ring-white/30 transition hover:ring-2 hover:ring-white",
+        className,
+      )}
+    >
+      {d.posterSmall ? <img src={d.poster || d.posterSmall} alt="" className="size-full object-cover" /> : null}
+      <span className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/80 via-black/40 to-transparent px-[1.2cqw] pt-[0.9cqw] pb-[2.5cqw]">
+        {label ? <span className="block text-[max(10px,1.1cqw)] font-medium text-white/75">{label}</span> : null}
+        <span className="line-clamp-2 text-[max(12px,1.75cqw)] leading-tight font-medium">{d.title}</span>
+      </span>
+      {d.duration ? (
+        <span className="tnum absolute right-[0.9cqw] bottom-[0.9cqw] rounded bg-black/80 px-[0.5cqw] text-[max(10px,1.2cqw)] font-medium">{timecode(d.duration)}</span>
+      ) : null}
+    </Link>
   );
 }
 
