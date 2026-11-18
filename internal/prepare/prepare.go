@@ -123,13 +123,18 @@ func Prepare(ctx context.Context, d *content.Source, cfg Config) (*content.Meta,
 	m.Video.Source.Duration = sp.Duration
 	m.Video.Source.Codec = sp.Video.Codec
 
-	// 1. Browser MP4.
-	videoName := "video-" + version + ".mp4"
-	videoPath := filepath.Join(outDir, videoName)
+	// 1. Browser MP4. Remuxed files keep the plain name; transcodes carry the encoder
+	// generation too, because media URLs are cached as immutable: new bytes need a new URL.
+	// (Notes and progress follow Version, the source hash, so they survive a re-encode.)
 	mode := "remux"
 	if !canRemux(sp) {
 		mode = "transcode"
 	}
+	videoName := "video-" + version + ".mp4"
+	if mode == "transcode" {
+		videoName = "video-" + version + "-" + EncodeGeneration + ".mp4"
+	}
+	videoPath := filepath.Join(outDir, videoName)
 	if cfg.Force || !exists(videoPath) {
 		cfg.Log.Printf("%s: %s %s (%dx%d %s, %.1f Mbit/s)", d.Slug, mode, video.OriginalFilename,
 			sp.Video.Width, sp.Video.Height, sp.Video.FrameRate, float64(sp.Bitrate)/1e6)
@@ -260,6 +265,13 @@ func canRemux(p *Probe) bool {
 	return v.Codec == "h264" && v.PixFmt == "yuv420p" && audioOK && p.Bitrate > 0 && p.Bitrate <= MaxRemuxBitrate
 }
 
+// EncodeGeneration names the transcode settings below; bump it when they change.
+//
+// e2: x264 "slower" at CRF 22. Measured with VMAF against the camera originals it matches the
+// first encode ("medium", CRF 21) within 0.3 points (95.6 vs 95.9, 96.7 vs 97.0), well under
+// what anyone can see, at about 20% fewer bytes.
+const EncodeGeneration = "e2"
+
 func buildVideo(ctx context.Context, in, out string, p *Probe, mode string) error {
 	tmp := out + ".part.mp4"
 	args := []string{"-v", "error", "-y", "-i", in, "-map", "0:v:0", "-map", "0:a:0?", "-map_metadata", "-1"}
@@ -271,7 +283,7 @@ func buildVideo(ctx context.Context, in, out string, p *Probe, mode string) erro
 			maxrate = "7M"
 		}
 		args = append(args,
-			"-c:v", "libx264", "-preset", "medium", "-crf", "21",
+			"-c:v", "libx264", "-preset", "slower", "-crf", "22",
 			"-maxrate", maxrate, "-bufsize", "10M",
 			"-profile:v", "high", "-pix_fmt", "yuv420p",
 			"-fps_mode", "passthrough", "-tag:v", "avc1")
