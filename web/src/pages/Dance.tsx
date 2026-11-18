@@ -291,7 +291,7 @@ export function Dance() {
   ].filter((f): f is string => !!f);
 
   return (
-    <main className="grid gap-x-8 px-4 pt-2 pb-24 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:pt-6 2xl:gap-x-10">
+    <main className="grid gap-x-8 px-4 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:pt-6 2xl:gap-x-10">
       <div className="min-w-0">
         <div className="sticky top-16 z-20 -mx-4 bg-bg px-4 pt-2 sm:static sm:mx-0 sm:px-0 sm:pt-0">
           {dance.video ? (
@@ -339,6 +339,8 @@ export function Dance() {
               </div>
             </div>
             <div className="-mr-4 flex flex-1 gap-2 overflow-x-auto pr-4 max-sm:min-w-0 [scrollbar-width:none] sm:mr-0 sm:flex-auto sm:overflow-visible sm:pr-0 2xl:justify-end">
+              {/* On phones the actions sit at the right edge; the spacer collapses if they need to scroll. */}
+              <span className="flex-1 sm:hidden" />
               <ReactionPill likes={dance.likes} dislikes={dance.dislikes} mine={dance.myReaction} onReact={react} />
               <Pill onClick={() => share()} icon={<Share2 />} label="Поделиться" />
               <Pill
