@@ -49,6 +49,27 @@ const ru: Partial<DefaultLayoutTranslations> = {
 
 const SPEEDS = [0.5, 0.75, 1] as const;
 
+// Volume and mute carry over to every video on this device.
+const VOLUME_KEY = "bal:volume";
+
+function savedVolume(): { volume: number; muted: boolean } {
+  try {
+    const v = JSON.parse(localStorage.getItem(VOLUME_KEY) ?? "null");
+    if (v && typeof v.volume === "number" && v.volume >= 0 && v.volume <= 1) return { volume: v.volume, muted: !!v.muted };
+  } catch {
+    /* storage blocked or bad value */
+  }
+  return { volume: 1, muted: false };
+}
+
+function saveVolume(volume: number, muted: boolean) {
+  try {
+    localStorage.setItem(VOLUME_KEY, JSON.stringify({ volume, muted }));
+  } catch {
+    /* storage blocked: lasts for this page */
+  }
+}
+
 export function RehearsalPlayer({
   dance,
   player,
@@ -77,6 +98,7 @@ export function RehearsalPlayer({
   withBar?: boolean;
 }) {
   const video = dance.video!;
+  const [sound] = useState(savedVolume);
   const loopRef = useRef(loop);
   loopRef.current = loop;
   const started = useRef(false);
@@ -107,6 +129,9 @@ export function RehearsalPlayer({
         src={{ src: video.url, type: "video/mp4" }}
         playsInline
         preload="metadata"
+        volume={sound.volume}
+        muted={sound.muted}
+        onVolumeChange={(d) => saveVolume(d.volume, d.muted)}
         keyShortcuts={{ togglePaused: "k Space", seekBackward: "j J ArrowLeft", seekForward: "l L ArrowRight", toggleFullscreen: "f" }}
         onLoadedMetadata={onReady}
         onCanPlay={() => {

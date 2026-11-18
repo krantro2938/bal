@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, type Ref } from "react";
+import { cn } from "@/lib/utils";
 
 /** Auto-growing textarea for inline notes; Ctrl/⌘+Enter saves, Escape cancels. */
 export function NoteInput({
@@ -8,6 +9,7 @@ export function NoteInput({
   onCancel,
   placeholder,
   autoFocus,
+  className,
 }: {
   ref?: Ref<HTMLTextAreaElement>;
   value: string;
@@ -15,6 +17,7 @@ export function NoteInput({
   onCancel: () => void;
   placeholder?: string;
   autoFocus?: boolean;
+  className?: string;
 }) {
   const own = useRef<HTMLTextAreaElement>(null);
   useLayoutEffect(() => {
@@ -40,7 +43,10 @@ export function NoteInput({
         if (e.key === "Escape") onCancel();
         if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) e.currentTarget.form?.requestSubmit();
       }}
-      className="block w-full resize-none overflow-hidden border-0 border-b-2 border-ink-2 bg-transparent pb-2 text-[15px] text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none"
+      className={cn(
+        "block w-full resize-none overflow-hidden border-0 border-b-2 border-ink-2 bg-transparent pb-2 text-[15px] text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none",
+        className,
+      )}
     />
   );
 }

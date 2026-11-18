@@ -230,6 +230,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
         <Composer
           user={user}
           now={now}
+          duration={duration}
           people={people}
           placeholder="Напишите комментарий…"
           onGuest={() => askLogin("Чтобы писать комментарии. Пишите уважительно — грубые комментарии не публикуются.")}
@@ -322,6 +323,7 @@ function Thread({ c, depth, ctx }: { c: Comment; depth: number; ctx: ThreadCtx }
         <Composer
           user={ctx.user}
           now={ctx.now}
+          duration={ctx.duration}
           people={ctx.people}
           small
           autoFocus
@@ -467,41 +469,62 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
   );
 }
 
-/** Timecodes like 1:20 become chips that seek the video; @mentions are blue, like YouTube's. */
-function richText(text: string, duration: number, onSeek: (t: number) => void) {
-  const out: ReactNode[] = [];
-  const re = /(^|[^\p{L}\d_.@:])(?:(\d{1,2}):([0-5]\d)(?![\d:])|@([a-z][a-z0-9_.]{2,29}))/giu;
+const TOKENS = /(^|[^\p{L}\d_.@:])(?:(\d{1,2}):([0-5]\d)(?![\d:])|@([a-z][a-z0-9_.]{2,29}))/giu;
+
+/** Splits a comment into text, timecodes (within the video) and @mentions. */
+function tokens(text: string, duration: number) {
+  const out: ({ text: string } | { t: number; text: string } | { mention: string; text: string })[] = [];
   let last = 0;
-  for (let m = re.exec(text); m; m = re.exec(text)) {
+  for (const m of text.matchAll(TOKENS)) {
     const start = m.index + m[1].length;
     const end = m.index + m[0].length;
-    if (m[4]) {
-      out.push(text.slice(last, start));
-      out.push(
-        <span key={start} className="font-medium text-link">
-          @{m[4]}
-        </span>,
-      );
-      last = end;
-      continue;
+    if (m[4]) out.push({ text: text.slice(last, start) }, { mention: m[4], text: text.slice(start, end) });
+    else {
+      const t = Number(m[2]) * 60 + Number(m[3]);
+      if (duration && t > duration) continue;
+      out.push({ text: text.slice(last, start) }, { t, text: text.slice(start, end) });
     }
-    const t = Number(m[2]) * 60 + Number(m[3]);
-    if (duration && t > duration) continue;
-    out.push(text.slice(last, start));
-    out.push(
-      <button
-        key={start}
-        type="button"
-        onClick={() => onSeek(t)}
-        className="tnum rounded-md bg-accent-soft px-1 font-medium text-accent transition-colors hover:bg-accent hover:text-accent-ink"
-      >
-        {timecode(t)}
-      </button>,
-    );
     last = end;
   }
-  out.push(text.slice(last));
+  out.push({ text: text.slice(last) });
   return out;
+}
+
+// Chips get their padding from a box-shadow so they keep the text's exact width (the composer's mirror depends on it).
+const timeChip = "tnum rounded-[4px] bg-accent-soft text-accent shadow-[0_0_0_3px_var(--accent-soft)]";
+
+/** A posted comment: timecodes are chips that seek the video; @mentions are blue, like YouTube's. */
+function richText(text: string, duration: number, onSeek: (t: number) => void) {
+  return tokens(text, duration).map((p, i) =>
+    "t" in p ? (
+      <button key={i} type="button" onClick={() => onSeek(p.t)} className={cn(timeChip, "mx-[3px] font-medium transition-colors hover:bg-accent hover:text-accent-ink")}>
+        {p.text}
+      </button>
+    ) : "mention" in p ? (
+      <span key={i} className="font-medium text-link">
+        {p.text}
+      </span>
+    ) : (
+      p.text
+    ),
+  );
+}
+
+/** The composer's mirror: same highlighting, but every character keeps its width so it lines up with the textarea. */
+function highlight(text: string, duration: number) {
+  return tokens(text, duration).map((p, i) =>
+    "t" in p ? (
+      <span key={i} className={timeChip}>
+        {p.text}
+      </span>
+    ) : "mention" in p ? (
+      <span key={i} className="text-link">
+        {p.text}
+      </span>
+    ) : (
+      p.text
+    ),
+  );
 }
 
 type MenuItem = { label: string; icon: ReactNode; run: () => void; danger?: boolean };
@@ -560,6 +583,7 @@ function ItemMenu({ items }: { items: MenuItem[] }) {
 function Composer({
   user,
   now,
+  duration,
   people,
   placeholder,
   small,
@@ -571,6 +595,7 @@ function Composer({
 }: {
   user: User | null;
   now: () => number;
+  duration: number;
   people: Author[];
   placeholder: string;
   small?: boolean;
@@ -637,17 +662,26 @@ function Composer({
         onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
         onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
       >
-        <NoteInput
-          ref={input}
-          autoFocus={autoFocus}
-          value={text}
-          onChange={(v) => {
-            setText(v);
-            setCaret(input.current?.selectionStart ?? v.length);
-          }}
-          onCancel={cancel}
-          placeholder={placeholder}
-        />
+        {/* The text is drawn by a mirror behind the (transparent-text) textarea, so timecodes and
+            @mentions are highlighted while typing exactly as in a posted comment. */}
+        <div className="relative">
+          <div aria-hidden className="pointer-events-none absolute inset-0 border-b-2 border-transparent pb-2 text-[15px] break-words whitespace-pre-wrap text-ink">
+            {highlight(text, duration)}
+            {"\u200b"}
+          </div>
+          <NoteInput
+            ref={input}
+            autoFocus={autoFocus}
+            value={text}
+            onChange={(v) => {
+              setText(v);
+              setCaret(input.current?.selectionStart ?? v.length);
+            }}
+            onCancel={cancel}
+            placeholder={placeholder}
+            className="relative text-transparent caret-ink"
+          />
+        </div>
         {suggestions.length ? (
           <ul className="absolute top-full left-0 z-30 mt-1 w-64 overflow-hidden rounded-xl bg-[var(--sheet)] py-1.5 shadow-[var(--shadow-pop)]">
             {suggestions.map((p) => (
