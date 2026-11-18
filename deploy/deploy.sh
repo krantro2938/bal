@@ -37,7 +37,7 @@ fi
 ssh "$host" "docker network create bal >/dev/null 2>&1 || true
 if [ \"\$(docker inspect -f '{{.Config.Image}}' bal-mod 2>/dev/null)\" != '$mod' ]; then
   docker rm -f bal-mod >/dev/null 2>&1 || true
-  docker run -d --name bal-mod --network bal --restart unless-stopped --read-only --memory 200m $mod >/dev/null
+  docker run -d --name bal-mod --network bal --restart unless-stopped --read-only --memory 256m $mod >/dev/null
 fi"
 
 echo "==> shipping image"
