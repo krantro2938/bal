@@ -92,7 +92,7 @@ export function RehearsalPlayer({
     <div>
       <MediaPlayer
         ref={player}
-        className="bal-player aspect-video w-full overflow-hidden rounded-[var(--radius-frame)]"
+        className="bal-player aspect-video w-full overflow-hidden sm:rounded-[var(--radius-frame)]"
         title={dance.title}
         src={{ src: video.url, type: "video/mp4" }}
         playsInline
@@ -117,7 +117,7 @@ export function RehearsalPlayer({
           playbackRates={[0.5, 0.75, 1, 1.25]}
           seekStep={5}
           colorScheme="dark"
-          slots={{ googleCastButton: null, pipButton: null, airPlayButton: null, settingsMenu: <SpeedButton /> }}
+          slots={{ googleCastButton: null, pipButton: null, airPlayButton: null, chaptersMenu: null, settingsMenu: <SpeedButton /> }}
         />
       </MediaPlayer>
       <RehearsalBar player={player} duration={video.duration} loop={loop} setLoop={setLoop} notes={notes} onNote={onNote} />
@@ -157,7 +157,7 @@ function RehearsalBar({
   };
 
   return (
-    <div className="bg-bg pt-3 pb-1">
+    <div className="bg-bg px-4 pt-3 pb-1 sm:px-0">
       <div className="flex flex-wrap items-center gap-2">
         <SplitPill label="Перемотка" className="h-10">
           <button type="button" onClick={() => seekBy(-5)} aria-label="Назад на 5 секунд" title="Назад на 5 секунд" className={cn(splitHalf("l"), "gap-1")}>
@@ -265,16 +265,17 @@ function LoopPanel({
   );
 }
 
+/** On phones −/+ move to the far end so the thumb doesn't cover the time being changed. */
 function EndEditor({ label, t, onStep, onHere }: { label: string; t: number; onStep: (d: number) => void; onHere: () => void }) {
-  const step = "grid size-8 place-items-center rounded-full text-ink-2 hover:bg-hover hover:text-ink";
+  const step = "grid size-10 place-items-center rounded-full text-ink-2 hover:bg-hover hover:text-ink max-sm:bg-surface-2 sm:size-8";
   return (
-    <div className="flex items-center gap-1">
-      <span className="w-14 text-[13px] text-ink-3">{label}</span>
-      <button type="button" onClick={() => onStep(-0.5)} className={step} aria-label={`${label}: на полсекунды раньше`} title="На 0,5 с раньше">
+    <div className="flex items-center gap-1 max-sm:w-full">
+      <span className="w-14 text-[13px] text-ink-3 max-sm:-order-2">{label}</span>
+      <button type="button" onClick={() => onStep(-0.5)} className={cn(step, "max-sm:order-1 max-sm:ml-auto")} aria-label={`${label}: на полсекунды раньше`} title="На 0,5 с раньше">
         <Minus className="size-4" />
       </button>
-      <span className="tnum w-11 text-center text-[15px] font-semibold">{timecode(t)}</span>
-      <button type="button" onClick={() => onStep(0.5)} className={step} aria-label={`${label}: на полсекунды позже`} title="На 0,5 с позже">
+      <span className="tnum w-11 text-center text-[15px] font-semibold max-sm:-order-1 max-sm:text-left">{timecode(t)}</span>
+      <button type="button" onClick={() => onStep(0.5)} className={cn(step, "max-sm:order-1")} aria-label={`${label}: на полсекунды позже`} title="На 0,5 с позже">
         <Plus className="size-4" />
       </button>
       <button

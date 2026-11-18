@@ -1,9 +1,14 @@
-import { ThumbsUp } from "lucide-react";
+import { Bookmark, EllipsisVertical, Share2, ThumbsUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
+import { toast } from "sonner";
+import { useCatalog } from "@/lib/catalog";
 import { ago, timecode, viewsLabel } from "@/lib/format";
+import { useSession } from "@/lib/session";
+import { shareLink } from "@/lib/share";
 import type { DanceSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { AuthPrompt } from "./AuthPrompt";
 import { Star } from "./Star";
 
 export function Cover({
@@ -87,7 +92,7 @@ export function NewBadge() {
 
 const PREVIEW_EVENT = "bal:preview";
 
-/** Plays the preview on mouse hover, or when the card is fully in view on touch screens. */
+/** Plays the preview on mouse hover, or on touch screens when the card crosses the middle of the screen. */
 function usePreview(slug: string) {
   const ref = useRef<HTMLDivElement>(null);
   const [on, setOn] = useState(false);
@@ -97,12 +102,13 @@ function usePreview(slug: string) {
     if (!el || !matchMedia("(hover: none)").matches) return;
     const onOther = (e: Event) => setOn((e as CustomEvent<string>).detail === slug);
     window.addEventListener(PREVIEW_EVENT, onOther);
+    // A thin band across the middle of the viewport: only the card passing through it plays.
     const io = new IntersectionObserver(
       ([entry]) => {
-        if (entry.intersectionRatio >= 0.95) window.dispatchEvent(new CustomEvent(PREVIEW_EVENT, { detail: slug }));
+        if (entry.isIntersecting) window.dispatchEvent(new CustomEvent(PREVIEW_EVENT, { detail: slug }));
         else setOn(false);
       },
-      { threshold: [0, 0.95] },
+      { rootMargin: "-45% 0px -45% 0px" },
     );
     io.observe(el);
     return () => {
@@ -127,27 +133,92 @@ function usePreview(slug: string) {
 
 export function VideoCard({ dance, eager, badge }: { dance: DanceSummary; eager?: boolean; badge?: string }) {
   const { ref, on, handlers } = usePreview(dance.slug);
+  const to = `/dance/${dance.slug}`;
   return (
-    <div ref={ref} className="group relative isolate hover:z-10" {...handlers}>
+    <div ref={ref} className="group relative isolate hover:z-10 has-[[data-open]]:z-20" {...handlers}>
       {/* YouTube-style backdrop that grows out of the card on hover */}
       <div className="pointer-events-none absolute -inset-2.5 -z-10 scale-95 rounded-[22px] bg-[var(--card-hover)] opacity-0 shadow-[var(--card-hover-shadow)] transition duration-200 [@media(hover:hover)]:group-hover:scale-100 [@media(hover:hover)]:group-hover:opacity-100" />
-      <Link to={`/dance/${dance.slug}`} className="block rounded-[var(--radius-frame)] focus-visible:outline-offset-4">
+      <Link to={to} tabIndex={-1} aria-hidden className="block rounded-[var(--radius-frame)]">
         <Cover dance={dance} eager={eager} playing={on && dance.available} />
-        <div className="mt-3 flex gap-3">
+      </Link>
+      <div className="mt-3 flex gap-1">
+        <Link to={to} className="flex min-w-0 flex-1 gap-3 rounded-lg focus-visible:outline-offset-4">
           <Badge dance={dance} />
-          <div className="min-w-0 pr-1">
+          <div className="min-w-0">
             <h2 className="line-clamp-2 font-title text-[18px] leading-snug">{dance.title}</h2>
             <p className="tnum mt-1 flex flex-wrap items-center gap-x-2 text-[13px] text-ink-3">
               <span>{viewsLabel(dance.views)}</span>
               {dance.published ? <span>{ago(dance.published)}</span> : null}
-              <span className="inline-flex items-center gap-1">
-                <ThumbsUp className="size-3.5" /> {dance.likes}
-              </span>
               {badge ? <span className="text-accent">{badge}</span> : null}
             </p>
           </div>
+        </Link>
+        <CardMenu dance={dance} />
+      </div>
+    </div>
+  );
+}
+
+/** The ⋮ menu under a card: save and share without opening the video. */
+function CardMenu({ dance }: { dance: DanceSummary }) {
+  const { user, state, setMark } = useSession();
+  const catalog = useCatalog();
+  const [open, setOpen] = useState(false);
+  const [ask, setAsk] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onDown, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  const saved = !!state?.favorites.includes(dance.slug);
+  const save = () => {
+    setOpen(false);
+    if (!user) return setAsk("Чтобы сохранять танцы и видеть их на всех устройствах.");
+    setMark("favorite", dance.slug, !saved).then(
+      () => toast(saved ? "Убрано из сохранённых" : "Сохранено — танец есть в «Избранном»"),
+      () => toast("Не удалось сохранить, попробуйте ещё раз"),
+    );
+  };
+  const share = () => {
+    setOpen(false);
+    shareLink(`${catalog.data?.shareUrl || location.origin}/dance/${dance.slug}`, dance.title);
+  };
+  const item = "flex h-10 w-full items-center gap-3 px-4 text-left text-[14px] hover:bg-hover [&_svg]:size-[18px]";
+  return (
+    <div ref={ref} className="relative -mr-2 shrink-0" data-open={open || undefined}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Действия"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={cn(
+          "grid size-9 place-items-center rounded-full text-ink-2 hover:bg-hover hover:text-ink",
+          !open && "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100",
+        )}
+      >
+        <EllipsisVertical className="size-5" />
+      </button>
+      {open ? (
+        <div role="menu" className="absolute top-10 right-0 z-30 w-60 overflow-hidden rounded-xl bg-[var(--sheet)] py-2 shadow-[var(--shadow-pop)]">
+          <button type="button" role="menuitem" onClick={save} className={item}>
+            <Bookmark className={cn(saved && "fill-current")} />
+            {saved ? "Убрать из сохранённых" : "Сохранить"}
+          </button>
+          <button type="button" role="menuitem" onClick={share} className={item}>
+            <Share2 />
+            Поделиться
+          </button>
         </div>
-      </Link>
+      ) : null}
+      {ask ? <AuthPrompt reason={ask} returnTo={() => location.pathname + location.search} onClose={() => setAsk(null)} /> : null}
     </div>
   );
 }

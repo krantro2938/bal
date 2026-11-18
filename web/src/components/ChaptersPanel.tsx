@@ -11,14 +11,13 @@ type Props = {
   chapters: Chapter[];
   cues: ThumbCue[];
   player: RefObject<MediaPlayerInstance | null>;
-  source?: string;
   onSeek: (t: number) => void;
   onLoop: (c: Chapter) => void;
   onShare: (t: number) => void;
 };
 
 /** YouTube-style chapter list: frame, title, timecode chip, share and repeat on the current one. */
-export function ChaptersPanel({ chapters, cues, player, source, onSeek, onLoop, onShare }: Props) {
+export function ChaptersPanel({ chapters, cues, player, onSeek, onLoop, onShare }: Props) {
   const time = useMediaState("currentTime", player);
   const current = chapters.findIndex((c) => time >= c.start && time < c.end);
   return (
@@ -50,14 +49,6 @@ export function ChaptersPanel({ chapters, cues, player, source, onSeek, onLoop, 
           </li>
         ))}
       </ol>
-      {source ? (
-        <p className="border-t border-line px-4 py-2.5 text-[12px] text-ink-3">
-          Тайм-коды — из{" "}
-          <a href={source} target="_blank" rel="noopener" className="underline underline-offset-4 hover:text-ink">
-            поста организаторов
-          </a>
-        </p>
-      ) : null}
     </section>
   );
 }

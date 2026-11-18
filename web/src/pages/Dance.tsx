@@ -20,6 +20,7 @@ import { api, ApiError } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
 import { ago, fullDate, parseTime, timecode, viewsLabel } from "@/lib/format";
 import { useSession } from "@/lib/session";
+import { shareLink } from "@/lib/share";
 import { useThumbs } from "@/lib/thumbs";
 import type { Chapter, DanceDetail, Note } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -163,16 +164,7 @@ export function Dance() {
   const share = async (at?: number) => {
     const t = Math.floor(at ?? currentTime());
     const url = `${catalog.data?.shareUrl || location.origin}/dance/${slug}${t > 0 ? `?t=${t}` : ""}`;
-    try {
-      if (navigator.share && matchMedia("(pointer: coarse)").matches) {
-        await navigator.share({ title: dance?.title, url });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      toast(t > 0 ? `Ссылка на ${timecode(t)} скопирована` : "Ссылка скопирована");
-    } catch (e) {
-      if ((e as Error).name !== "AbortError") window.prompt("Ссылка:", url);
-    }
+    await shareLink(url, dance?.title, t > 0 ? `Ссылка на ${timecode(t)} скопирована` : "Ссылка скопирована");
   };
 
   const askLogin = (why: string) => {
@@ -294,9 +286,9 @@ export function Dance() {
   return (
     <main className="grid gap-x-8 px-4 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:pt-6 2xl:gap-x-10">
       <div className="min-w-0">
-        <div className="sticky top-16 z-20 -mx-4 bg-bg px-4 pt-2 sm:static sm:mx-0 sm:px-0 sm:pt-0">
+        <div className="sticky top-16 z-20 -mx-4 bg-bg sm:static sm:mx-0">
           {dance.video ? (
-            <Suspense fallback={<div className="aspect-video w-full rounded-[var(--radius-frame)] bg-player" />}>
+            <Suspense fallback={<div className="aspect-video w-full bg-player sm:rounded-[var(--radius-frame)]" />}>
               <RehearsalPlayer
                 dance={dance}
                 player={player}
@@ -309,7 +301,7 @@ export function Dance() {
               />
             </Suspense>
           ) : (
-            <div>
+            <div className="px-4 sm:px-0">
               <Cover dance={dance} quiet />
               <div className="py-4">
                 <p className="font-medium">Видео ещё не загружено на сайт</p>
@@ -343,12 +335,13 @@ export function Dance() {
               {/* On phones the actions sit at the right edge; the spacer collapses if they need to scroll. */}
               <span className="flex-1 sm:hidden" />
               <ReactionPill likes={dance.likes} dislikes={dance.dislikes} mine={dance.myReaction} onReact={react} />
-              <Pill onClick={() => share()} icon={<Share2 />} label="Поделиться" />
+              <Pill onClick={() => share()} icon={<Share2 />} label="Поделиться" iconOnly />
               <Pill
                 onClick={() => toggleMark("favorite")}
                 icon={<Bookmark className={cn(fav && "fill-current")} />}
                 pressed={fav}
-                label={fav ? "Сохранено" : "Сохранить"}
+                label={fav ? "Убрать из сохранённых" : "Сохранить"}
+                iconOnly
               />
               {!isGlossary ? (
                 <Pill
@@ -570,7 +563,6 @@ export function Dance() {
               chapters={dance.chapterList}
               cues={cues}
               player={player}
-              source={dance.chaptersSource}
               onSeek={seek}
               onLoop={loopChapter}
               onShare={(t) => share(t)}
@@ -649,7 +641,22 @@ export function Dance() {
   );
 }
 
-function Pill({ onClick, icon, label, pressed, strong }: { onClick: () => void; icon: ReactNode; label: string; pressed?: boolean; strong?: boolean }) {
+/** Pill button; `iconOnly` drops the text and shows it as a tooltip after a short hover. */
+function Pill({
+  onClick,
+  icon,
+  label,
+  pressed,
+  strong,
+  iconOnly,
+}: {
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+  pressed?: boolean;
+  strong?: boolean;
+  iconOnly?: boolean;
+}) {
   return (
     <button
       type="button"
@@ -657,12 +664,19 @@ function Pill({ onClick, icon, label, pressed, strong }: { onClick: () => void; 
       aria-pressed={pressed}
       aria-label={label}
       className={cn(
-        "flex h-9 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium sm:px-3.5 [&_svg]:size-[18px]",
+        "group/pill relative flex h-9 shrink-0 items-center gap-2 rounded-full text-sm font-medium [&_svg]:size-[18px]",
+        iconOnly ? "w-9 justify-center" : "px-2.5 sm:px-3.5",
         strong ? "bg-accent text-accent-ink" : "bg-surface-2 hover:bg-line",
       )}
     >
       {icon}
-      <span className="max-sm:hidden">{label}</span>
+      {iconOnly ? (
+        <span className="pointer-events-none absolute top-full left-1/2 z-30 mt-2 -translate-x-1/2 rounded-md bg-ink px-2 py-1 text-[12px] whitespace-nowrap text-bg opacity-0 transition-opacity [@media(hover:hover)]:group-hover/pill:opacity-100 [@media(hover:hover)]:group-hover/pill:delay-500">
+          {label}
+        </span>
+      ) : (
+        <span className="max-sm:hidden">{label}</span>
+      )}
     </button>
   );
 }
