@@ -341,23 +341,26 @@ function Thread({ c, depth, ctx }: { c: Comment; depth: number; ctx: ThreadCtx }
       ),
     });
   }
-  if (replies.length && show) for (const r of replies) rows.push({ key: `r${r.id}`, elbow: 14, node: <Thread c={r} depth={depth + 1} ctx={ctx} /> });
-  if (replies.length) {
-    rows.push({
-      key: "toggle",
-      elbow: 18,
-      node: (
-        <button
-          type="button"
-          onClick={() => setShow((s) => !s)}
-          aria-expanded={show}
-          className="flex h-9 items-center gap-1.5 rounded-full px-3 text-[14px] font-medium text-accent hover:bg-accent-soft"
-        >
-          {show ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-          {show ? "Скрыть ответы" : replyCount(replies.length)}
-        </button>
-      ),
-    });
+  const toggle = (key: string) => ({
+    key,
+    elbow: 18,
+    node: (
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        aria-expanded={show}
+        className="flex h-9 items-center gap-1.5 rounded-full px-3 text-[14px] font-medium text-accent hover:bg-accent-soft"
+      >
+        {show ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+        {show ? "Скрыть ответы" : replyCount(replies.length)}
+      </button>
+    ),
+  });
+  // Unfolded: "Скрыть ответы" above the replies, and again below them when there are several.
+  if (replies.length) rows.push(toggle("toggle"));
+  if (replies.length && show) {
+    for (const r of replies) rows.push({ key: `r${r.id}`, elbow: 14, node: <Thread c={r} depth={depth + 1} ctx={ctx} /> });
+    if (replies.length > 1) rows.push(toggle("toggle-end"));
   }
 
   return (
@@ -464,7 +467,7 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
   );
 }
 
-/** Timecodes like 1:20 become chips that seek the video; @mentions are highlighted. */
+/** Timecodes like 1:20 become chips that seek the video; @mentions are blue, like YouTube's. */
 function richText(text: string, duration: number, onSeek: (t: number) => void) {
   const out: ReactNode[] = [];
   const re = /(^|[^\p{L}\d_.@:])(?:(\d{1,2}):([0-5]\d)(?![\d:])|@([a-z][a-z0-9_.]{2,29}))/giu;
@@ -475,7 +478,7 @@ function richText(text: string, duration: number, onSeek: (t: number) => void) {
     if (m[4]) {
       out.push(text.slice(last, start));
       out.push(
-        <span key={start} className="rounded-md bg-accent-soft px-1 font-medium text-accent">
+        <span key={start} className="font-medium text-link">
           @{m[4]}
         </span>,
       );
@@ -673,7 +676,8 @@ function Composer({
               className="tnum flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium text-accent hover:bg-accent-soft"
               title="Вставить текущее время видео — оно станет ссылкой"
             >
-              <Timer className="size-4" /> {timecode(now())}
+              <Timer className="size-4 shrink-0" />
+              <span className="leading-none">{timecode(now())}</span>
             </button>
             <span className="flex-1" />
             <Button type="button" variant="ghost" size="sm" onClick={cancel}>

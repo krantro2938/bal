@@ -179,6 +179,11 @@ function UsernameEditor({ username }: { username: string }) {
   }
   const hint = error || (check ? (!check.valid ? "3–30 символов: a–z, цифры, «_» и «.», первая — буква" : check.free ? "Свободно" : "Уже занято") : "");
   const ok = clean === username || (check?.valid && check.free);
+  const cancel = () => {
+    setValue(username);
+    setError("");
+    setEdit(false);
+  };
   return (
     <form
       className="flex flex-wrap items-center gap-2"
@@ -195,7 +200,7 @@ function UsernameEditor({ username }: { username: string }) {
         }
       }}
     >
-      <label className="flex h-9 items-center rounded-full bg-surface-2 pr-1 pl-3 text-ink focus-within:ring-2 focus-within:ring-accent">
+      <label className="flex h-9 items-center rounded-full bg-surface-2 pr-1 pl-3 text-ink focus-within:ring-1 focus-within:ring-line-strong">
         <span className="text-ink-3">@</span>
         <input
           autoFocus
@@ -204,7 +209,7 @@ function UsernameEditor({ username }: { username: string }) {
             setValue(e.target.value);
             setError("");
           }}
-          onKeyDown={(e) => e.key === "Escape" && (setValue(username), setEdit(false))}
+          onKeyDown={(e) => e.key === "Escape" && cancel()}
           maxLength={31}
           spellCheck={false}
           autoCapitalize="none"
@@ -214,20 +219,16 @@ function UsernameEditor({ username }: { username: string }) {
         <button type="submit" disabled={!ok} className="h-7 rounded-full bg-accent px-3 text-[13px] font-medium text-accent-ink disabled:opacity-40">
           Сохранить
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            setValue(username);
-            setError("");
-            setEdit(false);
-          }}
-          className="ml-0.5 grid size-7 place-items-center rounded-full text-ink-3 hover:bg-hover hover:text-ink"
-          aria-label="Отмена"
-          title="Отмена"
-        >
-          <X className="size-4" />
-        </button>
       </label>
+      <button
+        type="button"
+        onClick={cancel}
+        className="grid size-9 place-items-center rounded-full bg-surface-2 text-ink-3 hover:bg-line hover:text-ink"
+        aria-label="Отмена"
+        title="Отмена"
+      >
+        <X className="size-4" />
+      </button>
       {hint ? <span className={check?.free && !error ? "text-accent" : "text-danger"}>{hint}</span> : null}
     </form>
   );
