@@ -27,7 +27,9 @@ ssh "$host" 'mkdir -p /srv/bal/media /srv/bal/db && chown -R 10001:10001 /srv/ba
 
 if [ -z "${SKIP_MEDIA:-}" ]; then
   echo "==> syncing media (originals in var/raw stay local)"
-  rsync -a --delete --info=stats1 --exclude '*.part*' var/media/ "$host":/srv/bal/media/
+  # --delay-updates puts every new file in place at the end, so meta.json never points at a
+  # video that is still uploading; replaced files are removed only after that.
+  rsync -a --delete-after --delay-updates --info=stats1 --exclude '*.part*' var/media/ "$host":/srv/bal/media/
 fi
 
 if ! ssh "$host" "docker image inspect $mod >/dev/null 2>&1"; then
