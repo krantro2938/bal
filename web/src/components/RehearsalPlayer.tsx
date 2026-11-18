@@ -2,7 +2,7 @@ import "@vidstack/react/player/styles/default/theme.css";
 import "@vidstack/react/player/styles/default/layouts/video.css";
 import { MediaPlayer, MediaProvider, Poster, Track, useMediaRemote, useMediaState, type MediaPlayerInstance } from "@vidstack/react";
 import { DefaultVideoLayout, defaultLayoutIcons, type DefaultLayoutTranslations } from "@vidstack/react/player/layouts/default";
-import { Minus, NotebookPen, Play, Plus, Repeat, RotateCcw, RotateCw, SkipBack, SkipForward, X } from "lucide-react";
+import { FastForward, Minus, NotebookPen, Play, Plus, Repeat, Rewind, RotateCcw, RotateCw, SkipBack, SkipForward, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router";
 import { SplitPill, splitHalf } from "@/components/SplitPill";
@@ -15,6 +15,13 @@ export type Loop = { a: number; b: number } | null;
 
 /** Default loop length when it is switched on at the playhead. */
 export const LOOP_SECONDS = 8;
+
+/** A fresh repeat window starting at t (kept inside the video). */
+function loopAt(t: number, duration: number): { a: number; b: number } {
+  const r = (x: number) => Math.round(Math.max(0, Math.min(duration, x)) * 10) / 10;
+  const a = r(Math.min(t, duration - LOOP_SECONDS));
+  return { a, b: r(a + LOOP_SECONDS) };
+}
 
 const ru: Partial<DefaultLayoutTranslations> = {
   Accessibility: "Доступность",
@@ -76,6 +83,8 @@ export function RehearsalPlayer({
   player,
   startAt,
   loop,
+  setLoop,
+  onNote,
   onReady,
   theatre,
   onTheatre,
@@ -86,6 +95,8 @@ export function RehearsalPlayer({
   player: RefObject<MediaPlayerInstance | null>;
   startAt: number | null;
   loop: Loop;
+  setLoop: (l: Loop) => void;
+  onNote: () => void;
   onReady: () => void;
   /** Large screens: the player spans the page, letterboxed, like YouTube's theatre mode. */
   theatre: boolean;
@@ -110,6 +121,10 @@ export function RehearsalPlayer({
     });
   }, [player]);
 
+  // Once a video has ended, Vidstack ignores timeline seeks in its state and restarts from 0 on
+  // play. Remember where the viewer asked to go, hide the end screen, and continue from there.
+  const afterEnd = useRef<number | null>(null);
+  const [leftEnd, setLeftEnd] = useState(false);
   const replay = () => {
     const p = player.current;
     if (!p) return;
@@ -138,6 +153,27 @@ export function RehearsalPlayer({
         onVolumeChange={(d) => saveVolume(d.volume, d.muted)}
         keyShortcuts={{ togglePaused: "k Space", seekBackward: "j J ArrowLeft", seekForward: "l L ArrowRight", toggleFullscreen: "f" }}
         onLoadedMetadata={onReady}
+        onMediaSeekRequest={(t) => {
+          // (Pressing play then sends Vidstack's own "seek to 0", which must not replace the choice.)
+          if (player.current?.state.ended && t < video.duration - 0.5 && !(t === 0 && afterEnd.current !== null)) {
+            afterEnd.current = t;
+            setLeftEnd(true);
+          }
+        }}
+        onPlay={() => {
+          const t = afterEnd.current;
+          const p = player.current;
+          afterEnd.current = null;
+          setLeftEnd(false);
+          if (t === null || !p) return;
+          // Vidstack's own replay jumps back to 0 right after play starts; go to the chosen moment once it has.
+          const go = () => {
+            if (p.currentTime < t - 1) p.currentTime = t;
+          };
+          go();
+          window.setTimeout(go, 150);
+          window.setTimeout(go, 450);
+        }}
         onCanPlay={() => {
           if (!started.current && startAt !== null && player.current) {
             started.current = true;
@@ -156,7 +192,21 @@ export function RehearsalPlayer({
           playbackRates={[0.5, 0.75, 1, 1.25]}
           seekStep={5}
           colorScheme="dark"
+          noGestures
           slots={{
+            smallLayout: {
+              // Phones have no rehearsal bar: repeat and note sit in the player, left of the speed.
+              beforeSettingsMenu: (
+                <>
+                  <PlayerIconButton label={loop ? "Выключить повтор" : "Повтор фрагмента"} on={!!loop} onClick={() => setLoop(loop ? null : loopAt(player.current?.currentTime ?? 0, video.duration))}>
+                    <Repeat />
+                  </PlayerIconButton>
+                  <PlayerIconButton label="Заметка" onClick={onNote}>
+                    <NotebookPen />
+                  </PlayerIconButton>
+                </>
+              ),
+            },
             googleCastButton: null,
             pipButton: null,
             airPlayButton: null,
@@ -165,7 +215,8 @@ export function RehearsalPlayer({
             beforeFullscreenButton: <TheatreButton on={theatre} onToggle={onTheatre} />,
           }}
         />
-        <EndScreen next={next} prev={prev} onReplay={replay} />
+        <Gestures player={player} />
+        <EndScreen next={next} prev={prev} onReplay={replay} hidden={!!loop || leftEnd} />
       </MediaPlayer>
       </div>
     </div>
@@ -198,14 +249,14 @@ export function RehearsalBar({
   };
   const toggleLoop = () => {
     if (loop) return setLoop(null);
-    const a = clamp(Math.min(now(), duration - LOOP_SECONDS));
-    setLoop({ a, b: clamp(a + LOOP_SECONDS) });
+    setLoop(loopAt(now(), duration));
     player.current?.play().catch(() => {});
   };
 
   return (
-    <div className="bg-bg pt-3 pb-1">
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+    <div className="bg-bg pb-1 sm:pt-3">
+      {/* Phones: these controls live in the player (repeat, note, speed) and in gestures (±5 s). */}
+      <div className="flex flex-wrap items-center gap-1.5 max-sm:hidden sm:gap-2">
         <SplitPill label="Перемотка" className="h-10">
           <button type="button" onClick={() => seekBy(-5)} aria-label="Назад на 5 секунд" title="Назад на 5 секунд" className={cn(splitHalf("l"), "gap-1 max-sm:px-2.5")}>
             <RotateCcw className="size-[18px]" />
@@ -287,7 +338,7 @@ function LoopPanel({
     if (b - a >= 0.5) setLoop({ a, b });
   };
   return (
-    <div className="mt-4 rounded-[var(--radius-sheet)] border border-line px-4 pt-3 pb-4">
+    <div className="mt-3 rounded-[var(--radius-sheet)] border border-line px-4 pt-3 pb-4 sm:mt-4">
       <div className="flex items-center gap-2">
         <Repeat className="size-4 shrink-0 text-accent" />
         <p className="tnum flex-1 text-[15px]">
@@ -430,17 +481,23 @@ function Strip({
  * On phones, one compact card with ✕; closed, replay between previous and next. Clicks pass
  * through everywhere else, so the timeline keeps working; seeking back hides the screen.
  */
-function EndScreen({ next, prev, onReplay }: { next: DanceSummary[]; prev?: DanceSummary; onReplay: () => void }) {
-  const ended = useMediaState("ended");
+function EndScreen({ next, prev, onReplay, hidden }: { next: DanceSummary[]; prev?: DanceSummary; onReplay: () => void; hidden: boolean }) {
+  const time = useMediaState("currentTime");
+  const duration = useMediaState("duration");
+  // Fades in over the last two seconds; seeking anywhere earlier hides it again.
+  const show = !hidden && duration > 0 && time >= duration - 2;
   const [closed, setClosed] = useState(false);
   useEffect(() => {
-    if (!ended) setClosed(false);
-  }, [ended]);
-  if (!ended || !next.length) return null;
+    if (!show) setClosed(false);
+  }, [show]);
+  if (!next.length) return null;
   const [up, second, third] = next;
   const round = "pointer-events-auto grid place-items-center rounded-full text-white transition-colors hover:bg-white/15";
   return (
-    <div className="pointer-events-none absolute inset-0 z-20 @container">
+    <div
+      inert={!show}
+      className={cn("pointer-events-none absolute inset-0 z-20 transition-opacity duration-700 @container", show ? "opacity-100" : "opacity-0")}
+    >
       {/* Tablets and computers: the YouTube layout, sized by the player's width. */}
       <div className="absolute inset-x-[7%] top-[7%] bottom-[18%] max-sm:hidden">
         <EndCard d={up} label="Следующий" className="top-0 left-0" />
@@ -449,7 +506,7 @@ function EndScreen({ next, prev, onReplay }: { next: DanceSummary[]; prev?: Danc
         <button
           type="button"
           onClick={onReplay}
-          className="pointer-events-auto absolute right-[4%] bottom-0 grid aspect-square w-[13cqw] place-items-center rounded-full bg-[#ece6d6] text-[#0a1028] shadow-xl transition-transform hover:scale-105"
+          className="pointer-events-auto absolute right-[8.5cqw] bottom-0 grid aspect-square w-[13cqw] place-items-center rounded-full bg-[#ece6d6] text-[#0a1028] shadow-xl transition-transform hover:scale-105"
           aria-label="Смотреть снова"
           title="Смотреть снова"
         >
@@ -508,6 +565,138 @@ function EndScreen({ next, prev, onReplay }: { next: DanceSummary[]; prev?: Danc
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Our own gestures in place of Vidstack's: click toggles play (mouse) or the controls (touch);
+ * double-click is fullscreen with a mouse, double-tap on the left or right third seeks ∓5 s on
+ * touch (more taps keep adding, like YouTube); press and hold plays at 2× until released.
+ */
+function Gestures({ player }: { player: RefObject<MediaPlayerInstance | null> }) {
+  const remote = useMediaRemote();
+  const [hold, setHold] = useState(false);
+  const [jump, setJump] = useState<{ side: -1 | 1; total: number; key: number } | null>(null);
+  const g = useRef({ x: 0, y: 0, timer: 0, holding: false, rate: 1, lastTap: 0, lastSide: 0 as -1 | 0 | 1, single: 0, seekUntil: 0 });
+  const jumpTimer = useRef(0);
+
+  const side = (e: PointerEvent): -1 | 0 | 1 => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width;
+    return x < 1 / 3 ? -1 : x > 2 / 3 ? 1 : 0;
+  };
+  const seekBy = (dir: -1 | 1) => {
+    const p = player.current;
+    if (!p) return;
+    p.currentTime = Math.max(0, Math.min(p.state.duration - 0.1, p.currentTime + dir * 5));
+    setJump((j) => ({ side: dir, total: j && j.side === dir ? j.total + 5 : 5, key: Date.now() }));
+    window.clearTimeout(jumpTimer.current);
+    jumpTimer.current = window.setTimeout(() => setJump(null), 700);
+  };
+
+  return (
+    <div
+      className="absolute inset-0 z-0 touch-manipulation select-none [-webkit-touch-callout:none]"
+      onContextMenu={(e) => e.preventDefault()}
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        const s = g.current;
+        s.x = e.clientX;
+        s.y = e.clientY;
+        window.clearTimeout(s.timer);
+        s.timer = window.setTimeout(() => {
+          const p = player.current;
+          if (!p) return;
+          s.holding = true;
+          s.rate = p.playbackRate;
+          p.playbackRate = 2;
+          if (p.paused) p.play().catch(() => {});
+          setHold(true);
+        }, 450);
+      }}
+      onPointerMove={(e) => {
+        const s = g.current;
+        if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > 12) window.clearTimeout(s.timer);
+      }}
+      onPointerCancel={() => window.clearTimeout(g.current.timer)}
+      onPointerUp={(e) => {
+        const s = g.current;
+        const p = player.current;
+        window.clearTimeout(s.timer);
+        if (!p) return;
+        if (s.holding) {
+          s.holding = false;
+          p.playbackRate = s.rate;
+          setHold(false);
+          return;
+        }
+        const now = e.timeStamp;
+        const touch = e.pointerType !== "mouse";
+        const where = side(e);
+        if (touch) {
+          // Already seeking: every tap on the same side adds 5 s.
+          if (where && now < s.seekUntil && where === s.lastSide) {
+            s.seekUntil = now + 700;
+            return seekBy(where);
+          }
+          if (now - s.lastTap < 300 && where && where === s.lastSide) {
+            window.clearTimeout(s.single);
+            s.lastTap = 0;
+            s.seekUntil = now + 700;
+            return seekBy(where);
+          }
+          s.lastTap = now;
+          s.lastSide = where;
+          window.clearTimeout(s.single);
+          s.single = window.setTimeout(() => remote.toggleControls(), 260);
+          return;
+        }
+        if (now - s.lastTap < 300) {
+          s.lastTap = 0;
+          remote.toggleFullscreen("prefer-media");
+          return;
+        }
+        s.lastTap = now;
+        remote.togglePaused();
+      }}
+    >
+      {hold ? (
+        <span className="pointer-events-none absolute top-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 text-[13px] font-semibold text-white">
+          2× <FastForward className="size-4 fill-current" />
+        </span>
+      ) : null}
+      {jump ? (
+        <span
+          key={jump.key}
+          className={cn(
+            "pointer-events-none absolute inset-y-0 grid w-1/3 place-items-center bg-white/10 text-white",
+            jump.side < 0 ? "left-0 rounded-r-[50%]" : "right-0 rounded-l-[50%]",
+          )}
+        >
+          <span className="flex flex-col items-center gap-1 text-[13px] font-semibold">
+            {jump.side < 0 ? <Rewind className="size-6 fill-current" /> : <FastForward className="size-6 fill-current" />}
+            {jump.side < 0 ? "−" : "+"}
+            {jump.total} с
+          </span>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** A round icon button in the player's own style (phones: repeat and note next to the speed). */
+function PlayerIconButton({ label, on, onClick, children }: { label: string; on?: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={on}
+      title={label}
+      className={cn("vds-button [&_svg]:size-[22px]", on && "!bg-[#e8ddc2] !text-[#0a1028]")}
+    >
+      {children}
+    </button>
   );
 }
 

@@ -350,6 +350,8 @@ export function Dance() {
                 player={player}
                 startAt={startAt}
                 loop={loop}
+                setLoop={setLoop}
+                onNote={startNote}
                 onReady={() => setPlayerReady(true)}
                 theatre={theatre}
                 onTheatre={toggleTheatre}
@@ -381,7 +383,15 @@ export function Dance() {
               <RehearsalBar player={player} duration={dance.video.duration} loop={loop} setLoop={setLoop} notes={notes} onNote={startNote} />
             </Suspense>
           ) : null}
-          <h1 className="font-title mt-6 text-[24px] leading-tight lg:text-[30px]">{dance.title}</h1>
+          <h1 className="font-title mt-4 text-[24px] leading-tight sm:mt-6 lg:text-[30px]">{dance.title}</h1>
+          {/* Phones: views and date under the title, like YouTube's app; the description card drops them. */}
+          <p className="tnum mt-1 flex flex-wrap gap-x-2 text-[13px] text-ink-3 sm:hidden">
+            <span>{viewsLabel(dance.views)}</span>
+            {dance.published ? <span>{ago(dance.published)}</span> : null}
+            {facts.map((f) => (
+              <span key={f}>{f}</span>
+            ))}
+          </p>
 
           {/* On phones only the badge stays and the actions lose their labels, like YouTube's app. */}
           <div className="mt-4 flex items-center gap-3 sm:flex-wrap sm:gap-x-6 sm:gap-y-4">
@@ -462,7 +472,7 @@ export function Dance() {
             )}
             onClick={() => !more && setMore(true)}
           >
-            <p className="tnum flex flex-wrap gap-x-2.5 text-[14px] font-semibold">
+            <p className={cn("tnum flex flex-wrap gap-x-2.5 text-[14px] font-semibold", !more && "max-sm:hidden")}>
               <span>{viewsLabel(dance.views)}</span>
               {dance.published ? <span title={fullDate(dance.published)}>{more ? fullDate(dance.published) : ago(dance.published)}</span> : null}
               {isNew(dance) ? (
@@ -476,7 +486,7 @@ export function Dance() {
                 </span>
               ))}
             </p>
-            <p className={cn("mt-1.5 max-w-[75ch] text-ink-soft", !more && "line-clamp-2")}>{dance.description}</p>
+            <p className={cn("mt-1.5 max-w-[75ch] text-ink-soft", !more && "line-clamp-2 max-sm:mt-0")}>{dance.description}</p>
             {more ? (
               <>
                 {caption ? (
