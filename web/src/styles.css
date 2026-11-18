@@ -148,6 +148,12 @@
     --video-border-radius: 0;
   }
 }
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
 /* At the end our end screen has its own replay; the phone layout's centre button would double it. */
 .bal-player[data-ended] .vds-video-layout[data-sm] .vds-controls-group > .vds-play-button {
   visibility: hidden;

@@ -91,37 +91,31 @@ export function NewBadge() {
 }
 
 /**
- * Touch screens: one card plays at a time — the one under a line across the screen.
- * The line sits a bit above the middle, moves down while scrolling up so the card coming
- * into view wins, and at the bottom of the page the lowest visible card plays.
+ * Touch screens: one card plays at a time, chosen from the cards that are fully in view —
+ * below the header and, on a dance page, below the pinned player. The one nearest the middle
+ * of that free area plays; at the bottom of the page, the lowest one.
  */
 const cards = new Map<HTMLElement, (on: boolean) => void>();
-let lastY = 0;
-let down = true;
 let frame = 0;
 function pickCard() {
   frame = 0;
-  const y = window.scrollY;
-  if (y !== lastY) down = y > lastY;
-  lastY = y;
   const h = window.innerHeight;
-  const atEnd = y + h >= document.documentElement.scrollHeight - 8;
-  const line = h * (down ? 0.4 : 0.55);
+  let top = document.querySelector("header")?.getBoundingClientRect().bottom ?? 0;
+  const pinned = document.querySelector<HTMLElement>("[data-sticky-player]");
+  if (pinned && getComputedStyle(pinned).position === "sticky") top = Math.max(top, pinned.getBoundingClientRect().bottom);
+  const atEnd = window.scrollY + h >= document.documentElement.scrollHeight - 8;
+  const middle = (top + h) / 2;
   let best: HTMLElement | null = null;
   let bestScore = Infinity;
   for (const el of cards.keys()) {
     const r = el.getBoundingClientRect();
-    if (r.bottom < 0 || r.top > h) continue;
-    const visible = r.top >= 0 && r.bottom <= h;
-    // at the end of the page the lowest fully visible card wins; otherwise the closest to the line
-    const score = atEnd ? (visible ? -r.top : Infinity) : r.top <= line && r.bottom >= line ? 0 : Math.min(Math.abs(r.top - line), Math.abs(r.bottom - line)) + 1;
+    if (r.top < top - 4 || r.bottom > h + 4 || r.height === 0) continue;
+    const score = atEnd ? -r.top : Math.abs((r.top + r.bottom) / 2 - middle);
     if (score < bestScore) {
       bestScore = score;
       best = el;
     }
   }
-  // only a card close to the line plays; gaps between cards play nothing
-  if (!atEnd && bestScore > 40) best = null;
   for (const [el, set] of cards) set(el === best);
 }
 const schedule = () => (frame ||= requestAnimationFrame(pickCard));
@@ -135,7 +129,6 @@ function usePreview() {
     if (!el || !matchMedia("(hover: none)").matches) return;
     cards.set(el, setOn);
     if (cards.size === 1) {
-      lastY = window.scrollY;
       window.addEventListener("scroll", schedule, { passive: true });
       window.addEventListener("resize", schedule);
     }

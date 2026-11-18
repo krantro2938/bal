@@ -76,13 +76,9 @@ export function RehearsalPlayer({
   player,
   startAt,
   loop,
-  setLoop,
-  notes,
-  onNote,
   onReady,
   theatre,
   onTheatre,
-  withBar = true,
   next = [],
   prev,
 }: {
@@ -90,15 +86,10 @@ export function RehearsalPlayer({
   player: RefObject<MediaPlayerInstance | null>;
   startAt: number | null;
   loop: Loop;
-  setLoop: (l: Loop) => void;
-  notes: Note[];
-  onNote: () => void;
   onReady: () => void;
   /** Large screens: the player spans the page, letterboxed, like YouTube's theatre mode. */
   theatre: boolean;
   onTheatre: () => void;
-  /** In theatre mode the page places the bar itself, under the video in the left column. */
-  withBar?: boolean;
   /** Dances offered on the end screen, next in the programme first. */
   next?: DanceSummary[];
   prev?: DanceSummary;
@@ -177,7 +168,6 @@ export function RehearsalPlayer({
         <EndScreen next={next} prev={prev} onReplay={replay} />
       </MediaPlayer>
       </div>
-      {withBar ? <RehearsalBar player={player} duration={video.duration} loop={loop} setLoop={setLoop} notes={notes} onNote={onNote} /> : null}
     </div>
   );
 }
@@ -214,7 +204,7 @@ export function RehearsalBar({
   };
 
   return (
-    <div className="bg-bg px-3 pt-3 pb-1 sm:px-0">
+    <div className="bg-bg pt-3 pb-1">
       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         <SplitPill label="Перемотка" className="h-10">
           <button type="button" onClick={() => seekBy(-5)} aria-label="Назад на 5 секунд" title="Назад на 5 секунд" className={cn(splitHalf("l"), "gap-1 max-sm:px-2.5")}>
@@ -236,7 +226,7 @@ export function RehearsalBar({
                 if (player.current) player.current.playbackRate = r;
               }}
               aria-pressed={rate === r}
-              className={cn("tnum h-full rounded-full px-2 text-[13px] font-medium sm:px-2.5", rate === r ? "bg-accent text-accent-ink" : "text-ink-2 hover:text-ink")}
+              className={cn("tnum h-full min-w-8 rounded-full px-2 text-[13px] font-medium sm:px-2.5", rate === r ? "bg-accent text-accent-ink" : "text-ink-2 hover:text-ink")}
             >
               {String(r).replace(".", ",")}×
             </button>

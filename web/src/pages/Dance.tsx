@@ -342,7 +342,7 @@ export function Dance() {
     // Large screens: the player is its own grid cell so theatre mode can span both columns;
     // the 1fr row keeps the side column's height from stretching the player's row.
     <main className="grid gap-x-8 px-3 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:grid-rows-[auto_1fr] lg:pt-6 2xl:gap-x-10">
-        <div className={cn("sticky top-16 z-20 -mx-3 min-w-0 bg-bg sm:static sm:mx-0 lg:col-start-1 lg:row-start-1", theatre && "lg:col-span-2 lg:-mt-6")}>
+        <div data-sticky-player className={cn("sticky top-16 z-20 -mx-3 min-w-0 bg-bg sm:static sm:mx-0 lg:col-start-1 lg:row-start-1", theatre && "lg:col-span-2 lg:-mt-6")}>
           {dance.video ? (
             <Suspense fallback={<div className="aspect-video w-full bg-player sm:rounded-[var(--radius-frame)]" />}>
               <RehearsalPlayer
@@ -350,13 +350,9 @@ export function Dance() {
                 player={player}
                 startAt={startAt}
                 loop={loop}
-                setLoop={setLoop}
-                notes={notes}
-                onNote={startNote}
                 onReady={() => setPlayerReady(true)}
                 theatre={theatre}
                 onTheatre={toggleTheatre}
-                withBar={!theatre}
                 next={upNext}
                 prev={upNext[upNext.length - 1]}
               />
@@ -378,8 +374,9 @@ export function Dance() {
         </div>
 
         <div className="min-w-0 lg:col-start-1 lg:row-start-2">
-          {/* Theatre mode: the rehearsal bar sits here, so the side column starts level with it. */}
-          {theatre && dance.video ? (
+          {/* The rehearsal bar sits here rather than in the player's cell: on phones it scrolls away
+              while the player stays pinned, and in theatre mode the side column starts level with it. */}
+          {dance.video ? (
             <Suspense fallback={<div className="h-[52px]" />}>
               <RehearsalBar player={player} duration={dance.video.duration} loop={loop} setLoop={setLoop} notes={notes} onNote={startNote} />
             </Suspense>
