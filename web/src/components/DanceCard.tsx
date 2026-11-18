@@ -51,6 +51,11 @@ export function Cover({
           className={cn("absolute inset-0 size-full object-cover transition-opacity duration-300", shown ? "opacity-100" : "opacity-0")}
         />
       ) : null}
+      {isNew(dance) && !quiet ? (
+        <span className="absolute top-2 left-2">
+          <NewBadge />
+        </span>
+      ) : null}
       {dance.duration ? (
         <span className="tnum absolute right-2 bottom-2 rounded-md bg-[#05091a]/80 px-1.5 py-0.5 text-[12px] font-medium text-[#ece6d6]">
           {timecode(dance.duration)}
@@ -77,7 +82,7 @@ export function Badge({ dance, size = 36 }: { dance: DanceSummary; size?: number
 export const isNew = (d: DanceSummary) => !!d.published && Date.now() - new Date(d.published).getTime() < 5 * 86400000;
 
 export function NewBadge() {
-  return <span className="rounded-[5px] bg-white px-1.5 py-px text-[11px] font-semibold text-[#0a1028]">Новое</span>;
+  return <span className="rounded-md bg-white px-1.5 py-0.5 text-[12px] font-semibold text-[#0a1028] shadow-sm">Новое</span>;
 }
 
 const PREVIEW_EVENT = "bal:preview";
@@ -140,11 +145,6 @@ export function VideoCard({ dance, eager, badge }: { dance: DanceSummary; eager?
               </span>
               {badge ? <span className="text-accent">{badge}</span> : null}
             </p>
-            {isNew(dance) ? (
-              <p className="mt-1.5">
-                <NewBadge />
-              </p>
-            ) : null}
           </div>
         </div>
       </Link>
@@ -173,11 +173,6 @@ export function CompactCard({ dance, current }: { dance: DanceSummary; current?:
             </span>
             {current ? <span className="text-accent">сейчас</span> : null}
           </p>
-          {isNew(dance) ? (
-            <p className="mt-1">
-              <NewBadge />
-            </p>
-          ) : null}
         </div>
       </Link>
     </div>
