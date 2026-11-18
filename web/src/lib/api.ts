@@ -56,7 +56,8 @@ export const api = {
   comments: (slug: string) => request<{ comments: Comment[]; moderator: boolean }>("GET", `/api/dances/${encodeURIComponent(slug)}/comments`),
   createComment: (slug: string, body: string, parentId?: number) =>
     request<{ comment: Comment; notice?: string }>("POST", `/api/dances/${encodeURIComponent(slug)}/comments`, { body, parentId }),
-  deleteComment: (id: number) => request<void>("DELETE", `/api/comments/${id}`),
+  /** A comment with replies comes back as a placeholder; otherwise the removed ids. */
+  deleteComment: (id: number) => request<{ placeholder?: Comment; removed?: number[] }>("DELETE", `/api/comments/${id}`),
   likeComment: (id: number, on: boolean) => request<{ likes: number; liked: boolean }>("PUT", `/api/comments/${id}/like`, { on }),
   reportComment: (id: number) => request<void>("POST", `/api/comments/${id}/report`),
   approveComment: (id: number) => request<Comment>("POST", `/api/comments/${id}/approve`),

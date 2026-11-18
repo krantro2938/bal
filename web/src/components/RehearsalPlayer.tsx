@@ -569,7 +569,7 @@ function EndScreen({ next, prev, onReplay, hidden }: { next: DanceSummary[]; pre
 }
 
 /**
- * Our own gestures in place of Vidstack's: click toggles play (mouse) or the controls (touch);
+ * Our own gestures in place of Vidstack's: click toggles play (mouse) or shows/hides the controls (touch);
  * double-click is fullscreen with a mouse, double-tap on the left or right third seeks ∓5 s on
  * touch (more taps keep adding, like YouTube); press and hold plays at 2× until released.
  */
@@ -577,7 +577,7 @@ function Gestures({ player }: { player: RefObject<MediaPlayerInstance | null> })
   const remote = useMediaRemote();
   const [hold, setHold] = useState(false);
   const [jump, setJump] = useState<{ side: -1 | 1; total: number; key: number } | null>(null);
-  const g = useRef({ x: 0, y: 0, timer: 0, holding: false, rate: 1, lastTap: 0, lastSide: 0 as -1 | 0 | 1, single: 0, seekUntil: 0 });
+  const g = useRef({ x: 0, y: 0, timer: 0, holding: false, rate: 1, lastTap: 0, lastSide: 0 as -1 | 0 | 1, single: 0, seekUntil: 0, wereShowing: false });
   const jumpTimer = useRef(0);
 
   const side = (e: PointerEvent): -1 | 0 | 1 => {
@@ -603,6 +603,8 @@ function Gestures({ player }: { player: RefObject<MediaPlayerInstance | null> })
         const s = g.current;
         s.x = e.clientX;
         s.y = e.clientY;
+        // Vidstack shows the controls on any touch itself, so remember how they were before it.
+        s.wereShowing = player.current?.controls.showing ?? false;
         window.clearTimeout(s.timer);
         s.timer = window.setTimeout(() => {
           const p = player.current;
@@ -648,7 +650,9 @@ function Gestures({ player }: { player: RefObject<MediaPlayerInstance | null> })
           s.lastTap = now;
           s.lastSide = where;
           window.clearTimeout(s.single);
-          s.single = window.setTimeout(() => remote.toggleControls(), 260);
+          // One tap shows the controls (they stay until the player's idle timeout) or hides them if they were up.
+          const wereShowing = s.wereShowing;
+          s.single = window.setTimeout(() => (wereShowing ? p.controls.hide(0) : p.controls.show(0)), 260);
           return;
         }
         if (now - s.lastTap < 300) {

@@ -77,7 +77,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
         const direct = !!c.parentId || c.author.id === userId;
         setList((l) => {
           if (!l) return l;
-          if (l.some((x) => x.id === c.id)) return l.map((x) => (x.id === c.id ? { ...x, ...c, liked: x.liked } : x));
+          if (l.some((x) => x.id === c.id)) return l.map((x) => (x.id === c.id ? { ...x, ...c, liked: c.deleted ? false : x.liked } : x));
           return direct ? [...l, c] : l;
         });
         if (!direct) setPending((p) => (p.some((x) => x.id === c.id) ? p : [...p, c]));
@@ -108,11 +108,11 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   // People to suggest after "@": everyone who wrote here, newest first.
   const people = useMemo(() => {
     const seen = new Map<number, Author>();
-    for (const c of [...(list ?? [])].reverse()) if (c.author.id !== userId && !seen.has(c.author.id)) seen.set(c.author.id, c.author);
+    for (const c of [...(list ?? [])].reverse()) if (!c.deleted && c.author.id !== userId && !seen.has(c.author.id)) seen.set(c.author.id, c.author);
     return [...seen.values()];
   }, [list, userId]);
 
-  const count = (list ?? []).filter((c) => c.status === "published").length;
+  const count = (list ?? []).filter((c) => c.status === "published" && !c.deleted).length;
   useEffect(() => onCount?.(count), [count, onCount]);
 
   // Notification links: open the thread, scroll to the comment, flash it.
@@ -161,8 +161,12 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   const act = async (c: Comment, what: Action) => {
     try {
       if (what === "delete") {
-        await api.deleteComment(c.id);
-        setList((l) => l && without(l, c.id));
+        const r = await api.deleteComment(c.id);
+        if (r.placeholder) patch(c.id, { ...r.placeholder, liked: false });
+        else {
+          const gone = new Set(r.removed ?? [c.id]);
+          setList((l) => l && l.filter((x) => !gone.has(x.id)));
+        }
         toast("Комментарий удалён");
       } else if (what === "report") {
         await api.reportComment(c.id);
@@ -411,6 +415,14 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
     const el = body.current;
     if (el) setLong(el.scrollHeight > el.clientHeight + 2);
   }, [c.body]);
+  if (c.deleted) {
+    return (
+      <div id={`comment-${c.id}`} className="-mx-2 flex scroll-mt-40 gap-3 px-2">
+        <span className={cn("shrink-0 rounded-full bg-surface-2", reply ? "size-7" : "size-9")} />
+        <p className="self-center text-[14px] text-ink-3 italic">Комментарий удалён</p>
+      </div>
+    );
+  }
   const items: MenuItem[] = [];
   if (moderator && c.status === "held") items.push({ label: "Опубликовать", icon: <ShieldCheck />, run: () => ctx.act(c, "approve") });
   if (moderator && !reply)

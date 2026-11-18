@@ -111,11 +111,45 @@ func TestComments(t *testing.T) {
 	if code, _ := boris.do("DELETE", "/api/comments/"+id, ""); code != 403 {
 		t.Fatalf("boris deleted anna's comment: %d", code)
 	}
-	if code, _ := anna.do("DELETE", "/api/comments/"+id, ""); code != 204 {
-		t.Fatalf("anna delete: %d", code)
+	// A comment with replies stays as a placeholder: no text, no author; the replies stay.
+	if code, body := anna.do("DELETE", "/api/comments/"+id, ""); code != 200 || !strings.Contains(body, `"deleted":true`) {
+		t.Fatalf("anna delete: %d %s", code, body)
 	}
-	if _, body := guest.do("GET", "/api/dances/demo/comments", ""); strings.Contains(body, `"ответ"`) {
-		t.Fatalf("replies survived their thread: %s", body)
+	_, body = guest.do("GET", "/api/dances/demo/comments", "")
+	if !strings.Contains(body, `"ответ"`) || strings.Contains(body, "поворот налево") || !strings.Contains(body, `"deleted":true`) {
+		t.Fatalf("after soft delete: %s", body)
+	}
+	if code, _ := boris.do("POST", "/api/dances/demo/comments", `{"body":"ещё","parentId":`+id+`}`); code != 400 {
+		t.Fatalf("reply to a deleted comment: %d", code)
+	}
+	// Deleting the reply chain from the bottom up removes the placeholder with the last reply.
+	for i := len(chain) - 1; i >= 0; i-- {
+		var list struct{ Comments []store.Comment }
+		_, body := guest.do("GET", "/api/dances/demo/comments", "")
+		json.Unmarshal([]byte(body), &list)
+		var leaf int64
+		for _, c := range list.Comments {
+			if c.Body == "ответ" {
+				hasChild := false
+				for _, d := range list.Comments {
+					if d.ParentID == c.ID {
+						hasChild = true
+					}
+				}
+				if !hasChild {
+					leaf = c.ID
+				}
+			}
+		}
+		if leaf == 0 {
+			break
+		}
+		if code, _ := boris.do("DELETE", "/api/comments/"+jsonNum(leaf), ""); code != 200 {
+			t.Fatalf("delete reply: %d", code)
+		}
+	}
+	if _, body := guest.do("GET", "/api/dances/demo/comments", ""); strings.Contains(body, `"ответ"`) || strings.Contains(body, `"deleted":true`) {
+		t.Fatalf("placeholder or replies left: %s", body)
 	}
 }
 

@@ -65,6 +65,8 @@ export type Comment = {
   body: string;
   /** "held" comments wait for a moderator; only their author and moderators get them. */
   status: "published" | "held";
+  /** Deleted but kept for its replies: no text, no author. */
+  deleted?: boolean;
   pinned?: boolean;
   createdAt: number;
   likes: number;

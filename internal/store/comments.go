@@ -14,6 +14,7 @@ type Comment struct {
 	Author    Author  `json:"author"`
 	Body      string  `json:"body"`
 	Status    string  `json:"status"`
+	Deleted   bool    `json:"deleted,omitempty"` // a placeholder kept for its replies: no text, no author
 	Score     float64 `json:"-"`
 	Pinned    bool    `json:"pinned,omitempty"`
 	CreatedAt int64   `json:"createdAt"`
@@ -29,13 +30,17 @@ type Author struct {
 }
 
 const commentCols = `c.id, c.dance, COALESCE(c.parent_id, 0), u.id, u.name, u.username, u.picture, c.body, c.status, c.score, c.pinned, c.created_at,
+  c.deleted_at IS NOT NULL,
   (SELECT count(*) FROM comment_likes l WHERE l.comment_id = c.id),
   EXISTS(SELECT 1 FROM comment_likes l WHERE l.comment_id = c.id AND l.user_id = ?)`
 
 func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
 	var c Comment
 	err := row.Scan(&c.ID, &c.Dance, &c.ParentID, &c.Author.ID, &c.Author.Name, &c.Author.Username, &c.Author.Picture, &c.Body, &c.Status,
-		&c.Score, &c.Pinned, &c.CreatedAt, &c.Likes, &c.Liked)
+		&c.Score, &c.Pinned, &c.CreatedAt, &c.Deleted, &c.Likes, &c.Liked)
+	if c.Deleted {
+		c.Author, c.Body, c.Likes, c.Liked = Author{}, "", 0, false
+	}
 	return c, err
 }
 
@@ -83,10 +88,54 @@ VALUES (?,?,?,?,?,?,?) RETURNING id`, c.Dance, userID, parent, c.Body, c.Status,
 	return s.Comment(ctx, id, userID)
 }
 
-// DeleteComment removes a comment with its replies, likes and reports.
-func (s *Store) DeleteComment(ctx context.Context, id int64) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM comments WHERE id = ?`, id)
-	return err
+// DeleteComment removes a comment. If it has replies it becomes a placeholder instead (text,
+// likes, reports and notifications go; the thread stays), and soft is true. Otherwise it is
+// removed for good, together with ancestors that were placeholders left without replies;
+// removed lists every id that disappeared.
+func (s *Store) DeleteComment(ctx context.Context, id int64) (soft bool, removed []int64, err error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, nil, err
+	}
+	defer tx.Rollback()
+	var replies int
+	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM comments WHERE parent_id = ?`, id).Scan(&replies); err != nil {
+		return false, nil, err
+	}
+	if replies > 0 {
+		if _, err := tx.ExecContext(ctx, `UPDATE comments SET deleted_at = ?, body = '', pinned = 0 WHERE id = ?`, time.Now().UnixMilli(), id); err != nil {
+			return false, nil, err
+		}
+		for _, table := range []string{"comment_likes", "comment_reports", "notifications"} {
+			if _, err := tx.ExecContext(ctx, `DELETE FROM `+table+` WHERE comment_id = ?`, id); err != nil {
+				return false, nil, err
+			}
+		}
+		return true, nil, tx.Commit()
+	}
+	for cur := id; cur != 0; {
+		var parent sql.NullInt64
+		if err := tx.QueryRowContext(ctx, `SELECT parent_id FROM comments WHERE id = ?`, cur).Scan(&parent); err != nil {
+			return false, nil, err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM comments WHERE id = ?`, cur); err != nil {
+			return false, nil, err
+		}
+		removed = append(removed, cur)
+		cur = 0
+		if parent.Valid {
+			// The parent goes too if it was a placeholder and this was its last reply.
+			var gone bool
+			if err := tx.QueryRowContext(ctx, `SELECT deleted_at IS NOT NULL AND NOT EXISTS(SELECT 1 FROM comments WHERE parent_id = ?)
+FROM comments WHERE id = ?`, parent.Int64, parent.Int64).Scan(&gone); err != nil {
+				return false, nil, err
+			}
+			if gone {
+				cur = parent.Int64
+			}
+		}
+	}
+	return false, removed, tx.Commit()
 }
 
 // LikeComment sets or clears the user's like and returns the new count.
@@ -168,7 +217,7 @@ func (s *Store) Notify(ctx context.Context, userID int64, kind string, commentID
 func (s *Store) Notifications(ctx context.Context, userID int64) ([]Notification, int, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT n.id, n.kind, n.created_at, n.read_at IS NOT NULL, `+commentCols+`
 FROM notifications n JOIN comments c ON c.id = n.comment_id JOIN users u ON u.id = c.user_id
-WHERE n.user_id = ? AND c.status = 'published' ORDER BY n.created_at DESC LIMIT 50`, userID, userID)
+WHERE n.user_id = ? AND c.status = 'published' AND c.deleted_at IS NULL ORDER BY n.created_at DESC LIMIT 50`, userID, userID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -179,7 +228,7 @@ WHERE n.user_id = ? AND c.status = 'published' ORDER BY n.created_at DESC LIMIT 
 		var n Notification
 		c := &n.Comment
 		if err := rows.Scan(&n.ID, &n.Kind, &n.CreatedAt, &n.Read, &c.ID, &c.Dance, &c.ParentID, &c.Author.ID, &c.Author.Name,
-			&c.Author.Username, &c.Author.Picture, &c.Body, &c.Status, &c.Score, &c.Pinned, &c.CreatedAt, &c.Likes, &c.Liked); err != nil {
+			&c.Author.Username, &c.Author.Picture, &c.Body, &c.Status, &c.Score, &c.Pinned, &c.CreatedAt, &c.Deleted, &c.Likes, &c.Liked); err != nil {
 			return nil, 0, err
 		}
 		if !n.Read {

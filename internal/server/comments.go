@@ -94,7 +94,7 @@ func (s *Server) handleCreateComment(w http.ResponseWriter, r *http.Request, u *
 	}
 	if in.ParentID != 0 {
 		p, err := s.store.Comment(r.Context(), in.ParentID, u.ID)
-		if errors.Is(err, store.ErrNotFound) || (err == nil && (p.Dance != slug || (p.Status != "published" && p.Author.ID != u.ID))) {
+		if errors.Is(err, store.ErrNotFound) || (err == nil && (p.Dance != slug || p.Deleted || (p.Status != "published" && p.Author.ID != u.ID))) {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Комментарий, на который вы отвечаете, удалён"})
 			return
 		} else if err != nil {
@@ -156,7 +156,7 @@ func (s *Server) commentFor(w http.ResponseWriter, r *http.Request, u *store.Use
 		return store.Comment{}, false
 	}
 	c, err := s.store.Comment(r.Context(), id, u.ID)
-	if errors.Is(err, store.ErrNotFound) || (err == nil && c.Status != "published" && c.Author.ID != u.ID && !s.isModerator(u)) {
+	if errors.Is(err, store.ErrNotFound) || (err == nil && (c.Deleted || c.Status != "published" && c.Author.ID != u.ID && !s.isModerator(u))) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Комментарий удалён"})
 		return c, false
 	} else if err != nil {
@@ -175,12 +175,26 @@ func (s *Server) handleDeleteComment(w http.ResponseWriter, r *http.Request, u *
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Можно удалить только свой комментарий"})
 		return
 	}
-	if err := s.store.DeleteComment(r.Context(), c.ID); err != nil {
+	soft, removed, err := s.store.DeleteComment(r.Context(), c.ID)
+	if err != nil {
 		httpError(w, err)
 		return
 	}
-	s.events.publish(c.Dance, event{Type: "removed", ID: c.ID})
-	w.WriteHeader(http.StatusNoContent)
+	if soft {
+		// Kept as «Комментарий удалён» because it has replies.
+		placeholder, err := s.store.Comment(r.Context(), c.ID, 0)
+		if err != nil {
+			httpError(w, err)
+			return
+		}
+		s.events.publish(c.Dance, event{Type: "comment", Comment: &placeholder})
+		writeJSON(w, http.StatusOK, map[string]any{"placeholder": placeholder})
+		return
+	}
+	for _, id := range removed {
+		s.events.publish(c.Dance, event{Type: "removed", ID: id})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"removed": removed})
 }
 
 func (s *Server) handleLikeComment(w http.ResponseWriter, r *http.Request, u *store.User) {
