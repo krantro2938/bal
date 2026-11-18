@@ -30,6 +30,9 @@ type Config struct {
 	SourcesPath string
 	PublicURL   string
 	FrontendURL string // defaults to PublicURL
+	// ShareURL is a host outside Russia that link-preview bots can reach (Telegram cannot reach
+	// Russian servers). It proxies bots here with X-Bal-Share and redirects people to PublicURL.
+	ShareURL string
 
 	GoogleClientID     string
 	GoogleClientSecret string

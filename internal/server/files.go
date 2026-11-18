@@ -61,7 +61,7 @@ func (s *Server) spaHandler(dir string) http.Handler {
 				return
 			}
 		}
-		page, err := s.renderIndex(dir, clean)
+		page, err := s.renderIndex(dir, clean, r.Header.Get("X-Bal-Share") != "")
 		if err != nil {
 			http.Error(w, "frontend not built: run `npm --prefix web run build`", http.StatusServiceUnavailable)
 			return

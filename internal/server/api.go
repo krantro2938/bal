@@ -170,7 +170,7 @@ func (s *Server) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		out = append(out, sum)
 	}
 	w.Header().Set("Cache-Control", "no-cache")
-	writeJSON(w, http.StatusOK, map[string]any{"edition": src.Edition, "channel": src.Channel, "dances": out})
+	writeJSON(w, http.StatusOK, map[string]any{"edition": src.Edition, "channel": src.Channel, "shareUrl": s.cfg.ShareURL, "dances": out})
 }
 
 func (s *Server) handleDance(w http.ResponseWriter, r *http.Request) {

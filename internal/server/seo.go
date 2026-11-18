@@ -38,20 +38,25 @@ func (s *Server) metaFor(path string) pageMeta {
 }
 
 // renderIndex fills the meta tags in index.html for this page.
-func (s *Server) renderIndex(dir, path string) ([]byte, error) {
+func (s *Server) renderIndex(dir, path string, share bool) ([]byte, error) {
 	b, err := os.ReadFile(filepath.Join(dir, "index.html"))
 	if err != nil {
 		return nil, err
 	}
 	m := s.metaFor(path)
 	base := strings.TrimRight(s.cfg.PublicURL, "/")
+	// Previews requested through the share host point their image there too.
+	shared := base
+	if share && s.cfg.ShareURL != "" {
+		shared = strings.TrimRight(s.cfg.ShareURL, "/")
+	}
 	page := string(b)
 	attr := func(v string) string { return html.EscapeString(v) }
 	repl := []string{
 		"<title>Звёздная одиссея · Репетиции</title>", "<title>" + attr(m.Title) + "</title>",
 		`<meta property="og:title" content="Звёздная одиссея · Репетиции бала" />`, `<meta property="og:title" content="` + attr(m.Title) + `" />`,
-		`<meta property="og:image" content="/og.png" />`, `<meta property="og:image" content="` + attr(base+m.Image) + `" />`,
-		`<meta property="og:url" content="/" />`, `<meta property="og:url" content="` + attr(base+m.Path) + `" />` +
+		`<meta property="og:image" content="/og.png" />`, `<meta property="og:image" content="` + attr(shared+m.Image) + `" />`,
+		`<meta property="og:url" content="/" />`, `<meta property="og:url" content="` + attr(shared+m.Path) + `" />` +
 			"\n    " + `<link rel="canonical" href="` + attr(base+m.Path) + `" />`,
 	}
 	if m.Description != defaultDescription {

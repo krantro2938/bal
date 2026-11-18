@@ -137,6 +137,7 @@ func main() {
 		fs.StringVar(&cfg.DBPath, "db", env("BAL_DB", "var/data/bal.db"), "SQLite database")
 		fs.StringVar(&cfg.StaticDir, "static", env("BAL_STATIC_DIR", "web/dist"), "built frontend")
 		fs.StringVar(&cfg.PublicURL, "public-url", env("BAL_PUBLIC_URL", "http://localhost:8080"), "external base URL (OAuth redirects)")
+		fs.StringVar(&cfg.ShareURL, "share-url", env("BAL_SHARE_URL", ""), "host for shared links that preview bots can reach")
 		fs.StringVar(&cfg.FrontendURL, "frontend-url", env("BAL_FRONTEND_URL", ""), "where pages are served if not the public URL (Vite in development)")
 		fs.Parse(args)
 		cfg.SourcesPath, cfg.MediaDir = *sourcesPath, *mediaDir

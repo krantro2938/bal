@@ -21,7 +21,7 @@ export type DanceSummary = {
   published?: string;
 };
 
-export type Catalog = { edition: string; channel: string; dances: DanceSummary[] };
+export type Catalog = { edition: string; channel: string; shareUrl?: string; dances: DanceSummary[] };
 
 export type Chapter = { start: number; end: number; title: string };
 

@@ -162,7 +162,7 @@ export function Dance() {
 
   const share = async (at?: number) => {
     const t = Math.floor(at ?? currentTime());
-    const url = `${location.origin}/dance/${slug}${t > 0 ? `?t=${t}` : ""}`;
+    const url = `${catalog.data?.shareUrl || location.origin}/dance/${slug}${t > 0 ? `?t=${t}` : ""}`;
     try {
       if (navigator.share && matchMedia("(pointer: coarse)").matches) {
         await navigator.share({ title: dance?.title, url });
