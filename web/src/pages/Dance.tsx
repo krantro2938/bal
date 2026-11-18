@@ -735,8 +735,9 @@ export function Dance() {
           </section>
         ) : null}
 
+        {/* Recommendations are set apart from this dance's own materials. */}
         {others.length > 0 ? (
-          <section>
+          <section className="!mt-12 border-t border-line pt-8">
             <h2 className="mb-3 px-1 text-[18px] font-semibold">Другие танцы</h2>
             <div className="space-y-2">
               {others.map((d) => (

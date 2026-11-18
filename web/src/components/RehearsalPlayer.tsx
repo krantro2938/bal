@@ -360,7 +360,7 @@ function LoopPanel({
         <EndEditor label="Начало" t={loop.a} onStep={(d) => set(loop.a + d, loop.b)} onHere={() => set(now(), loop.b)} />
         <EndEditor label="Конец" t={loop.b} onStep={(d) => set(loop.a, loop.b + d)} onHere={() => set(loop.a, now())} />
       </div>
-      <p className="mt-2 text-[13px] text-ink-3">Края полосы можно тянуть. «Сюда» ставит край на текущий момент видео.</p>
+      <p className="mt-2 text-[13px] text-ink-3">Края полосы и кружок позиции можно тянуть. «Сюда» ставит край на текущий момент видео.</p>
     </div>
   );
 }
@@ -407,13 +407,26 @@ function Strip({
   notes: Note[];
 }) {
   const track = useRef<HTMLDivElement>(null);
-  const [drag, setDrag] = useState<"a" | "b" | null>(null);
+  // "a"/"b": an end of the fragment; "t": the playhead (scrubbing).
+  const [drag, setDrag] = useState<"a" | "b" | "t" | null>(null);
   const pct = (t: number) => `${(Math.min(Math.max(t, 0), duration) / duration) * 100}%`;
   const timeAt = (clientX: number) => {
     const r = track.current!.getBoundingClientRect();
     return Math.round(Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * duration * 10) / 10;
   };
+  // Pointer capture keeps a drag going outside the strip; some browsers refuse it, and the drag must still work.
+  const capture = (e: PointerEvent) => {
+    try {
+      track.current?.setPointerCapture(e.pointerId);
+    } catch {
+      /* drag continues while the finger stays on the strip */
+    }
+  };
+  const seek = (clientX: number) => {
+    if (player.current) player.current.currentTime = Math.min(duration - 0.1, timeAt(clientX));
+  };
   const onMove = (e: PointerEvent) => {
+    if (drag === "t") return seek(e.clientX);
     if (!drag || !loop) return;
     const t = timeAt(e.clientX);
     if (drag === "a" && t <= loop.b - 0.5) setLoop({ a: t, b: loop.b });
@@ -423,23 +436,26 @@ function Strip({
     <div>
       <div
         ref={track}
-        className="relative h-8 cursor-pointer touch-none select-none"
+        className="relative isolate h-11 cursor-pointer touch-none select-none"
         onPointerDown={(e) => {
           if (drag) return;
-          if (player.current) player.current.currentTime = Math.min(duration - 0.1, timeAt(e.clientX));
+          capture(e);
+          setDrag("t");
+          seek(e.clientX);
         }}
         onPointerMove={onMove}
         onPointerUp={() => setDrag(null)}
         onPointerCancel={() => setDrag(null)}
         role="presentation"
       >
-        <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-line" />
-        <div className="absolute top-1/2 left-0 h-1 -translate-y-1/2 rounded-full bg-ink-3/60" style={{ width: pct(time) }} />
+        {/* The band sits low; the playhead's knob sits above it so the two never fight for a touch. */}
+        <div className="absolute inset-x-0 top-7 h-1 -translate-y-1/2 rounded-full bg-line" />
+        <div className="absolute top-7 left-0 h-1 -translate-y-1/2 rounded-full bg-ink-3/60" style={{ width: pct(time) }} />
         {loop ? (
           <>
             {/* The repeating fragment: a light band with diagonal hatching. */}
             <div
-              className="absolute top-1/2 h-6 -translate-y-1/2 rounded-md bg-accent-soft"
+              className="absolute top-7 h-6 -translate-y-1/2 rounded-md bg-accent-soft"
               style={{
                 left: pct(loop.a),
                 width: `calc(${pct(loop.b)} - ${pct(loop.a)})`,
@@ -451,11 +467,11 @@ function Strip({
                 key={end}
                 type="button"
                 aria-label={end === "a" ? "Начало фрагмента" : "Конец фрагмента"}
-                className="absolute top-1/2 z-10 grid h-8 w-6 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize place-items-center"
+                className="absolute top-7 z-10 grid h-8 w-6 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize place-items-center"
                 style={{ left: pct(loop[end]) }}
                 onPointerDown={(e) => {
                   e.stopPropagation();
-                  track.current?.setPointerCapture(e.pointerId);
+                  capture(e);
                   setDrag(end);
                 }}
               >
@@ -465,11 +481,24 @@ function Strip({
           </>
         ) : null}
         {notes.map((n) => (
-          <span key={n.id} className="pointer-events-none absolute -top-1 -translate-x-1/2 text-accent" style={{ left: pct(n.t) }}>
+          <span key={n.id} className="pointer-events-none absolute top-1 -translate-x-1/2 text-accent" style={{ left: pct(n.t) }}>
             <span className="block size-1.5 rounded-full bg-accent" />
           </span>
         ))}
-        <div className="pointer-events-none absolute top-1/2 z-20 h-5 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink" style={{ left: pct(time) }} />
+        <div className="pointer-events-none absolute top-1.5 bottom-1.5 z-20 w-[3px] -translate-x-1/2 rounded-full bg-ink" style={{ left: pct(time) }} />
+        <button
+          type="button"
+          aria-label="Позиция видео"
+          className="absolute top-0 z-30 grid h-5 w-9 -translate-x-1/2 cursor-grab place-items-center active:cursor-grabbing"
+          style={{ left: pct(time) }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            capture(e);
+            setDrag("t");
+          }}
+        >
+          <span className="size-3.5 rounded-full bg-ink ring-2 ring-bg" />
+        </button>
       </div>
     </div>
   );
