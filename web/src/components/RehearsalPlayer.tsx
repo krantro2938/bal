@@ -2,7 +2,7 @@ import "@vidstack/react/player/styles/default/theme.css";
 import "@vidstack/react/player/styles/default/layouts/video.css";
 import { MediaPlayer, MediaProvider, Poster, Track, useMediaRemote, useMediaState, type MediaPlayerInstance } from "@vidstack/react";
 import { DefaultVideoLayout, defaultLayoutIcons, type DefaultLayoutTranslations } from "@vidstack/react/player/layouts/default";
-import { Minus, NotebookPen, Plus, Repeat, RotateCcw, RotateCw, X } from "lucide-react";
+import { Minus, NotebookPen, Play, Plus, Repeat, RotateCcw, RotateCw, SkipBack, SkipForward, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router";
 import { SplitPill, splitHalf } from "@/components/SplitPill";
@@ -84,6 +84,7 @@ export function RehearsalPlayer({
   onTheatre,
   withBar = true,
   next = [],
+  prev,
 }: {
   dance: DanceDetail;
   player: RefObject<MediaPlayerInstance | null>;
@@ -100,6 +101,7 @@ export function RehearsalPlayer({
   withBar?: boolean;
   /** Dances offered on the end screen, next in the programme first. */
   next?: DanceSummary[];
+  prev?: DanceSummary;
 }) {
   const video = dance.video!;
   const [sound] = useState(savedVolume);
@@ -172,7 +174,7 @@ export function RehearsalPlayer({
             beforeFullscreenButton: <TheatreButton on={theatre} onToggle={onTheatre} />,
           }}
         />
-        <EndScreen next={next} onReplay={replay} />
+        <EndScreen next={next} prev={prev} onReplay={replay} />
       </MediaPlayer>
       </div>
       {withBar ? <RehearsalBar player={player} duration={video.duration} loop={loop} setLoop={setLoop} notes={notes} onNote={onNote} /> : null}
@@ -433,42 +435,87 @@ function Strip({
 }
 
 /**
- * When the video ends (not while a fragment repeats), the next dances of the programme
- * appear over it, like YouTube's end screen, with a button to watch again.
+ * When the video ends (not while a fragment repeats), YouTube-style: the picture dims a little
+ * and a card offers the next dance ("Смотреть" or ✕). Closed, only replay remains, between
+ * previous and next. The layer lets clicks through, so the timeline still works.
  */
-function EndScreen({ next, onReplay }: { next: DanceSummary[]; onReplay: () => void }) {
+function EndScreen({ next, prev, onReplay }: { next: DanceSummary[]; prev?: DanceSummary; onReplay: () => void }) {
   const ended = useMediaState("ended");
-  if (!ended || !next.length) return null;
+  const [closed, setClosed] = useState(false);
+  useEffect(() => {
+    if (!ended) setClosed(false);
+  }, [ended]);
+  if (!ended) return null;
+  const [up, ...more] = next;
+  const round = "pointer-events-auto grid place-items-center rounded-full text-white transition-colors hover:bg-white/15";
   return (
-    <div className="absolute inset-0 z-20 flex flex-col justify-center gap-3 bg-[#05091a]/80 p-3 text-[#ece6d6] backdrop-blur-sm sm:gap-5 sm:p-8">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[13px] font-medium text-[#ece6d6]/70 sm:text-[15px]">Дальше по программе</p>
-        <button
-          type="button"
-          onClick={onReplay}
-          className="flex h-8 items-center gap-2 rounded-full bg-white/15 px-3 text-[13px] font-medium transition-colors hover:bg-white/25 sm:h-9 sm:px-3.5"
-        >
-          <RotateCcw className="size-4" /> Смотреть снова
-        </button>
-      </div>
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        {next.slice(0, 4).map((d, i) => (
-          <li key={d.slug} className={cn(i >= 2 && "max-sm:hidden")}>
-            <Link to={`/dance/${d.slug}`} className="group block">
-              <span className="relative block aspect-video overflow-hidden rounded-lg bg-black/40 ring-1 ring-white/10 transition group-hover:ring-2 group-hover:ring-[#e8ddc2]">
-                {d.posterSmall ? <img src={d.posterSmall} alt="" className="size-full object-cover" /> : null}
-                {d.duration ? (
-                  <span className="tnum absolute right-1.5 bottom-1.5 rounded bg-black/75 px-1 text-[11px] font-medium">{timecode(d.duration)}</span>
-                ) : null}
-                {i === 0 ? (
-                  <span className="absolute top-1.5 left-1.5 rounded bg-[#e8ddc2] px-1.5 text-[11px] font-semibold text-[#0a1028]">Следующий</span>
-                ) : null}
+    <div className="pointer-events-none absolute inset-0 z-20 bg-black/40">
+      <div className="absolute inset-x-0 top-0 bottom-14 flex items-center justify-center p-2.5 sm:bottom-16 sm:p-3">
+        {up && !closed ? (
+          <div className="pointer-events-auto relative w-[min(100%,420px)] rounded-xl bg-[#05091a]/90 p-2.5 text-[#ece6d6] shadow-2xl sm:p-4">
+            <button
+              type="button"
+              onClick={() => setClosed(true)}
+              className="absolute top-2 right-2 grid size-8 place-items-center rounded-full text-[#ece6d6]/70 hover:bg-white/10 hover:text-white"
+              aria-label="Закрыть"
+            >
+              <X className="size-4" />
+            </button>
+            <p className="text-[12px] text-[#ece6d6]/60 max-sm:hidden">Следующий</p>
+            <Link to={`/dance/${up.slug}`} className="group flex gap-3 pr-7 sm:mt-1.5">
+              <span className="relative block aspect-video w-24 shrink-0 overflow-hidden rounded-md bg-black/40 sm:w-36">
+                {up.posterSmall ? <img src={up.posterSmall} alt="" className="size-full object-cover" /> : null}
+                {up.duration ? <span className="tnum absolute right-1 bottom-1 rounded bg-black/75 px-1 text-[11px]">{timecode(up.duration)}</span> : null}
               </span>
-              <span className="mt-1.5 line-clamp-2 text-[13px] leading-snug font-medium group-hover:underline sm:text-[14px]">{d.title}</span>
+              <span className="self-center">
+                <span className="block text-[11px] text-[#ece6d6]/60 sm:hidden">Следующий</span>
+                <span className="line-clamp-2 text-[14px] leading-snug font-medium group-hover:underline sm:text-[16px]">{up.title}</span>
+              </span>
             </Link>
-          </li>
-        ))}
-      </ul>
+            <div className="mt-2.5 flex gap-2 sm:mt-3">
+              <button type="button" onClick={onReplay} className="flex h-8 flex-1 sm:h-9 items-center justify-center gap-1.5 rounded-full bg-white/10 text-[13px] font-medium hover:bg-white/20">
+                <RotateCcw className="size-4" /> Ещё раз
+              </button>
+              <Link
+                to={`/dance/${up.slug}`}
+                className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#e8ddc2] sm:h-9 text-[13px] font-semibold text-[#0a1028] hover:bg-white"
+              >
+                <Play className="size-4 fill-current" /> Смотреть
+              </Link>
+            </div>
+            {more.length ? (
+              <ul className="mt-3 hidden gap-2 border-t border-white/10 pt-3 sm:flex">
+                {more.slice(0, 2).map((d) => (
+                  <li key={d.slug} className="min-w-0 flex-1">
+                    <Link to={`/dance/${d.slug}`} className="group flex items-center gap-2">
+                      <span className="block aspect-video w-16 shrink-0 overflow-hidden rounded bg-black/40">
+                        {d.posterSmall ? <img src={d.posterSmall} alt="" className="size-full object-cover" /> : null}
+                      </span>
+                      <span className="line-clamp-2 text-[12px] leading-snug text-[#ece6d6]/80 group-hover:underline">{d.title}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex items-center gap-6 sm:gap-10">
+            {prev ? (
+              <Link to={`/dance/${prev.slug}`} className={cn(round, "size-11")} aria-label={`Предыдущий: ${prev.title}`} title={prev.title}>
+                <SkipBack className="size-6 fill-current" />
+              </Link>
+            ) : null}
+            <button type="button" onClick={onReplay} className={cn(round, "size-16 bg-black/30")} aria-label="Смотреть снова" title="Смотреть снова">
+              <RotateCcw className="size-8" />
+            </button>
+            {up ? (
+              <Link to={`/dance/${up.slug}`} className={cn(round, "size-11")} aria-label={`Следующий: ${up.title}`} title={up.title}>
+                <SkipForward className="size-6 fill-current" />
+              </Link>
+            ) : null}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -358,6 +358,7 @@ export function Dance() {
                 onTheatre={toggleTheatre}
                 withBar={!theatre}
                 next={upNext}
+                prev={upNext[upNext.length - 1]}
               />
             </Suspense>
           ) : (

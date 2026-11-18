@@ -148,6 +148,11 @@
     --video-border-radius: 0;
   }
 }
+/* At the end our end screen has its own replay; the phone layout's centre button would double it. */
+.bal-player[data-ended] .vds-video-layout[data-sm] .vds-controls-group > .vds-play-button {
+  visibility: hidden;
+}
+
 /* Theatre mode: the player (and its controls) spans the page; it is only as tall as leaves room for
    the rehearsal bar below, and the video sits in it with black sides. */
 @media (width >= 64rem) {
