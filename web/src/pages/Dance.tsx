@@ -328,6 +328,9 @@ export function Dance() {
   const isGlossary = dance.kind === "glossary";
   const videoPost = dance.assets.find((a) => a.kind === "video");
   const others = (catalog.data?.dances ?? []).filter((d) => d.slug !== slug);
+  // End screen: the dances after this one in programme order, wrapping round to the start.
+  const programme = others.filter((d) => d.available && d.kind === "dance").sort((a, b) => a.order - b.order);
+  const upNext = [...programme.filter((d) => d.order > dance.order), ...programme.filter((d) => d.order < dance.order)];
   const caption = dance.caption.replace(/\s*#\S+/g, "").trim();
   const facts = [
     dance.hasScheme && "схема",
@@ -354,6 +357,7 @@ export function Dance() {
                 theatre={theatre}
                 onTheatre={toggleTheatre}
                 withBar={!theatre}
+                next={upNext}
               />
             </Suspense>
           ) : (

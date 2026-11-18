@@ -4,10 +4,11 @@ import { MediaPlayer, MediaProvider, Poster, Track, useMediaRemote, useMediaStat
 import { DefaultVideoLayout, defaultLayoutIcons, type DefaultLayoutTranslations } from "@vidstack/react/player/layouts/default";
 import { Minus, NotebookPen, Plus, Repeat, RotateCcw, RotateCw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from "react";
+import { Link } from "react-router";
 import { SplitPill, splitHalf } from "@/components/SplitPill";
 import { Tip } from "@/components/Tip";
 import { timecode } from "@/lib/format";
-import type { DanceDetail, Note } from "@/lib/types";
+import type { DanceDetail, DanceSummary, Note } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export type Loop = { a: number; b: number } | null;
@@ -82,6 +83,7 @@ export function RehearsalPlayer({
   theatre,
   onTheatre,
   withBar = true,
+  next = [],
 }: {
   dance: DanceDetail;
   player: RefObject<MediaPlayerInstance | null>;
@@ -96,6 +98,8 @@ export function RehearsalPlayer({
   onTheatre: () => void;
   /** In theatre mode the page places the bar itself, under the video in the left column. */
   withBar?: boolean;
+  /** Dances offered on the end screen, next in the programme first. */
+  next?: DanceSummary[];
 }) {
   const video = dance.video!;
   const [sound] = useState(savedVolume);
@@ -112,6 +116,13 @@ export function RehearsalPlayer({
       if (l && currentTime >= l.b && currentTime < l.b + 1.5) p.currentTime = l.a;
     });
   }, [player]);
+
+  const replay = () => {
+    const p = player.current;
+    if (!p) return;
+    p.currentTime = 0;
+    p.play().catch(() => {});
+  };
 
   const chapters = useMemo(
     () => ({ cues: dance.chapterList.map((c) => ({ startTime: c.start, endTime: c.end, text: c.title })) }),
@@ -161,6 +172,7 @@ export function RehearsalPlayer({
             beforeFullscreenButton: <TheatreButton on={theatre} onToggle={onTheatre} />,
           }}
         />
+        <EndScreen next={next} onReplay={replay} />
       </MediaPlayer>
       </div>
       {withBar ? <RehearsalBar player={player} duration={video.duration} loop={loop} setLoop={setLoop} notes={notes} onNote={onNote} /> : null}
@@ -416,6 +428,47 @@ function Strip({
         ))}
         <div className="pointer-events-none absolute top-1/2 z-20 h-5 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink" style={{ left: pct(time) }} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * When the video ends (not while a fragment repeats), the next dances of the programme
+ * appear over it, like YouTube's end screen, with a button to watch again.
+ */
+function EndScreen({ next, onReplay }: { next: DanceSummary[]; onReplay: () => void }) {
+  const ended = useMediaState("ended");
+  if (!ended || !next.length) return null;
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col justify-center gap-3 bg-[#05091a]/80 p-3 text-[#ece6d6] backdrop-blur-sm sm:gap-5 sm:p-8">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[13px] font-medium text-[#ece6d6]/70 sm:text-[15px]">Дальше по программе</p>
+        <button
+          type="button"
+          onClick={onReplay}
+          className="flex h-8 items-center gap-2 rounded-full bg-white/15 px-3 text-[13px] font-medium transition-colors hover:bg-white/25 sm:h-9 sm:px-3.5"
+        >
+          <RotateCcw className="size-4" /> Смотреть снова
+        </button>
+      </div>
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        {next.slice(0, 4).map((d, i) => (
+          <li key={d.slug} className={cn(i >= 2 && "max-sm:hidden")}>
+            <Link to={`/dance/${d.slug}`} className="group block">
+              <span className="relative block aspect-video overflow-hidden rounded-lg bg-black/40 ring-1 ring-white/10 transition group-hover:ring-2 group-hover:ring-[#e8ddc2]">
+                {d.posterSmall ? <img src={d.posterSmall} alt="" className="size-full object-cover" /> : null}
+                {d.duration ? (
+                  <span className="tnum absolute right-1.5 bottom-1.5 rounded bg-black/75 px-1 text-[11px] font-medium">{timecode(d.duration)}</span>
+                ) : null}
+                {i === 0 ? (
+                  <span className="absolute top-1.5 left-1.5 rounded bg-[#e8ddc2] px-1.5 text-[11px] font-semibold text-[#0a1028]">Следующий</span>
+                ) : null}
+              </span>
+              <span className="mt-1.5 line-clamp-2 text-[13px] leading-snug font-medium group-hover:underline sm:text-[14px]">{d.title}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
