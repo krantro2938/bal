@@ -62,7 +62,7 @@ export function Catalog() {
 
   return (
     <main className="px-4 pb-20 sm:px-6 lg:px-8">
-      <div className="sticky top-16 z-30 -mx-4 flex gap-2 overflow-x-auto bg-bg px-4 pt-2 pb-4 [scrollbar-width:none] sm:top-[72px] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pt-2 pb-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         {chips
           .filter((c) => c.show)
           .map((c) => (
