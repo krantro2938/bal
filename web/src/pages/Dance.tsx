@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 
 // The player bundle (Vidstack) is only fetched when a dance page opens.
 const RehearsalPlayer = lazy(() => import("@/components/RehearsalPlayer").then((m) => ({ default: m.RehearsalPlayer })));
+const RehearsalBar = lazy(() => import("@/components/RehearsalPlayer").then((m) => ({ default: m.RehearsalBar })));
 
 const guestPosKey = (slug: string) => `bal-pos:${slug}`;
 
@@ -69,7 +70,16 @@ export function Dance() {
     if (focusComment) setTab("comments");
   }, [focusComment]);
   const [commentCount, setCommentCount] = useState(0);
-  const [theatre, setTheatre] = useState(() => readFlag(THEATRE_KEY));
+  const [theatreOn, setTheatre] = useState(() => readFlag(THEATRE_KEY));
+  // Theatre mode only exists on large screens; phones keep the stored choice for later.
+  const [wide, setWide] = useState(() => matchMedia(WIDE).matches);
+  useEffect(() => {
+    const m = matchMedia(WIDE);
+    const on = () => setWide(m.matches);
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, []);
+  const theatre = theatreOn && wide;
   const toggleTheatre = useCallback(() => {
     setTheatre((t) => {
       writeFlag(THEATRE_KEY, !t);
@@ -81,7 +91,7 @@ export function Dance() {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
       if (e.key.toLowerCase() !== "t" || e.metaKey || e.ctrlKey || e.altKey || el.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(el.tagName)) return;
-      if (matchMedia("(min-width: 1024px)").matches) toggleTheatre();
+      if (matchMedia(WIDE).matches) toggleTheatre();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -290,7 +300,7 @@ export function Dance() {
 
   if (error) {
     return (
-      <main className="mx-auto max-w-[1200px] px-3 sm:px-4 lg:px-8">
+      <main className="mx-auto max-w-[1200px] px-3 sm:px-4 lg:px-6">
         <StateBlock
           className="mt-6"
           title={error.status === 404 ? "Такого танца нет в каталоге" : "Страница не загрузилась"}
@@ -304,7 +314,7 @@ export function Dance() {
 
   if (!dance) {
     return (
-      <main className="grid gap-8 px-3 pt-2 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:pt-6" aria-busy="true">
+      <main className="grid gap-8 px-3 pt-2 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:pt-6" aria-busy="true">
         <div>
           <div className="aspect-video w-full rounded-[var(--radius-frame)] bg-player" />
           <div className="mt-5 h-8 w-2/3 rounded-lg bg-surface-2" />
@@ -328,7 +338,7 @@ export function Dance() {
   return (
     // Large screens: the player is its own grid cell so theatre mode can span both columns;
     // the 1fr row keeps the side column's height from stretching the player's row.
-    <main className="grid gap-x-8 px-3 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:grid-rows-[auto_1fr] lg:px-8 lg:pt-6 2xl:gap-x-10">
+    <main className="grid gap-x-8 px-3 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:grid-rows-[auto_1fr] lg:pt-6 2xl:gap-x-10">
         <div className={cn("sticky top-16 z-20 -mx-3 min-w-0 bg-bg sm:static sm:mx-0 lg:col-start-1 lg:row-start-1", theatre && "lg:col-span-2 lg:-mt-6")}>
           {dance.video ? (
             <Suspense fallback={<div className="aspect-video w-full bg-player sm:rounded-[var(--radius-frame)]" />}>
@@ -343,6 +353,7 @@ export function Dance() {
                 onReady={() => setPlayerReady(true)}
                 theatre={theatre}
                 onTheatre={toggleTheatre}
+                withBar={!theatre}
               />
             </Suspense>
           ) : (
@@ -362,6 +373,12 @@ export function Dance() {
         </div>
 
         <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+          {/* Theatre mode: the rehearsal bar sits here, so the side column starts level with it. */}
+          {theatre && dance.video ? (
+            <Suspense fallback={<div className="h-[52px]" />}>
+              <RehearsalBar player={player} duration={dance.video.duration} loop={loop} setLoop={setLoop} notes={notes} onNote={startNote} />
+            </Suspense>
+          ) : null}
           <h1 className="font-title mt-6 text-[24px] leading-tight lg:text-[30px]">{dance.title}</h1>
 
           {/* On phones only the badge stays and the actions lose their labels, like YouTube's app. */}
@@ -401,7 +418,7 @@ export function Dance() {
           </div>
 
           {resumeAt !== null && !resumeDismissed && !resumeOff ? (
-            <div className="mt-5 flex items-center gap-2 rounded-[var(--radius-frame)] bg-surface-2 px-4 py-2.5 text-[15px]">
+            <div className="mt-5 flex items-center gap-2 rounded-[var(--radius-frame)] bg-[var(--notice)] px-4 py-2.5 text-[15px]">
               <span className="tnum flex-1">Вы остановились на {timecode(resumeAt)}</span>
               <button
                 type="button"
@@ -651,7 +668,7 @@ export function Dance() {
           </section>
         </div>
 
-      <aside className={cn("mt-12 min-w-0 space-y-8 lg:col-start-2 lg:mt-0", theatre ? "lg:row-start-2 lg:pt-6" : "lg:row-span-2 lg:row-start-1")}>
+      <aside className={cn("mt-12 min-w-0 space-y-8 lg:col-start-2 lg:mt-0", theatre ? "lg:row-start-2 lg:pt-3" : "lg:row-span-2 lg:row-start-1")}>
         {dance.chapterList.length > 0 ? (
           <div className="hidden lg:block">
             <ChaptersPanel
@@ -739,6 +756,7 @@ export function Dance() {
 /** Pill button; `iconOnly` drops the text and shows it as a tooltip after a short hover. */
 const TAB_KEY = "bal:discussion-tab";
 const THEATRE_KEY = "bal:theatre";
+const WIDE = "(min-width: 1024px)";
 const RESUME_OFF_KEY = "bal:resume-banner-off";
 
 function readFlag(key: string) {

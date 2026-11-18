@@ -22,7 +22,7 @@ export function Me() {
 
   if (ready && !user) return <Navigate to="/login?return=%2Fme" replace />;
   if (!ready || !state || !data) {
-    return <main className="mx-auto max-w-[1200px] px-3 pt-8 sm:px-4 lg:px-8" aria-busy="true"><div className="h-8 w-56 rounded bg-surface-2" /></main>;
+    return <main className="mx-auto max-w-[1200px] px-3 pt-8 sm:px-4 lg:px-6" aria-busy="true"><div className="h-8 w-56 rounded bg-surface-2" /></main>;
   }
 
   const bySlug = new Map(data.dances.map((d) => [d.slug, d]));
@@ -64,9 +64,10 @@ export function Me() {
                   return (
                     <li key={p.dance} className="w-[72vw] shrink-0 snap-start sm:w-[300px] lg:w-auto">
                       <Link to={`/dance/${d.slug}?t=${Math.floor(p.position)}`} className="group block">
-                        <div className="relative">
+                        {/* clipped with the cover so the bar follows its rounded corners */}
+                        <div className="relative overflow-hidden rounded-[var(--radius-frame)]">
                           <Cover dance={d} />
-                          <div className="absolute inset-x-0 bottom-0 h-[3px] bg-white/25">
+                          <div className="absolute inset-x-0 bottom-0 h-1 bg-white/25">
                             <div className="h-full bg-[#e8ddc2]" style={{ width: `${Math.min(100, (p.position / (d.duration || 1)) * 100)}%` }} />
                           </div>
                         </div>

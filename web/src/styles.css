@@ -23,7 +23,7 @@
   --accent-soft: #1c2b6e1f;
   --link: #1f5fd1;
   --ink-soft: var(--ink);
-  --theatre: var(--bg);
+  --notice: var(--accent-soft);
   --danger: #a8322d;
   --player-bg: #05091a;
   --hover: #0b12300d;
@@ -51,7 +51,7 @@
   --link: #7fb6ff;
   /* Long text and list titles sit a step back from headings on the dark page. */
   --ink-soft: #ece6d6d1;
-  --theatre: #000000;
+  --notice: var(--surface-2);
   --danger: #f0938a;
   --hover: #ffffff0f;
   --shadow-sheet: none;
@@ -150,11 +150,14 @@
     --video-border-radius: 0;
   }
 }
-/* Theatre mode: as wide as the page allows while the whole frame and the controls under it fit on screen. */
+/* Theatre mode: the player (and its controls) spans the page; it is only as tall as leaves room for
+   the rehearsal bar below, and the video sits in it with black sides. */
 @media (width >= 64rem) {
   .bal-player.bal-theatre {
-    width: min(100%, calc((100dvh - 72px - 150px) * 16 / 9));
+    max-height: calc(100dvh - 72px - 150px);
     border-radius: 0;
+    background: #000;
+    --video-bg: #000;
     --video-border-radius: 0;
   }
 }

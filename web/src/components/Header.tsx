@@ -24,7 +24,7 @@ export function Header() {
           <SearchBox autoFocus onClose={() => setMobileSearch(false)} />
         </div>
       ) : null}
-      <div className={`flex h-16 items-center gap-1 px-3 sm:h-[72px] sm:gap-3 sm:px-6 lg:px-8 ${mobileSearch ? "hidden sm:flex" : ""}`}>
+      <div className={`flex h-16 items-center gap-1 px-3 sm:h-[72px] sm:gap-3 sm:px-6 ${mobileSearch ? "hidden sm:flex" : ""}`}>
         <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-full py-1 pr-2" aria-label="Звёздная одиссея — все танцы">
           <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#081028] text-[#e8ddc2]">
             <Star className="size-4" />
@@ -118,7 +118,7 @@ function AccountMenu({ user }: { user: User }) {
               <p className="truncate text-[13px] text-ink-3">@{user.username}</p>
             </div>
           </div>
-          <div className="border-t border-line pt-2">
+          <div className="pt-1">
             <Link to="/me" className="flex items-center gap-3 px-4 py-2.5 text-[15px] hover:bg-hover">
               <NotebookPen className="size-5 text-ink-2" /> Мои репетиции
             </Link>

@@ -60,6 +60,7 @@ export function RehearsalPlayer({
   onReady,
   theatre,
   onTheatre,
+  withBar = true,
 }: {
   dance: DanceDetail;
   player: RefObject<MediaPlayerInstance | null>;
@@ -72,6 +73,8 @@ export function RehearsalPlayer({
   /** Large screens: the player spans the page, letterboxed, like YouTube's theatre mode. */
   theatre: boolean;
   onTheatre: () => void;
+  /** In theatre mode the page places the bar itself, under the video in the left column. */
+  withBar?: boolean;
 }) {
   const video = dance.video!;
   const loopRef = useRef(loop);
@@ -95,14 +98,11 @@ export function RehearsalPlayer({
 
   return (
     <div>
-      {/* In theatre mode the band runs edge to edge and the video keeps its ratio inside it. */}
-      <div className={cn(theatre && "lg:-mx-8 lg:flex lg:justify-center lg:bg-[var(--theatre)]")}>
+      {/* In theatre mode the player runs edge to edge; the video keeps its ratio inside, with black sides. */}
+      <div className={cn(theatre && "lg:-mx-6")}>
       <MediaPlayer
         ref={player}
-        className={cn(
-          "bal-player mx-auto aspect-video w-full overflow-hidden sm:rounded-[var(--radius-frame)]",
-          theatre && "bal-theatre",
-        )}
+        className={cn("bal-player aspect-video w-full overflow-hidden sm:rounded-[var(--radius-frame)]", theatre && "bal-theatre")}
         title={dance.title}
         src={{ src: video.url, type: "video/mp4" }}
         playsInline
@@ -138,12 +138,12 @@ export function RehearsalPlayer({
         />
       </MediaPlayer>
       </div>
-      <RehearsalBar player={player} duration={video.duration} loop={loop} setLoop={setLoop} notes={notes} onNote={onNote} />
+      {withBar ? <RehearsalBar player={player} duration={video.duration} loop={loop} setLoop={setLoop} notes={notes} onNote={onNote} /> : null}
     </div>
   );
 }
 
-function RehearsalBar({
+export function RehearsalBar({
   player,
   duration,
   loop,
