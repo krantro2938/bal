@@ -69,6 +69,25 @@ export function Dance() {
     if (focusComment) setTab("comments");
   }, [focusComment]);
   const [commentCount, setCommentCount] = useState(0);
+  const [theatre, setTheatre] = useState(() => readFlag(THEATRE_KEY));
+  const toggleTheatre = useCallback(() => {
+    setTheatre((t) => {
+      writeFlag(THEATRE_KEY, !t);
+      return !t;
+    });
+  }, []);
+  // T toggles theatre mode, as on YouTube (not while typing).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (e.key.toLowerCase() !== "t" || e.metaKey || e.ctrlKey || e.altKey || el.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(el.tagName)) return;
+      if (matchMedia("(min-width: 1024px)").matches) toggleTheatre();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggleTheatre]);
+  // Once someone closes the "you stopped at" banner, it stays closed everywhere.
+  const [resumeOff, setResumeOff] = useState(() => readFlag(RESUME_OFF_KEY));
   const cues = useThumbs(dance?.thumbnails);
 
   useEffect(() => {
@@ -307,9 +326,10 @@ export function Dance() {
   ].filter((f): f is string => !!f);
 
   return (
-    <main className="grid gap-x-8 px-3 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:pt-6 2xl:gap-x-10">
-      <div className="min-w-0">
-        <div className="sticky top-16 z-20 -mx-3 bg-bg sm:static sm:mx-0">
+    // Large screens: the player is its own grid cell so theatre mode can span both columns;
+    // the 1fr row keeps the side column's height from stretching the player's row.
+    <main className="grid gap-x-8 px-3 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:grid-rows-[auto_1fr] lg:px-8 lg:pt-6 2xl:gap-x-10">
+        <div className={cn("sticky top-16 z-20 -mx-3 min-w-0 bg-bg sm:static sm:mx-0 lg:col-start-1 lg:row-start-1", theatre && "lg:col-span-2 lg:-mt-6")}>
           {dance.video ? (
             <Suspense fallback={<div className="aspect-video w-full bg-player sm:rounded-[var(--radius-frame)]" />}>
               <RehearsalPlayer
@@ -321,6 +341,8 @@ export function Dance() {
                 notes={notes}
                 onNote={startNote}
                 onReady={() => setPlayerReady(true)}
+                theatre={theatre}
+                onTheatre={toggleTheatre}
               />
             </Suspense>
           ) : (
@@ -339,8 +361,8 @@ export function Dance() {
           )}
         </div>
 
-        <div>
-          <h1 className="font-title mt-4 text-[24px] leading-tight lg:text-[30px]">{dance.title}</h1>
+        <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+          <h1 className="font-title mt-6 text-[24px] leading-tight lg:text-[30px]">{dance.title}</h1>
 
           {/* On phones only the badge stays and the actions lose their labels, like YouTube's app. */}
           <div className="mt-4 flex items-center gap-3 sm:flex-wrap sm:gap-x-6 sm:gap-y-4">
@@ -378,8 +400,8 @@ export function Dance() {
             </div>
           </div>
 
-          {resumeAt !== null && !resumeDismissed ? (
-            <div className="mt-5 flex items-center gap-2 rounded-[var(--radius-frame)] bg-accent-soft px-4 py-2.5 text-[15px]">
+          {resumeAt !== null && !resumeDismissed && !resumeOff ? (
+            <div className="mt-5 flex items-center gap-2 rounded-[var(--radius-frame)] bg-surface-2 px-4 py-2.5 text-[15px]">
               <span className="tnum flex-1">Вы остановились на {timecode(resumeAt)}</span>
               <button
                 type="button"
@@ -400,9 +422,13 @@ export function Dance() {
               </button>
               <button
                 type="button"
-                onClick={() => setResumeDismissed(true)}
+                onClick={() => {
+                  setResumeOff(true);
+                  writeFlag(RESUME_OFF_KEY, true);
+                }}
                 className="-mr-2 grid size-8 place-items-center rounded-full text-ink-3 hover:bg-hover hover:text-ink"
-                aria-label="Скрыть"
+                aria-label="Больше не показывать"
+                title="Больше не показывать"
               >
                 <X className="size-4" />
               </button>
@@ -431,13 +457,13 @@ export function Dance() {
                 </span>
               ))}
             </p>
-            <p className={cn("mt-1.5 max-w-[75ch]", !more && "line-clamp-2")}>{dance.description}</p>
+            <p className={cn("mt-1.5 max-w-[75ch] text-ink-soft", !more && "line-clamp-2")}>{dance.description}</p>
             {more ? (
               <>
                 {caption ? (
                   <div className="mt-5 max-w-[75ch] border-t border-line-strong/60 pt-5">
                     <p className="text-[14px] font-medium text-ink-2">Из поста организаторов</p>
-                    <p className="mt-2 whitespace-pre-line text-ink">{caption}</p>
+                    <p className="mt-2 whitespace-pre-line text-ink-soft">{caption}</p>
                   </div>
                 ) : null}
                 <div className="mt-5 border-t border-line-strong/60 pt-5">
@@ -470,7 +496,7 @@ export function Dance() {
                 </button>
               </>
             ) : (
-              <span className="mt-2 flex w-fit items-center gap-1 text-[15px] font-medium underline-offset-4 hover:underline">
+              <span className="mt-2 flex items-center gap-1 text-[15px] font-medium">
                 ещё <ChevronDown className="size-4" />
               </span>
             )}
@@ -624,9 +650,8 @@ export function Dance() {
             </div>
           </section>
         </div>
-      </div>
 
-      <aside className="mt-12 min-w-0 space-y-8 lg:mt-0">
+      <aside className={cn("mt-12 min-w-0 space-y-8 lg:col-start-2 lg:mt-0", theatre ? "lg:row-start-2 lg:pt-6" : "lg:row-span-2 lg:row-start-1")}>
         {dance.chapterList.length > 0 ? (
           <div className="hidden lg:block">
             <ChaptersPanel
@@ -647,7 +672,7 @@ export function Dance() {
               <button
                 type="button"
                 onClick={() => setScheme(0)}
-                className="flex h-9 items-center gap-1.5 rounded-full bg-accent px-3.5 text-[13px] font-medium text-accent-ink"
+                className="flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-3.5 text-[13px] font-medium hover:bg-line"
               >
                 <Maximize2 className="size-4" /> Открыть
               </button>
@@ -713,6 +738,25 @@ export function Dance() {
 
 /** Pill button; `iconOnly` drops the text and shows it as a tooltip after a short hover. */
 const TAB_KEY = "bal:discussion-tab";
+const THEATRE_KEY = "bal:theatre";
+const RESUME_OFF_KEY = "bal:resume-banner-off";
+
+function readFlag(key: string) {
+  try {
+    return localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeFlag(key: string, on: boolean) {
+  try {
+    if (on) localStorage.setItem(key, "1");
+    else localStorage.removeItem(key);
+  } catch {
+    /* storage blocked: lasts for this page */
+  }
+}
 
 function Pill({
   onClick,

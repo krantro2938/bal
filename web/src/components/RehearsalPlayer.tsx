@@ -58,6 +58,8 @@ export function RehearsalPlayer({
   notes,
   onNote,
   onReady,
+  theatre,
+  onTheatre,
 }: {
   dance: DanceDetail;
   player: RefObject<MediaPlayerInstance | null>;
@@ -67,6 +69,9 @@ export function RehearsalPlayer({
   notes: Note[];
   onNote: () => void;
   onReady: () => void;
+  /** Large screens: the player spans the page, letterboxed, like YouTube's theatre mode. */
+  theatre: boolean;
+  onTheatre: () => void;
 }) {
   const video = dance.video!;
   const loopRef = useRef(loop);
@@ -90,9 +95,14 @@ export function RehearsalPlayer({
 
   return (
     <div>
+      {/* In theatre mode the band runs edge to edge and the video keeps its ratio inside it. */}
+      <div className={cn(theatre && "lg:-mx-8 lg:flex lg:justify-center lg:bg-[var(--theatre)]")}>
       <MediaPlayer
         ref={player}
-        className="bal-player aspect-video w-full overflow-hidden sm:rounded-[var(--radius-frame)]"
+        className={cn(
+          "bal-player mx-auto aspect-video w-full overflow-hidden sm:rounded-[var(--radius-frame)]",
+          theatre && "bal-theatre",
+        )}
         title={dance.title}
         src={{ src: video.url, type: "video/mp4" }}
         playsInline
@@ -117,9 +127,17 @@ export function RehearsalPlayer({
           playbackRates={[0.5, 0.75, 1, 1.25]}
           seekStep={5}
           colorScheme="dark"
-          slots={{ googleCastButton: null, pipButton: null, airPlayButton: null, chaptersMenu: null, settingsMenu: <SpeedButton /> }}
+          slots={{
+            googleCastButton: null,
+            pipButton: null,
+            airPlayButton: null,
+            chaptersMenu: null,
+            settingsMenu: <SpeedButton />,
+            beforeFullscreenButton: <TheatreButton on={theatre} onToggle={onTheatre} />,
+          }}
         />
       </MediaPlayer>
+      </div>
       <RehearsalBar player={player} duration={video.duration} loop={loop} setLoop={setLoop} notes={notes} onNote={onNote} />
     </div>
   );
@@ -207,7 +225,7 @@ function RehearsalBar({
           className="group/tip relative grid size-10 place-items-center rounded-full bg-surface-2 hover:bg-line sm:ml-auto"
         >
           <NotebookPen className="size-[18px]" />
-          <Tip label={`Заметка на ${timecode(time)}`} />
+          <Tip label={`Заметка на ${timecode(time)}`} align="end" />
         </button>
       </div>
 
@@ -377,6 +395,19 @@ function Strip({
   );
 }
 
+/** Theatre mode toggle, only on large screens (T on the keyboard, as on YouTube). */
+function TheatreButton({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  const label = on ? "Обычный режим (t)" : "Режим кинотеатра (t)";
+  return (
+    <button type="button" onClick={onToggle} className="vds-button max-lg:!hidden" aria-label={label} title={label}>
+      {/* a wide frame to enter, a narrower one to leave, like YouTube's */}
+      <svg className="vds-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+        {on ? <rect x="8" y="10" width="16" height="12" rx="2" /> : <rect x="4" y="9" width="24" height="14" rx="2" />}
+      </svg>
+    </button>
+  );
+}
+
 /** Replaces the settings menu: speed presets and a slider in a small popover inside the player (works in fullscreen). */
 function SpeedButton() {
   const rate = useMediaState("playbackRate");
@@ -402,9 +433,9 @@ function SpeedButton() {
         {fmt(rate)}
       </button>
       {open ? (
-        <div className="absolute right-0 bottom-[72px] z-50 w-64 [[data-sm]_&]:top-11 [[data-sm]_&]:bottom-auto rounded-2xl bg-[#0b1230]/95 p-4 text-[#ece6d6] shadow-2xl ring-1 ring-white/10 backdrop-blur">
+        <div className="absolute right-0 bottom-[72px] z-50 w-64 [[data-sm]_&]:top-11 [[data-sm]_&]:bottom-auto rounded-2xl bg-[var(--sheet)] p-4 text-ink shadow-[var(--shadow-pop)]">
           <div className="flex items-baseline justify-between">
-            <span className="text-[13px] text-white/60">Скорость</span>
+            <span className="text-[13px] text-ink-3">Скорость</span>
             <span className="tnum text-[15px] font-semibold">{fmt(rate)}</span>
           </div>
           <div className="mt-3 grid grid-cols-5 gap-1">
@@ -415,7 +446,7 @@ function SpeedButton() {
                 onClick={() => remote.changePlaybackRate(r)}
                 className={cn(
                   "tnum h-8 rounded-full text-[12px] font-medium transition-colors",
-                  Math.abs(rate - r) < 0.01 ? "bg-[#e8ddc2] text-[#0a1028]" : "bg-white/10 hover:bg-white/20",
+                  Math.abs(rate - r) < 0.01 ? "bg-accent text-accent-ink" : "bg-surface-2 hover:bg-line",
                 )}
               >
                 {String(r).replace(".", ",")}
@@ -431,9 +462,9 @@ function SpeedButton() {
             onChange={(e) => remote.changePlaybackRate(Number(e.target.value))}
             aria-label="Скорость"
             className="bal-range mt-4 h-1 w-full cursor-pointer appearance-none rounded-full"
-            style={{ background: `linear-gradient(to right, #e8ddc2 ${((rate - 0.25) / 1.75) * 100}%, rgb(255 255 255 / 0.2) ${((rate - 0.25) / 1.75) * 100}%)`, ["--accent" as string]: "#e8ddc2" }}
+            style={{ background: `linear-gradient(to right, var(--accent) ${((rate - 0.25) / 1.75) * 100}%, var(--line) ${((rate - 0.25) / 1.75) * 100}%)` }}
           />
-          <div className="tnum mt-1.5 flex justify-between text-[11px] text-white/40">
+          <div className="tnum mt-1.5 flex justify-between text-[11px] text-ink-3">
             <span>0,25×</span>
             <span>2×</span>
           </div>

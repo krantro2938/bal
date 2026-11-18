@@ -267,7 +267,7 @@ export function CompactCard({ dance, current }: { dance: DanceSummary; current?:
       >
         <Cover dance={dance} playing={on && dance.available && !current} className="w-[168px] shrink-0 rounded-lg sm:w-[208px]" />
         <div className="min-w-0 py-0.5">
-          <h3 className="line-clamp-2 text-[15px] leading-snug font-medium">{dance.title}</h3>
+          <h3 className="line-clamp-2 text-[15px] leading-snug font-medium text-ink-soft">{dance.title}</h3>
           <p className="mt-1 text-[12px] text-ink-3">{dance.kind === "glossary" ? "Словарь движений" : `Танец ${String(dance.order).padStart(2, "0")}`}</p>
           <p className="tnum flex flex-wrap items-center gap-x-2 text-[12px] text-ink-3">
             <span>{viewsLabel(dance.views)}</span>
