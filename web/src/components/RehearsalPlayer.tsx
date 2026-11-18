@@ -2,7 +2,7 @@ import "@vidstack/react/player/styles/default/theme.css";
 import "@vidstack/react/player/styles/default/layouts/video.css";
 import { MediaPlayer, MediaProvider, Poster, Track, useMediaRemote, useMediaState, type MediaPlayerInstance } from "@vidstack/react";
 import { DefaultVideoLayout, defaultLayoutIcons, type DefaultLayoutTranslations } from "@vidstack/react/player/layouts/default";
-import { ArrowRightFromLine, ArrowRightToLine, Hand, LocateFixed, Minus, Plus, Repeat, RotateCcw, RotateCw, X } from "lucide-react";
+import { Minus, Plus, Repeat, RotateCcw, RotateCw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from "react";
 import { SplitPill, splitHalf } from "@/components/SplitPill";
 import { Star } from "@/components/Star";
@@ -257,24 +257,19 @@ function LoopPanel({
       </div>
       <div className="mt-2">{children}</div>
       <div className="mt-3 flex flex-wrap gap-x-8 gap-y-2">
-        <EndEditor icon={<ArrowRightFromLine />} label="Начало" t={loop.a} onStep={(d) => set(loop.a + d, loop.b)} onHere={() => set(now(), loop.b)} />
-        <EndEditor icon={<ArrowRightToLine />} label="Конец" t={loop.b} onStep={(d) => set(loop.a, loop.b + d)} onHere={() => set(loop.a, now())} />
+        <EndEditor label="Начало" t={loop.a} onStep={(d) => set(loop.a + d, loop.b)} onHere={() => set(now(), loop.b)} />
+        <EndEditor label="Конец" t={loop.b} onStep={(d) => set(loop.a, loop.b + d)} onHere={() => set(loop.a, now())} />
       </div>
-      <p className="mt-3 text-[13px] leading-relaxed text-ink-3 [&_svg]:inline [&_svg]:size-3.5 [&_svg]:align-[-2px]">
-        <Hand /> Тяните края полосы или нажмите <LocateFixed /> «Сюда» — край встанет на текущий момент видео
-      </p>
+      <p className="mt-2 text-[13px] text-ink-3">Края полосы можно тянуть. «Сюда» ставит край на текущий момент видео.</p>
     </div>
   );
 }
 
-function EndEditor({ icon, label, t, onStep, onHere }: { icon: ReactNode; label: string; t: number; onStep: (d: number) => void; onHere: () => void }) {
+function EndEditor({ label, t, onStep, onHere }: { label: string; t: number; onStep: (d: number) => void; onHere: () => void }) {
   const step = "grid size-8 place-items-center rounded-full text-ink-2 hover:bg-hover hover:text-ink";
   return (
     <div className="flex items-center gap-1">
-      <span className="mr-1 flex w-[5.25rem] items-center gap-1.5 text-[13px] text-ink-2 [&_svg]:size-4 [&_svg]:text-accent">
-        {icon}
-        {label}
-      </span>
+      <span className="w-14 text-[13px] text-ink-3">{label}</span>
       <button type="button" onClick={() => onStep(-0.5)} className={step} aria-label={`${label}: на полсекунды раньше`} title="На 0,5 с раньше">
         <Minus className="size-4" />
       </button>
@@ -285,10 +280,9 @@ function EndEditor({ icon, label, t, onStep, onHere }: { icon: ReactNode; label:
       <button
         type="button"
         onClick={onHere}
-        className="ml-1 flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium text-accent hover:bg-hover"
+        className="ml-1 h-8 rounded-full px-2.5 text-[13px] font-medium text-accent hover:bg-hover"
         title={`Поставить ${label.toLowerCase()} в текущий момент видео`}
       >
-        <LocateFixed className="size-4" />
         Сюда
       </button>
     </div>
@@ -312,22 +306,17 @@ function Strip({
   notes: Note[];
 }) {
   const track = useRef<HTMLDivElement>(null);
-  const [drag, setDrag] = useState<{ end: "a" | "b"; view: [number, number] } | null>(null);
-  // The strip zooms to the fragment and some context around it, so even a few seconds read clearly.
-  // While an end is dragged the window holds still.
-  const live = useMemo(() => loopWindow(loop, duration), [loop, duration]);
-  const [w0, w1] = drag?.view ?? live;
-  const inView = (t: number) => t >= w0 && t <= w1;
-  const pct = (t: number) => `${((Math.min(Math.max(t, w0), w1) - w0) / (w1 - w0)) * 100}%`;
+  const [drag, setDrag] = useState<"a" | "b" | null>(null);
+  const pct = (t: number) => `${(Math.min(Math.max(t, 0), duration) / duration) * 100}%`;
   const timeAt = (clientX: number) => {
     const r = track.current!.getBoundingClientRect();
-    return Math.round((w0 + Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * (w1 - w0)) * 10) / 10;
+    return Math.round(Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * duration * 10) / 10;
   };
   const onMove = (e: PointerEvent) => {
     if (!drag || !loop) return;
     const t = timeAt(e.clientX);
-    if (drag.end === "a" && t <= loop.b - 0.5) setLoop({ a: t, b: loop.b });
-    if (drag.end === "b" && t >= loop.a + 0.5) setLoop({ a: loop.a, b: t });
+    if (drag === "a" && t <= loop.b - 0.5) setLoop({ a: t, b: loop.b });
+    if (drag === "b" && t >= loop.a + 0.5) setLoop({ a: loop.a, b: t });
   };
   return (
     <div>
@@ -366,7 +355,7 @@ function Strip({
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   track.current?.setPointerCapture(e.pointerId);
-                  setDrag({ end, view: live });
+                  setDrag(end);
                 }}
               >
                 <span className="h-7 w-1.5 rounded-full bg-accent" />
@@ -374,30 +363,15 @@ function Strip({
             ))}
           </>
         ) : null}
-        {notes.filter((n) => inView(n.t)).map((n) => (
+        {notes.map((n) => (
           <span key={n.id} className="pointer-events-none absolute -top-1 -translate-x-1/2 text-accent" style={{ left: pct(n.t) }}>
             <Star className="size-2.5" />
           </span>
         ))}
-        {inView(time) ? (
-          <div className="pointer-events-none absolute top-1/2 z-20 h-5 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink" style={{ left: pct(time) }} />
-        ) : null}
-      </div>
-      <div className="tnum mt-0.5 flex justify-between text-[11px] text-ink-3">
-        <span>{timecode(w0)}</span>
-        <span>{timecode(w1)}</span>
+        <div className="pointer-events-none absolute top-1/2 z-20 h-5 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink" style={{ left: pct(time) }} />
       </div>
     </div>
   );
-}
-
-/** Visible range of the loop strip: the fragment plus as much again on each side, at least 20 s in total. */
-function loopWindow(loop: Loop, duration: number): [number, number] {
-  if (!loop) return [0, duration];
-  const span = Math.min(duration, Math.max(20, (loop.b - loop.a) * 3));
-  let w0 = (loop.a + loop.b) / 2 - span / 2;
-  w0 = Math.max(0, Math.min(duration - span, w0));
-  return [Math.floor(w0), Math.min(duration, Math.ceil(w0 + span))];
 }
 
 /** Replaces the settings menu: speed presets and a slider in a small popover inside the player (works in fullscreen). */
