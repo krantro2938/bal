@@ -4,6 +4,7 @@ import { MediaPlayer, MediaProvider, Poster, Track, useMediaRemote, useMediaStat
 import { DefaultVideoLayout, defaultLayoutIcons, type DefaultLayoutTranslations } from "@vidstack/react/player/layouts/default";
 import { Minus, Plus, Repeat, RotateCcw, RotateCw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from "react";
+import { SplitPill, splitHalf } from "@/components/SplitPill";
 import { Star } from "@/components/Star";
 import { timecode } from "@/lib/format";
 import type { DanceDetail, Note } from "@/lib/types";
@@ -158,17 +159,16 @@ function RehearsalBar({
   return (
     <div className="bg-bg pt-3 pb-1">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex h-10 items-center rounded-full bg-surface-2" role="group" aria-label="Перемотка">
-          <BarButton onClick={() => seekBy(-5)} label="Назад на 5 секунд">
+        <SplitPill label="Перемотка" className="h-10">
+          <button type="button" onClick={() => seekBy(-5)} aria-label="Назад на 5 секунд" title="Назад на 5 секунд" className={cn(splitHalf("l"), "gap-1")}>
             <RotateCcw className="size-[18px]" />
             <span className="tnum text-[13px]">5</span>
-          </BarButton>
-          <span className="h-5 w-px bg-line-strong" />
-          <BarButton onClick={() => seekBy(5)} label="Вперёд на 5 секунд">
+          </button>
+          <button type="button" onClick={() => seekBy(5)} aria-label="Вперёд на 5 секунд" title="Вперёд на 5 секунд" className={cn(splitHalf("r"), "gap-1")}>
             <RotateCw className="size-[18px]" />
             <span className="tnum text-[13px]">5</span>
-          </BarButton>
-        </div>
+          </button>
+        </SplitPill>
 
         <div className="flex h-10 items-center rounded-full bg-surface-2 p-1" role="group" aria-label="Скорость">
           {SPEEDS.map((r) => (
@@ -243,7 +243,7 @@ function LoopPanel({
         <Repeat className="size-4 shrink-0 text-accent" />
         <p className="tnum flex-1 text-[15px]">
           Повтор <b className="font-semibold">{timecode(loop.a)} – {timecode(loop.b)}</b>
-          <span className="text-ink-3"> · {Math.round(loop.b - loop.a)} с</span>
+          <span className="ml-2 text-ink-3">{Math.round(loop.b - loop.a)} с</span>
         </p>
         <button
           type="button"
@@ -285,20 +285,6 @@ function EndEditor({ label, t, onStep, onHere }: { label: string; t: number; onS
         Сюда
       </button>
     </div>
-  );
-}
-
-function BarButton({ onClick, label, children }: { onClick: () => void; label: string; children: ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      className="flex h-10 min-w-12 items-center justify-center gap-0.5 rounded-full px-3 text-ink hover:bg-hover"
-    >
-      {children}
-    </button>
   );
 }
 
@@ -405,7 +391,7 @@ function SpeedButton() {
         {fmt(rate)}
       </button>
       {open ? (
-        <div className="absolute right-0 bottom-11 z-50 w-64 rounded-2xl bg-[#0b1230]/95 p-4 text-[#ece6d6] shadow-2xl ring-1 ring-white/10 backdrop-blur">
+        <div className="absolute right-0 bottom-[72px] z-50 w-64 [[data-sm]_&]:top-11 [[data-sm]_&]:bottom-auto rounded-2xl bg-[#0b1230]/95 p-4 text-[#ece6d6] shadow-2xl ring-1 ring-white/10 backdrop-blur">
           <div className="flex items-baseline justify-between">
             <span className="text-[13px] text-white/60">Скорость</span>
             <span className="tnum text-[15px] font-semibold">{fmt(rate)}</span>

@@ -22,11 +22,11 @@ export function Sheet({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-[#05091a]/55" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-[var(--scrim)]" />
         <Dialog.Content
           className={cn(
-            "fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[var(--radius-sheet)] border-t border-line bg-bg px-5 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-sheet)]",
-            "sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-[440px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[24px] sm:border sm:p-7",
+            "fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[var(--radius-sheet)] bg-[var(--sheet)] px-5 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-sheet)]",
+            "sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-[440px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[24px] sm:p-7",
             className,
           )}
         >

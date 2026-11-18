@@ -67,7 +67,7 @@ export function ChaptersCarousel({ chapters, cues, player, onSeek }: Pick<Props,
   const time = useMediaState("currentTime", player);
   return (
     <section>
-      <h2 className="mb-2 text-[15px] font-semibold">Фрагменты · {chapters.length}</h2>
+      <h2 className="mb-2 text-[15px] font-semibold">Фрагменты <span className="tnum ml-1 font-normal text-ink-3">{chapters.length}</span></h2>
       <ol className="-mx-3 flex snap-x gap-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">
         {chapters.map((c) => {
           const on = time >= c.start && time < c.end;

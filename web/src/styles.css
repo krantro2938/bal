@@ -28,6 +28,8 @@
   --shadow-pop: 0 12px 40px #0b12301f, 0 2px 8px #0b123014;
   --card-hover: #f0f0ec;
   --card-hover-shadow: none;
+  --sheet: var(--bg);
+  --scrim: #05091a8c;
   color-scheme: light;
 }
 
@@ -49,6 +51,9 @@
   --shadow-pop: 0 16px 48px #00000080;
   --card-hover: var(--surface);
   --card-hover-shadow: var(--shadow-pop);
+  /* Borderless dialogs need a lighter panel and a deeper scrim to stand off the page. */
+  --sheet: var(--surface);
+  --scrim: #000000b3;
   color-scheme: dark;
 }
 

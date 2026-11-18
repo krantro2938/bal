@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { AudioTrack } from "@/components/AudioTrack";
 import { ChaptersCarousel, ChaptersPanel } from "@/components/ChaptersPanel";
-import { Badge, CompactCard, Cover } from "@/components/DanceCard";
+import { Badge, CompactCard, Cover, isNew, NewBadge } from "@/components/DanceCard";
 import { Avatar } from "@/components/Header";
 import { ReactionPill } from "@/components/ReactionPill";
 import { SchemeViewer } from "@/components/SchemeViewer";
@@ -288,7 +288,7 @@ export function Dance() {
     dance.hasScheme && "схема",
     dance.hasAudio && "музыка",
     dance.chapterList.length > 0 && `${dance.chapterList.length} фрагментов`,
-  ].filter(Boolean);
+  ].filter((f): f is string => !!f);
 
   return (
     <main className="grid gap-x-8 px-4 pt-2 pb-24 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:pt-6 2xl:gap-x-10">
@@ -326,29 +326,35 @@ export function Dance() {
         <div>
           <h1 className="font-title mt-4 text-[24px] leading-tight lg:text-[30px]">{dance.title}</h1>
 
-          <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-4">
-            <div className="flex min-w-0 items-center gap-3">
+          {/* On phones only the badge stays and the actions lose their labels, like YouTube's app. */}
+          <div className="mt-4 flex items-center gap-3 sm:flex-wrap sm:gap-x-6 sm:gap-y-4">
+            <div className="flex min-w-0 shrink-0 items-center gap-3">
               <Badge dance={dance} size={40} />
-              <div className="min-w-0 leading-tight">
+              <div className="min-w-0 leading-tight max-sm:hidden">
                 <p className="truncate text-[15px] font-medium">Традиционный бал РТУ МИРЭА</p>
-                <p className="tnum text-[13px] text-ink-3">
-                  {isGlossary ? "Словарь движений" : `Танец ${String(dance.order).padStart(2, "0")}`}
-                  {dance.duration ? ` · ${timecode(dance.duration)}` : ""}
+                <p className="tnum flex gap-x-2 text-[13px] text-ink-3">
+                  <span>{isGlossary ? "Словарь движений" : `Танец ${String(dance.order).padStart(2, "0")}`}</span>
+                  {dance.duration ? <span>{timecode(dance.duration)}</span> : null}
                 </p>
               </div>
             </div>
-            <div className="-mx-4 flex flex-1 gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 lg:justify-end">
+            <div className="-mr-4 flex flex-1 gap-2 overflow-x-auto pr-4 max-sm:min-w-0 [scrollbar-width:none] sm:mr-0 sm:flex-auto sm:overflow-visible sm:pr-0 2xl:justify-end">
               <ReactionPill likes={dance.likes} dislikes={dance.dislikes} mine={dance.myReaction} onReact={react} />
-              <Pill onClick={() => share()} icon={<Share2 />}>
-                Поделиться
-              </Pill>
-              <Pill onClick={() => toggleMark("favorite")} icon={<Bookmark className={cn(fav && "fill-current")} />} pressed={fav}>
-                {fav ? "Сохранено" : "Сохранить"}
-              </Pill>
+              <Pill onClick={() => share()} icon={<Share2 />} label="Поделиться" />
+              <Pill
+                onClick={() => toggleMark("favorite")}
+                icon={<Bookmark className={cn(fav && "fill-current")} />}
+                pressed={fav}
+                label={fav ? "Сохранено" : "Сохранить"}
+              />
               {!isGlossary ? (
-                <Pill onClick={() => toggleMark("learned")} icon={<Check />} pressed={learned} strong={learned}>
-                  {learned ? "Выучено" : "Отметить «Выучено»"}
-                </Pill>
+                <Pill
+                  onClick={() => toggleMark("learned")}
+                  icon={<Check />}
+                  pressed={learned}
+                  strong={learned}
+                  label={learned ? "Выучено" : "Отметить «Выучено»"}
+                />
               ) : null}
             </div>
           </div>
@@ -380,15 +386,19 @@ export function Dance() {
             )}
             onClick={() => !more && setMore(true)}
           >
-            <p className="tnum text-[14px] font-semibold">
-              {viewsLabel(dance.views)}
-              {dance.published ? (
-                <span title={fullDate(dance.published)}>
-                  {" · "}
-                  {more ? fullDate(dance.published) : ago(dance.published)}
+            <p className="tnum flex flex-wrap gap-x-2.5 text-[14px] font-semibold">
+              <span>{viewsLabel(dance.views)}</span>
+              {dance.published ? <span title={fullDate(dance.published)}>{more ? fullDate(dance.published) : ago(dance.published)}</span> : null}
+              {isNew(dance) ? (
+                <span className="self-center">
+                  <NewBadge />
                 </span>
               ) : null}
-              {facts.length ? <span className="font-medium text-ink-2"> · {facts.join(" · ")}</span> : null}
+              {facts.map((f) => (
+                <span key={f} className="font-medium text-ink-2">
+                  {f}
+                </span>
+              ))}
             </p>
             <p className={cn("mt-1.5 max-w-[75ch]", !more && "line-clamp-2")}>{dance.description}</p>
             {more ? (
@@ -417,7 +427,7 @@ export function Dance() {
                             <Icon className="size-4 text-ink-3" />
                             <span className="font-medium">{{ video: "Видео", scheme: "Схема", audio: "Музыка" }[a.kind]}</span>
                             <span className="tnum text-ink-3">#{a.post.split("/").pop()}</span>
-                            {a.status !== "obtained" ? <span className="text-ink-3">· только в Telegram</span> : null}
+                            {a.status !== "obtained" ? <span className="text-ink-3">только в Telegram</span> : null}
                           </a>
                         </li>
                       );
@@ -443,7 +453,7 @@ export function Dance() {
 
           <section className="mt-10">
             <h2 className="mb-4 text-[20px] font-semibold">
-              Мои заметки{notes.length ? <span className="tnum font-normal text-ink-3"> · {notes.length}</span> : null}
+              Мои заметки{notes.length ? <span className="tnum ml-2 font-normal text-ink-3">{notes.length}</span> : null}
             </h2>
             <div className="flex gap-3">
               {user ? (
@@ -596,7 +606,7 @@ export function Dance() {
         {dance.audio.length > 0 ? (
           <section>
             <h2 className="mb-2 text-[18px] font-semibold">Музыка для повторения</h2>
-            <ul className="-mx-2">
+            <ul className="-mx-2 flex flex-col gap-3">
               {dance.audio.map((a) => (
                 <li key={a.path}>
                   <AudioTrack src={a.path} title={a.title} duration={a.duration} filename={a.original} />
@@ -641,20 +651,20 @@ export function Dance() {
   );
 }
 
-function Pill({ onClick, icon, children, pressed, strong }: { onClick: () => void; icon: ReactNode; children: ReactNode; pressed?: boolean; strong?: boolean }) {
+function Pill({ onClick, icon, label, pressed, strong }: { onClick: () => void; icon: ReactNode; label: string; pressed?: boolean; strong?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={pressed}
+      aria-label={label}
       className={cn(
-        "flex h-9 shrink-0 items-center gap-2 rounded-full px-3.5 text-sm font-medium [&_svg]:size-[18px]",
+        "flex h-9 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium sm:px-3.5 [&_svg]:size-[18px]",
         strong ? "bg-accent text-accent-ink" : "bg-surface-2 hover:bg-line",
       )}
     >
       {icon}
-      {children}
+      <span className="max-sm:hidden">{label}</span>
     </button>
   );
 }
-

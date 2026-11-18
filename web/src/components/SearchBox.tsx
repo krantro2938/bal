@@ -134,7 +134,7 @@ export function SearchBox({ onClose, autoFocus, className }: { onClose?: () => v
       </div>
 
       {showList ? (
-        <div className="absolute top-[52px] right-0 left-0 z-50 overflow-hidden rounded-[var(--radius-sheet)] border border-line bg-bg p-2 shadow-[var(--shadow-pop)]">
+        <div className="absolute top-[52px] right-0 left-0 z-50 overflow-hidden rounded-[var(--radius-sheet)] bg-bg p-2 shadow-[var(--shadow-pop)]">
           {suggestions.length === 0 ? (
             <p className="px-3 py-3 text-[15px] text-ink-3">Ничего не нашлось по «{dq.trim()}»</p>
           ) : (
@@ -155,10 +155,18 @@ export function SearchBox({ onClose, autoFocus, className }: { onClose?: () => v
                     )}
                     <span className="min-w-0">
                       <span className="block truncate text-[15px] font-medium">{s.kind === "dance" ? s.dance.title : s.title}</span>
-                      <span className="tnum block truncate text-[13px] text-ink-3">
-                        {s.kind === "dance"
-                          ? `${s.dance.kind === "glossary" ? "Словарь движений" : `Танец ${String(s.dance.order).padStart(2, "0")}`}${s.dance.duration ? ` · ${timecode(s.dance.duration)}` : ""}`
-                          : `Движение · Словарь движений · ${timecode(s.start)}`}
+                      <span className="tnum flex gap-x-2 truncate text-[13px] text-ink-3">
+                        {s.kind === "dance" ? (
+                          <>
+                            <span>{s.dance.kind === "glossary" ? "Словарь движений" : `Танец ${String(s.dance.order).padStart(2, "0")}`}</span>
+                            {s.dance.duration ? <span>{timecode(s.dance.duration)}</span> : null}
+                          </>
+                        ) : (
+                          <>
+                            <span>Движение в словаре</span>
+                            <span>{timecode(s.start)}</span>
+                          </>
+                        )}
                       </span>
                     </span>
                   </button>

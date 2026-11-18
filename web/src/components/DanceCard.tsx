@@ -81,7 +81,14 @@ export function metaLine(d: DanceSummary) {
     if (d.hasAudio) parts.push("музыка");
   }
   if (!d.available) parts.push("видео в Telegram");
-  return parts.join(" · ");
+  return parts;
+}
+
+/** Published in the last five days. */
+export const isNew = (d: DanceSummary) => !!d.published && Date.now() - new Date(d.published).getTime() < 5 * 86400000;
+
+export function NewBadge() {
+  return <span className="rounded-[5px] bg-white px-1.5 py-px text-[11px] font-semibold text-[#0a1028]">Новое</span>;
 }
 
 const PREVIEW_EVENT = "bal:preview";
@@ -136,17 +143,25 @@ export function VideoCard({ dance, eager, badge }: { dance: DanceSummary; eager?
           <Badge dance={dance} />
           <div className="min-w-0 pr-1">
             <h2 className="line-clamp-2 font-title text-[18px] leading-snug">{dance.title}</h2>
-            <p className="mt-1 text-[13px] text-ink-3">
-              {dance.kind === "glossary" ? "Словарь движений" : `Танец ${String(dance.order).padStart(2, "0")}`} · {metaLine(dance)}
+            <p className="mt-1 flex flex-wrap gap-x-2 text-[13px] text-ink-3">
+              <span>{dance.kind === "glossary" ? "Словарь движений" : `Танец ${String(dance.order).padStart(2, "0")}`}</span>
+              {metaLine(dance).map((m) => (
+                <span key={m}>{m}</span>
+              ))}
             </p>
-            <p className="tnum mt-0.5 flex flex-wrap items-center gap-x-1 text-[13px] text-ink-3">
+            <p className="tnum mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px] text-ink-3">
               <span>{viewsLabel(dance.views)}</span>
-              {dance.published ? <span>· {ago(dance.published)}</span> : null}
-              <span className="ml-1 inline-flex items-center gap-1">
-                · <ThumbsUp className="size-3.5" /> {dance.likes}
+              {dance.published ? <span>{ago(dance.published)}</span> : null}
+              <span className="inline-flex items-center gap-1">
+                <ThumbsUp className="size-3.5" /> {dance.likes}
               </span>
-              {badge ? <span className="ml-1 text-accent">· {badge}</span> : null}
+              {badge ? <span className="text-accent">{badge}</span> : null}
             </p>
+            {isNew(dance) ? (
+              <p className="mt-1.5">
+                <NewBadge />
+              </p>
+            ) : null}
           </div>
         </div>
       </Link>
@@ -168,10 +183,18 @@ export function CompactCard({ dance, current }: { dance: DanceSummary; current?:
         <div className="min-w-0 py-0.5">
           <h3 className="line-clamp-2 text-[15px] leading-snug font-medium">{dance.title}</h3>
           <p className="mt-1 text-[12px] text-ink-3">{dance.kind === "glossary" ? "Словарь движений" : `Танец ${String(dance.order).padStart(2, "0")}`}</p>
-          <p className="tnum flex items-center gap-1 text-[12px] text-ink-3">
-            {viewsLabel(dance.views)} · <ThumbsUp className="size-3" /> {dance.likes}
-            {current ? <span className="ml-1 text-accent">· сейчас</span> : null}
+          <p className="tnum flex flex-wrap items-center gap-x-2 text-[12px] text-ink-3">
+            <span>{viewsLabel(dance.views)}</span>
+            <span className="inline-flex items-center gap-1">
+              <ThumbsUp className="size-3" /> {dance.likes}
+            </span>
+            {current ? <span className="text-accent">сейчас</span> : null}
           </p>
+          {isNew(dance) ? (
+            <p className="mt-1">
+              <NewBadge />
+            </p>
+          ) : null}
         </div>
       </Link>
     </div>
