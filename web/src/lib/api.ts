@@ -1,4 +1,4 @@
-import type { AuthConfig, Catalog, DanceDetail, Note, User, UserState } from "./types";
+import type { AuthConfig, Catalog, Comment, DanceDetail, Note, User, UserState } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -53,6 +53,14 @@ export const api = {
   deleteNote: (id: number) => request<void>("DELETE", `/api/notes/${id}`),
   mark: (kind: "favorite" | "learned", slug: string, on: boolean) =>
     request<void>(on ? "PUT" : "DELETE", `/api/marks/${kind}/${encodeURIComponent(slug)}`),
+  comments: (slug: string) => request<{ comments: Comment[]; moderator: boolean }>("GET", `/api/dances/${encodeURIComponent(slug)}/comments`),
+  createComment: (slug: string, body: string, parentId?: number) =>
+    request<{ comment: Comment; notice?: string }>("POST", `/api/dances/${encodeURIComponent(slug)}/comments`, { body, parentId }),
+  deleteComment: (id: number) => request<void>("DELETE", `/api/comments/${id}`),
+  likeComment: (id: number, on: boolean) => request<{ likes: number; liked: boolean }>("PUT", `/api/comments/${id}/like`, { on }),
+  reportComment: (id: number) => request<void>("POST", `/api/comments/${id}/report`),
+  approveComment: (id: number) => request<Comment>("POST", `/api/comments/${id}/approve`),
+  pinComment: (id: number, on: boolean) => request<void>("PUT", `/api/comments/${id}/pin`, { on }),
   progress: (slug: string, version: string, position: number) =>
     request<void>("PUT", `/api/progress/${encodeURIComponent(slug)}`, { version, position }, { keepalive: true }),
 };

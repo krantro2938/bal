@@ -50,6 +50,15 @@ export function ago(iso?: string) {
   return rtf.format(-Math.floor(days / 365), "year");
 }
 
+/** "только что", "5 минут назад", "3 часа назад", then like ago(). */
+export function since(ms: number) {
+  const s = (Date.now() - ms) / 1000;
+  if (s < 60) return "только что";
+  if (s < 3600) return rtf.format(-Math.floor(s / 60), "minute");
+  if (s < 86400) return rtf.format(-Math.floor(s / 3600), "hour");
+  return ago(new Date(ms).toISOString());
+}
+
 export function fullDate(iso?: string) {
   return iso ? new Date(iso).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }) : "";
 }

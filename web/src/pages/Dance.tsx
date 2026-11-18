@@ -5,6 +5,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AudioTrack } from "@/components/AudioTrack";
 import { ChaptersCarousel, ChaptersPanel } from "@/components/ChaptersPanel";
+import { Comments } from "@/components/Comments";
 import { Badge, CompactCard, Cover, isNew, NewBadge } from "@/components/DanceCard";
 import { Avatar } from "@/components/Header";
 import { ReactionPill } from "@/components/ReactionPill";
@@ -553,6 +554,15 @@ export function Dance() {
               <p className="mt-3 text-[14px] text-ink-3">Поставьте видео на паузу в трудном месте и нажмите «Заметка» — она откроется ровно на этой секунде.</p>
             ) : null}
           </section>
+
+          <Comments
+            slug={slug}
+            user={user}
+            duration={dance.video?.duration ?? dance.duration ?? 0}
+            now={currentTime}
+            onSeek={(t) => seek(t)}
+            askLogin={askLogin}
+          />
         </div>
       </div>
 

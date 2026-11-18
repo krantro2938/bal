@@ -54,3 +54,23 @@ export type Note = {
 export type Progress = { dance: string; version: string; position: number; updatedAt: number };
 
 export type UserState = { favorites: string[]; learned: string[]; progress: Progress[]; notes: Note[] };
+
+export type Comment = {
+  id: number;
+  dance: string;
+  parentId?: number;
+  author: { id: number; name: string; picture?: string };
+  body: string;
+  /** "held" comments wait for a moderator; only their author and moderators get them. */
+  status: "published" | "held";
+  pinned?: boolean;
+  createdAt: number;
+  likes: number;
+  liked?: boolean;
+};
+
+export type CommentEvent =
+  | { type: "comment"; comment: Comment }
+  | { type: "removed"; id: number }
+  | { type: "likes"; id: number; likes: number }
+  | { type: "pinned"; id?: number };

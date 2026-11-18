@@ -95,6 +95,33 @@ CREATE INDEX reactions_dance ON reactions(dance);`,
   day      TEXT NOT NULL,
   PRIMARY KEY (dance, visitor, day)
 ) WITHOUT ROWID;`,
+
+	// 5: public comments under each dance, one level of replies. status is
+	// 'published' or 'held' (waiting for a moderator; seen by its author and moderators).
+	`CREATE TABLE comments (
+  id          INTEGER PRIMARY KEY,
+  dance       TEXT NOT NULL,
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  parent_id   INTEGER REFERENCES comments(id) ON DELETE CASCADE,
+  body        TEXT NOT NULL,
+  status      TEXT NOT NULL CHECK (status IN ('published','held')),
+  score       REAL NOT NULL DEFAULT 0,
+  pinned      INTEGER NOT NULL DEFAULT 0,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX comments_dance ON comments(dance, created_at);
+CREATE INDEX comments_parent ON comments(parent_id);
+CREATE TABLE comment_likes (
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  comment_id  INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  PRIMARY KEY (comment_id, user_id)
+) WITHOUT ROWID;
+CREATE TABLE comment_reports (
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  comment_id  INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  created_at  INTEGER NOT NULL,
+  PRIMARY KEY (comment_id, user_id)
+) WITHOUT ROWID;`,
 }
 
 // migrate applies pending migrations on one connection with foreign keys

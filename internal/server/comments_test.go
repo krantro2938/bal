@@ -1,0 +1,117 @@
+package server
+
+import (
+	"bufio"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"bal/internal/store"
+)
+
+func TestComments(t *testing.T) {
+	ts := newTestServer(t)
+	// A fake toxicity model: anything with "дурак" is an insult, "сомнительно" is borderline.
+	model := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ Text string }
+		json.NewDecoder(r.Body).Decode(&in)
+		insult := 0.01
+		if strings.Contains(in.Text, "дурак") {
+			insult = 0.97
+		} else if strings.Contains(in.Text, "сомнительно") {
+			insult = 0.6
+		}
+		json.NewEncoder(w).Encode(map[string]any{"labels": map[string]float64{"insult": insult}})
+	}))
+	defer model.Close()
+	lastServer.checker.URL = model.URL
+	lastServer.cfg.Moderators = []string{"модератор"}
+
+	anna, boris, mod, guest := newClient(t, ts), newClient(t, ts), newClient(t, ts), newClient(t, ts)
+	anna.do("POST", "/api/auth/dev", `{"name":"Анна"}`)
+	boris.do("POST", "/api/auth/dev", `{"name":"Борис"}`)
+	mod.do("POST", "/api/auth/dev", `{"name":"Модератор"}`)
+
+	// Live updates: a guest watching the page sees Anna's comment arrive.
+	resp, err := http.Get(ts.URL + "/api/dances/demo/events")
+	if err != nil || resp.StatusCode != 200 {
+		t.Fatalf("events: %v %v", err, resp)
+	}
+	defer resp.Body.Close()
+	lines := bufio.NewScanner(resp.Body)
+
+	if code, _ := guest.do("POST", "/api/dances/demo/comments", `{"body":"привет"}`); code != 401 {
+		t.Fatalf("guest posted: %d", code)
+	}
+	code, body := anna.do("POST", "/api/dances/demo/comments", `{"body":"На 1:20 поворот налево"}`)
+	if code != 201 {
+		t.Fatalf("create: %d %s", code, body)
+	}
+	var created struct{ Comment store.Comment }
+	json.Unmarshal([]byte(body), &created)
+	for lines.Scan() {
+		if strings.HasPrefix(lines.Text(), "data: ") {
+			if !strings.Contains(lines.Text(), "поворот налево") {
+				t.Fatalf("event: %s", lines.Text())
+			}
+			break
+		}
+	}
+
+	if code, body := boris.do("POST", "/api/dances/demo/comments", `{"body":"бля, сложно"}`); code != 422 || !strings.Contains(body, "нецензурные") {
+		t.Fatalf("obscene: %d %s", code, body)
+	}
+	if code, body := boris.do("POST", "/api/dances/demo/comments", `{"body":"ты дурак"}`); code != 422 || !strings.Contains(body, "оскорбление") {
+		t.Fatalf("insult: %d %s", code, body)
+	}
+	code, body = boris.do("POST", "/api/dances/demo/comments", `{"body":"сомнительно, но ладно"}`)
+	if code != 201 || !strings.Contains(body, `"held"`) || !strings.Contains(body, "на проверку") {
+		t.Fatalf("held: %d %s", code, body)
+	}
+	var held struct{ Comment store.Comment }
+	json.Unmarshal([]byte(body), &held)
+
+	// The held comment is visible to its author and moderators only.
+	if _, body := anna.do("GET", "/api/dances/demo/comments", ""); strings.Contains(body, "сомнительно") {
+		t.Fatalf("anna sees held: %s", body)
+	}
+	if _, body := boris.do("GET", "/api/dances/demo/comments", ""); !strings.Contains(body, "сомнительно") {
+		t.Fatalf("boris lost his held comment: %s", body)
+	}
+	if code, _ := anna.do("POST", "/api/comments/"+jsonNum(held.Comment.ID)+"/approve", ""); code != 403 && code != 404 {
+		t.Fatalf("anna approved: %d", code)
+	}
+	if code, _ := mod.do("POST", "/api/comments/"+jsonNum(held.Comment.ID)+"/approve", ""); code != 200 {
+		t.Fatalf("mod approve: %d", code)
+	}
+	if _, body := anna.do("GET", "/api/dances/demo/comments", ""); !strings.Contains(body, "сомнительно") {
+		t.Fatalf("approved comment hidden: %s", body)
+	}
+
+	// Replies to replies join the top-level thread.
+	id := jsonNum(created.Comment.ID)
+	_, body = boris.do("POST", "/api/dances/demo/comments", `{"body":"спасибо","parentId":`+id+`}`)
+	var reply struct{ Comment store.Comment }
+	json.Unmarshal([]byte(body), &reply)
+	_, body = anna.do("POST", "/api/dances/demo/comments", `{"body":"пожалуйста","parentId":`+jsonNum(reply.Comment.ID)+`}`)
+	var reply2 struct{ Comment store.Comment }
+	json.Unmarshal([]byte(body), &reply2)
+	if reply2.Comment.ParentID != created.Comment.ID {
+		t.Fatalf("nested reply parent %d", reply2.Comment.ParentID)
+	}
+
+	if code, body := boris.do("PUT", "/api/comments/"+id+"/like", `{"on":true}`); code != 200 || !strings.Contains(body, `"likes":1`) {
+		t.Fatalf("like: %d %s", code, body)
+	}
+	if code, _ := boris.do("DELETE", "/api/comments/"+id, ""); code != 403 {
+		t.Fatalf("boris deleted anna's comment: %d", code)
+	}
+	if code, _ := anna.do("DELETE", "/api/comments/"+id, ""); code != 204 {
+		t.Fatalf("anna delete: %d", code)
+	}
+	if _, body := guest.do("GET", "/api/dances/demo/comments", ""); strings.Contains(body, "спасибо") {
+		t.Fatalf("replies survived their thread: %s", body)
+	}
+}

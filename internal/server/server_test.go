@@ -14,6 +14,7 @@ import (
 
 	"bal/internal/auth"
 	"bal/internal/content"
+	"bal/internal/moderation"
 	"bal/internal/store"
 )
 
@@ -48,6 +49,9 @@ func newTestServer(t *testing.T) *httptest.Server {
 	}
 	s.providers = map[string]*auth.Provider{}
 	s.limiter = newLimiter(1000, time.Millisecond)
+	s.comments = newLimiter(1000, time.Millisecond)
+	s.checker = &moderation.Checker{}
+	s.events = newHub()
 	lastServer = s
 	ts := httptest.NewServer(s.routes())
 	t.Cleanup(ts.Close)

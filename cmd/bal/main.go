@@ -145,6 +145,12 @@ func main() {
 		cfg.GoogleClientSecret = os.Getenv("BAL_GOOGLE_CLIENT_SECRET")
 		cfg.DevLogin = os.Getenv("BAL_DEV_LOGIN") == "1"
 		cfg.TrustProxy = os.Getenv("BAL_TRUST_PROXY") == "1"
+		cfg.ModerationURL = os.Getenv("BAL_MODERATION_URL")
+		for _, e := range strings.Split(os.Getenv("BAL_MODERATORS"), ",") {
+			if e = strings.ToLower(strings.TrimSpace(e)); e != "" {
+				cfg.Moderators = append(cfg.Moderators, e)
+			}
+		}
 		cfg.Log = logger
 		check(server.Run(ctx, cfg))
 

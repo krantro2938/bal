@@ -19,6 +19,7 @@ import (
 
 	"bal/internal/auth"
 	"bal/internal/content"
+	"bal/internal/moderation"
 	"bal/internal/store"
 )
 
@@ -39,6 +40,11 @@ type Config struct {
 	DevLogin           bool // local only: sign in with any name, no password
 	TrustProxy         bool // take the client IP from X-Forwarded-For
 
+	// ModerationURL is the toxicity-model sidecar (/moderation); empty means the word filter only.
+	ModerationURL string
+	// Moderators are emails (verified sign-ins only) that can approve, pin and delete comments.
+	Moderators []string
+
 	Log *log.Logger
 }
 
@@ -49,6 +55,9 @@ type Server struct {
 	providers map[string]*auth.Provider
 	limiter   *limiter
 	secret    []byte
+	comments  *limiter
+	checker   *moderation.Checker
+	events    *hub
 	secure    bool
 }
 
@@ -81,6 +90,12 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 	s.providers = map[string]*auth.Provider{}
 	s.limiter = newLimiter(10, 6*time.Second)
+	s.comments = newLimiter(5, 30*time.Second)
+	s.checker = &moderation.Checker{URL: strings.TrimRight(cfg.ModerationURL, "/"), Client: &http.Client{Timeout: 3 * time.Second}}
+	s.events = newHub()
+	if cfg.ModerationURL == "" {
+		cfg.Log.Printf("comment moderation: word filter only (set BAL_MODERATION_URL for the toxicity model)")
+	}
 	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
 		s.providers["google"] = auth.Google(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.PublicURL)
 	} else {
@@ -139,6 +154,14 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("PUT /api/progress/{slug}", s.requireUser(s.handleProgress))
 	mux.Handle("PUT /api/dances/{slug}/reaction", s.requireUser(s.handleReaction))
 	mux.HandleFunc("POST /api/dances/{slug}/view", s.handleView)
+	mux.HandleFunc("GET /api/dances/{slug}/comments", s.handleListComments)
+	mux.HandleFunc("GET /api/dances/{slug}/events", s.handleEvents)
+	mux.Handle("POST /api/dances/{slug}/comments", s.requireUser(s.handleCreateComment))
+	mux.Handle("DELETE /api/comments/{id}", s.requireUser(s.handleDeleteComment))
+	mux.Handle("PUT /api/comments/{id}/like", s.requireUser(s.handleLikeComment))
+	mux.Handle("POST /api/comments/{id}/report", s.requireUser(s.handleReportComment))
+	mux.Handle("POST /api/comments/{id}/approve", s.requireUser(s.handleApproveComment))
+	mux.Handle("PUT /api/comments/{id}/pin", s.requireUser(s.handlePinComment))
 
 	mux.Handle("GET /media/", http.StripPrefix("/media/", mediaHandler(s.cfg.MediaDir)))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
