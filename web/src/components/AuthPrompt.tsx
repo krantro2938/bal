@@ -14,7 +14,7 @@ export function AuthPrompt({ reason, returnTo, onClose }: { reason: string | nul
   const ret = reason ? encodeURIComponent(returnTo()) : "";
   return (
     <Sheet open={!!reason} onOpenChange={(o) => !o && onClose()} title="Войдите в аккаунт" description={reason ?? ""}>
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-3">
         {cfg?.google ? (
           <a
             href={`/auth/google/start?return=${ret}`}
@@ -33,7 +33,7 @@ export function AuthPrompt({ reason, returnTo, onClose }: { reason: string | nul
         >
           <Mail className="size-[18px]" /> Войти по почте
         </Link>
-        <p className="mt-2 text-center text-[14px] text-ink-2">
+        <p className="mt-5 border-t border-line pt-5 text-center text-[14px] leading-relaxed text-ink-2">
           Нет аккаунта?{" "}
           <Link to={`/register?return=${ret}`} onClick={onClose} className="font-medium text-accent hover:underline">
             Зарегистрироваться

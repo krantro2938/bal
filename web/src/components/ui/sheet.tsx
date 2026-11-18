@@ -25,15 +25,15 @@ export function Sheet({
         <Dialog.Overlay className="fixed inset-0 z-50 bg-[#05091a]/55" />
         <Dialog.Content
           className={cn(
-            "fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[var(--radius-sheet)] border-t border-line bg-bg px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-sheet)]",
-            "sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-[440px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-sheet)] sm:border sm:p-6",
+            "fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[var(--radius-sheet)] border-t border-line bg-bg px-5 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-sheet)]",
+            "sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-[440px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[24px] sm:border sm:p-7",
             className,
           )}
         >
-          <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="mb-7 flex items-start justify-between gap-4">
             <div>
-              <Dialog.Title className="font-title text-xl">{title}</Dialog.Title>
-              {description ? <Dialog.Description className="mt-1 text-sm text-ink-2">{description}</Dialog.Description> : null}
+              <Dialog.Title className="font-title text-[24px]">{title}</Dialog.Title>
+              {description ? <Dialog.Description className="mt-2 text-[15px] leading-relaxed text-ink-2">{description}</Dialog.Description> : null}
             </div>
             <Dialog.Close className="-mt-1 -mr-1 grid size-9 place-items-center rounded-full text-ink-2 hover:bg-surface-2" aria-label="Закрыть">
               <X className="size-5" />
