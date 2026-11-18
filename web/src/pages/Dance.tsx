@@ -418,7 +418,7 @@ export function Dance() {
           </div>
 
           {resumeAt !== null && !resumeDismissed && !resumeOff ? (
-            <div className="mt-5 flex items-center gap-2 rounded-[var(--radius-frame)] bg-[var(--notice)] px-4 py-2.5 text-[15px]">
+            <div className="mt-5 flex items-center gap-2 rounded-[var(--radius-frame)] bg-accent-soft px-4 py-2.5 text-[15px]">
               <span className="tnum flex-1">Вы остановились на {timecode(resumeAt)}</span>
               <button
                 type="button"

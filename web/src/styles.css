@@ -23,7 +23,6 @@
   --accent-soft: #1c2b6e1f;
   --link: #1f5fd1;
   --ink-soft: var(--ink);
-  --notice: var(--accent-soft);
   --danger: #a8322d;
   --player-bg: #05091a;
   --hover: #0b12300d;
@@ -51,7 +50,6 @@
   --link: #7fb6ff;
   /* Long text and list titles sit a step back from headings on the dark page. */
   --ink-soft: #ece6d6d1;
-  --notice: var(--surface-2);
   --danger: #f0938a;
   --hover: #ffffff0f;
   --shadow-sheet: none;

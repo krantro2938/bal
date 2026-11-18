@@ -450,9 +450,10 @@ function SpeedButton() {
     <div ref={ref} className="relative">
       <button
         type="button"
-        className="tnum mx-1 flex h-8 items-center rounded-full bg-white/10 px-3 text-[13px] font-semibold text-white transition-colors hover:bg-white/20"
+        className="vds-button tnum text-[14px] leading-none font-semibold"
         onClick={() => setOpen((o) => !o)}
         aria-label={`Скорость ${fmt(rate)}`}
+        title="Скорость"
         aria-expanded={open}
       >
         {fmt(rate)}
