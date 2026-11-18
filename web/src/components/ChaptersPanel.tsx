@@ -68,11 +68,11 @@ export function ChaptersCarousel({ chapters, cues, player, onSeek }: Pick<Props,
   return (
     <section>
       <h2 className="mb-2 text-[15px] font-semibold">Фрагменты <span className="tnum ml-1 font-normal text-ink-3">{chapters.length}</span></h2>
-      <ol className="-mx-3 flex snap-x gap-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">
+      <ol className="-mx-4 flex gap-3 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:-mx-6 sm:px-6">
         {chapters.map((c) => {
           const on = time >= c.start && time < c.end;
           return (
-            <li key={c.start} className="w-[148px] shrink-0 snap-start">
+            <li key={c.start} className="w-[148px] shrink-0">
               <button type="button" onClick={() => onSeek(c.start)} className="w-full text-left">
                 <Thumb cues={cues} t={c.start + 1} width={148} className={cn(on && "ring-2 ring-accent")} />
                 <span className="mt-1.5 line-clamp-2 text-[13px] leading-snug font-medium">{c.title}</span>

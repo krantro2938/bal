@@ -6,6 +6,10 @@ import { CatalogProvider } from "./lib/catalog";
 import { SessionProvider } from "./lib/session";
 import "./styles.css";
 
+// Focus rings show only while navigating with the keyboard (see [data-pointer] in styles.css).
+addEventListener("pointerdown", () => (document.documentElement.dataset.pointer = ""), true);
+addEventListener("keydown", (e) => e.key === "Tab" && delete document.documentElement.dataset.pointer, true);
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>

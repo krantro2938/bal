@@ -2,6 +2,7 @@ import type { MediaPlayerInstance } from "@vidstack/react";
 import { Bookmark, Check, ChevronDown, ExternalLink, Film, Maximize2, Music, Pencil, ScrollText, Share2, Trash2 } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { AudioTrack } from "@/components/AudioTrack";
 import { ChaptersCarousel, ChaptersPanel } from "@/components/ChaptersPanel";
 import { Badge, CompactCard, Cover, isNew, NewBadge } from "@/components/DanceCard";
@@ -40,7 +41,6 @@ export function Dance() {
   const [loop, setLoop] = useState<Loop>(null);
   const [noteDraft, setNoteDraft] = useState<{ t: number; id?: number; text: string } | null>(null);
   const [loginAsk, setLoginAsk] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [scheme, setScheme] = useState<number | null>(null);
   const [more, setMore] = useState(false);
   const player = useRef<MediaPlayerInstance>(null);
@@ -80,11 +80,6 @@ export function Dance() {
   useEffect(() => {
     if (startAt !== null && player.current && playerReady) player.current.currentTime = startAt;
   }, [startAt, playerReady]);
-
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
-    window.setTimeout(() => setToast((t) => (t === msg ? null : t)), 2400);
-  }, []);
 
   const seek = useCallback((t: number, play = true) => {
     const p = player.current;
@@ -174,7 +169,7 @@ export function Dance() {
         return;
       }
       await navigator.clipboard.writeText(url);
-      showToast(t > 0 ? `Ссылка на ${timecode(t)} скопирована` : "Ссылка скопирована");
+      toast(t > 0 ? `Ссылка на ${timecode(t)} скопирована` : "Ссылка скопирована");
     } catch (e) {
       if ((e as Error).name !== "AbortError") window.prompt("Ссылка:", url);
     }
@@ -208,10 +203,10 @@ export function Dance() {
         setNotes((ns) => [...ns, n].sort((a, b) => a.t - b.t));
       }
       setNoteDraft(null);
-      showToast("Заметка сохранена");
+      toast("Заметка сохранена");
       refresh();
     } catch (e) {
-      showToast((e as Error).message);
+      toast((e as Error).message);
     }
   };
 
@@ -220,16 +215,22 @@ export function Dance() {
     setNotes((ns) => ns.filter((n) => n.id !== id));
     try {
       await api.deleteNote(id);
+      toast("Заметка удалена");
     } catch {
       setNotes(prev);
-      showToast("Не удалось удалить заметку");
+      toast("Не удалось удалить заметку");
     }
   };
 
   const toggleMark = (kind: "favorite" | "learned") => {
     if (!user) return askLogin(kind === "favorite" ? "Чтобы сохранять танцы и видеть их на всех устройствах." : "Чтобы отмечать выученные танцы.");
     const list = kind === "favorite" ? state?.favorites : state?.learned;
-    setMark(kind, slug, !list?.includes(slug));
+    const on = !list?.includes(slug);
+    const done = kind === "favorite" ? (on ? "Сохранено — танец есть в «Избранном»" : "Убрано из сохранённых") : on ? "Отмечено как выученное" : "Отметка «Выучено» снята";
+    setMark(kind, slug, on).then(
+      () => toast(done),
+      () => toast("Не удалось сохранить, попробуйте ещё раз"),
+    );
   };
 
   const react = async (v: -1 | 0 | 1) => {
@@ -244,7 +245,7 @@ export function Dance() {
       catalog.patch(slug, { likes: r.likes, dislikes: r.dislikes, myReaction: r.mine });
     } catch {
       setDance(prev);
-      showToast("Не удалось сохранить оценку");
+      toast("Не удалось сохранить оценку");
     }
   };
 
@@ -644,11 +645,6 @@ export function Dance() {
         <SchemeViewer pages={dance.schemes} title={dance.title} index={scheme} onIndex={setScheme} onClose={() => setScheme(null)} />
       ) : null}
 
-      {toast ? (
-        <div role="status" className="fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 flex justify-center px-4">
-          <p className="rounded-full bg-ink px-4 py-2 text-sm text-bg shadow-lg">{toast}</p>
-        </div>
-      ) : null}
     </main>
   );
 }

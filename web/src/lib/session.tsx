@@ -47,8 +47,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       );
       try {
         await api.mark(kind, slug, on);
-      } catch {
+      } catch (e) {
         await refresh();
+        throw e;
       }
     },
     [refresh],

@@ -99,6 +99,10 @@
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
+  /* The ring is for keyboard users; after a tap or click it would just linger on the button. */
+  [data-pointer] :focus-visible {
+    outline: none;
+  }
   input:focus-visible,
   textarea:focus-visible {
     outline: none;

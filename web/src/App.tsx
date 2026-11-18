@@ -1,5 +1,6 @@
 import { Link, Outlet, Route, Routes, useLocation } from "react-router";
 import { useEffect } from "react";
+import { Toaster } from "sonner";
 import { Header } from "@/components/Header";
 import { StateBlock } from "@/components/StateBlock";
 import { Catalog } from "@/pages/Catalog";
@@ -22,6 +23,19 @@ function Shell() {
       <div id="main">
         <Outlet />
       </div>
+      <Toaster
+        position="bottom-center"
+        offset={16}
+        mobileOffset={{ bottom: "max(16px, env(safe-area-inset-bottom))" }}
+        toastOptions={{
+          unstyled: true,
+          classNames: {
+            toast: "flex w-full items-center justify-center gap-2 font-sans",
+            content: "rounded-full bg-ink px-4 py-2.5 text-sm text-bg shadow-lg",
+            icon: "hidden",
+          },
+        }}
+      />
     </>
   );
 }
