@@ -46,6 +46,8 @@ export const api = {
     request<{ likes: number; dislikes: number; mine: -1 | 0 | 1 }>("PUT", `/api/dances/${encodeURIComponent(slug)}/reaction`, { value }),
   devLogin: (name: string) => request<{ user: User }>("POST", "/api/auth/dev", { name }),
   logout: () => request<void>("POST", "/api/auth/logout"),
+  pushSubscribe: (sub: PushSubscriptionJSON) => request<void>("POST", "/api/push", sub),
+  pushUnsubscribe: (endpoint: string) => request<void>("DELETE", "/api/push", { endpoint }),
   state: () => request<UserState>("GET", "/api/me/state"),
   notes: (dance: string) => request<Note[]>("GET", `/api/notes?dance=${encodeURIComponent(dance)}`),
   createNote: (n: { dance: string; version: string; t: number; text: string }) => request<Note>("POST", "/api/notes", n),

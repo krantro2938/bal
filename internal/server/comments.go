@@ -456,6 +456,7 @@ func (s *Server) notify(ctx context.Context, c store.Comment) {
 		}
 		if added {
 			s.events.publish(userChannel(id), event{Type: "notification"})
+			s.pushComment(id, kind, c)
 		}
 	}
 }

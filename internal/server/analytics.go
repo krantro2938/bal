@@ -38,6 +38,7 @@ var analyticsEvents = map[string]bool{
 	"signup":        true, // an account was created
 	"login":         true, // signed in with email and password
 	"install":       true, // installed as an app
+	"push-on":       true, // turned on notifications on a device
 }
 
 var (

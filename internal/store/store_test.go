@@ -179,3 +179,22 @@ func TestProfile(t *testing.T) {
 		t.Fatalf("missing user: %v", err)
 	}
 }
+
+func TestAnnounceOnlyNewDances(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	ctx := context.Background()
+	// The first check only records what is already on the site.
+	if fresh, err := s.Announce(ctx, []string{"a", "b"}); err != nil || len(fresh) != 0 {
+		t.Fatalf("first check: %v %v", fresh, err)
+	}
+	if fresh, err := s.Announce(ctx, []string{"a", "b", "c"}); err != nil || len(fresh) != 1 || fresh[0] != "c" {
+		t.Fatalf("new dance: %v %v", fresh, err)
+	}
+	if fresh, err := s.Announce(ctx, []string{"a", "b", "c"}); err != nil || len(fresh) != 0 {
+		t.Fatalf("again: %v %v", fresh, err)
+	}
+}

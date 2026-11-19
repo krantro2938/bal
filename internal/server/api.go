@@ -257,12 +257,14 @@ func (s *Server) requireUser(h func(http.ResponseWriter, *http.Request, *store.U
 }
 
 func (s *Server) handleAuthConfig(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]bool{
+	writeJSON(w, http.StatusOK, map[string]any{
 		"google":   s.providers["google"] != nil,
 		"password": true,
 		"dev":      s.cfg.DevLogin,
 		// Not about sign-in, but the page already asks for this once: whether to send /api/pulse.
 		"analytics": s.analyticsURL != "",
+		// The key browsers subscribe to push notifications with.
+		"push": s.push.public,
 	})
 }
 

@@ -96,7 +96,7 @@ Production runs at **https://bal.aansl.com**: one Docker container behind the ho
 | Host path | Container | Contents |
 |---|---|---|
 | `/srv/bal/media` | `/data/media` (read-only) | prepared media, rsynced from the laptop (not in Git) |
-| `/srv/bal/db` | `/data/db` | `bal.db` (SQLite WAL) + `secret.key` |
+| `/srv/bal/db` | `/data/db` | `bal.db` (SQLite WAL) + `secret.key` + `vapid.key` (push) |
 | `/srv/bal/bal.env` | env file | public URL, Google credentials (see `deploy/bal.env.example`) |
 
 ```sh
@@ -115,6 +115,8 @@ The image is built locally and streamed with `docker save | ssh docker load`, be
 Telegram links use **https://go.bal.aansl.com**, configured with `BAL_SHARE_URL`. Install `deploy/share.Caddyfile` on the Caddy server for that host. It serves lightweight preview pages and poster images to link fetchers and forwards browser navigations to the main site with their query string intact. For a live check, paste a fresh `go.bal.aansl.com` link into Telegram's composer and confirm the card appears.
 
 **Visit counting (optional).** Set `BAL_ANALYTICS_URL` (the Umami origin, e.g. `https://stats.coffer.rest`) and `BAL_ANALYTICS_SITE_ID` (the website's ID in Umami) in `/srv/bal/bal.env`. With either empty, counting is off and nothing is sent. Pages send small reports to `/api/pulse` on this site. The server checks them against a fixed list of pages and events (`internal/server/analytics.go`) and forwards them to Umami's `/api/send` in the background. No Umami script is loaded and the security policy stays `'self'`. Do Not Track and Global Privacy Control turn counting off in the browser.
+
+**Push notifications.** Signed-in people can turn on «Уведомления» in the account menu or the bell's list. A reply, an @mention, or a dance whose video has just appeared on the site then reaches the device while the site is closed. The server sends them itself with Web Push (`internal/server/push.go`): no extra service, no keys to configure. Its VAPID key is created once in `/srv/bal/db/vapid.key`; keep that file, since a new key silently cuts off every device that turned notifications on. New videos are checked a minute after start-up and then every 5 minutes, and each dance is announced once. The first check only records what is already there. iPhones get notifications only in the installed app (iOS 16.4+), Android in Chrome, Brave or Yandex Browser.
 
 **Google sign-in in production** needs `https://bal.aansl.com/auth/google/callback` added to the OAuth client's authorized redirect URIs in Google Cloud Console.
 

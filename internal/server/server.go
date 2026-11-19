@@ -76,6 +76,7 @@ type Server struct {
 	pulseSlots      chan struct{}
 
 	official *store.Author // the site's own (verified) account, from content/pinned.json
+	push     *pusher       // push notifications (push.go)
 }
 
 const sessionCookie = "bal_session"
@@ -139,6 +140,15 @@ func Run(ctx context.Context, cfg Config) error {
 	if err := s.syncPinned(ctx); err != nil {
 		return fmt.Errorf("pinned comments: %w", err)
 	}
+	vapid, err := loadVAPID(filepath.Join(filepath.Dir(cfg.DBPath), "vapid.key"))
+	if err != nil {
+		return fmt.Errorf("push key: %w", err)
+	}
+	if s.push, err = newPusher(vapid, cfg.PublicURL); err != nil {
+		return err
+	}
+	go s.runPush(ctx)
+	go s.announceNew(ctx)
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
@@ -201,6 +211,8 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("GET /api/me/username", s.requireUser(s.handleUsernameFree))
 	mux.Handle("GET /api/notifications", s.requireUser(s.handleNotifications))
 	mux.Handle("POST /api/notifications/read", s.requireUser(s.handleReadNotifications))
+	mux.Handle("POST /api/push", s.requireUser(s.handlePushSubscribe))
+	mux.Handle("DELETE /api/push", s.requireUser(s.handlePushUnsubscribe))
 
 	mux.Handle("GET /media/", http.StripPrefix("/media/", mediaHandler(s.cfg.MediaDir)))
 	mux.HandleFunc("POST /api/pulse", s.handlePulse)

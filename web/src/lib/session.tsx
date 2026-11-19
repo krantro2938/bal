@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "./api";
+import { stopPush, syncPush } from "./push";
 import type { User, UserState } from "./types";
 
 type Session = {
@@ -31,6 +32,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // A device with notifications on gets this account's (signing in on it as someone else moves them).
+  const userId = user?.id;
+  useEffect(() => {
+    if (userId) syncPush();
+  }, [userId]);
+
   useEffect(() => {
     refresh();
     // Pick up changes made on another device when the tab regains focus.
@@ -56,6 +63,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    await stopPush(); // this browser stops getting the account's notifications
     await api.logout();
     setUser(null);
     setState(null);

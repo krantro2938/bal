@@ -215,13 +215,17 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   // the top; leave: sliding away, then the drawer unmounts.
   const [phase, setPhase] = useState<"enter" | "idle" | "drag" | "settle" | "leave">("enter");
   const [drag, setDrag] = useState(0);
-  const touch = useRef<{ y: number; pull: boolean } | null>(null);
+  // Dragged up by its head, the drawer covers the whole screen, video included; down again,
+  // it goes back under the video, and further down it closes (three positions, like YouTube's).
+  const [full, setFull] = useState(false);
+  const touch = useRef<{ y: number; pull: boolean; head: boolean } | null>(null);
   const dragging = useRef(false);
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!sheet) return;
     setPhase("enter");
     setDrag(0);
+    setFull(false);
     // Right under the video itself (the rehearsal bar below it is covered, as in YouTube's app).
     const measure = () => {
       const video = document.querySelector("[data-sticky-player] [data-media-player]");
@@ -264,10 +268,11 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       setWriting(false);
     };
   }, [sheet]);
-  // Should a transitionend never arrive (a backgrounded tab), the drawer still goes.
+  // Should a transitionend never arrive (a backgrounded tab, nothing left to move), the drawer
+  // still goes, or comes to rest.
   useEffect(() => {
-    if (phase !== "leave") return;
-    const t = setTimeout(() => setOpen(false), 400);
+    if (phase !== "leave" && phase !== "settle") return;
+    const t = setTimeout(() => (phase === "leave" ? setOpen(false) : setPhase("idle")), 400);
     return () => clearTimeout(t);
   }, [phase]);
   // A tap on the preview while the drawer is still sliding away brings it straight back.
@@ -283,30 +288,36 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   const closeSheet = () => (history.state?.commentsSheet ? history.back() : setPhase("leave"));
   const onSheetTouchStart = (e: TouchEvent, head: boolean) => {
     // From the head always; from the list only when it is scrolled to the top (then a pull down moves the drawer).
-    touch.current = { y: e.touches[0].clientY, pull: head || (scroller.current?.scrollTop ?? 0) <= 0 };
+    touch.current = { y: e.touches[0].clientY, pull: head || (scroller.current?.scrollTop ?? 0) <= 0, head };
   };
   const onSheetTouchMove = (e: TouchEvent) => {
     const t = touch.current;
     if (!t?.pull) return;
     const dy = e.touches[0].clientY - t.y;
-    if (phase !== "drag" && dy < 0) {
-      t.pull = false; // an upward swipe scrolls the list instead
+    // Upward: the head lifts the drawer to full screen; on the list (or already full) it scrolls instead.
+    if (phase !== "drag" && dy < 0 && (!t.head || full)) {
+      t.pull = false;
       return;
     }
     dragging.current = true;
     setPhase("drag");
-    setDrag(Math.max(0, dy));
+    setDrag(full ? Math.max(0, dy) : Math.max(-sheetTop, dy));
   };
   const onSheetTouchEnd = () => {
     touch.current = null;
     dragging.current = false;
     if (phase !== "drag") return;
-    if (drag > 90) closeSheet();
-    else {
-      setPhase("settle");
-      setDrag(0);
-    }
+    if (full ? drag > sheetTop + 90 : drag > 90) return closeSheet();
+    if (!full && drag < -60) setFull(true);
+    else if (full && drag > 60) setFull(false);
+    setPhase("settle");
+    setDrag(0);
   };
+  // Where the drawer's top is: full screen or under the video, moved by a finger between the
+  // two; a drag below the video slides the whole drawer down instead.
+  const restTop = full ? 0 : sheetTop;
+  const sheetY = Math.min(Math.max(restTop + drag, 0), sheetTop);
+  const below = Math.max(0, restTop + drag - sheetTop);
 
   const ctx: ThreadCtx = { user, moderator, pinnedBy, duration, now, people, flash, expand, children: replies, onSeek, post, like, act, askLogin };
   const first = threads[0];
@@ -412,10 +423,11 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
           <div
             className="fixed inset-x-0 bottom-0 z-[45] flex flex-col overscroll-none bg-bg shadow-[var(--shadow-pop)]"
             style={{
-              top: sheetTop,
+              top: sheetY,
               // None at rest: a transformed drawer would trap the fixed comment box (while typing) inside it.
-              transform: phase === "leave" ? "translateY(100%)" : drag ? `translateY(${drag}px)` : undefined,
-              transition: phase === "settle" || phase === "leave" ? "transform 220ms cubic-bezier(.2,.7,.2,1)" : "none",
+              transform: phase === "leave" ? "translateY(100%)" : below ? `translateY(${below}px)` : undefined,
+              transition:
+                phase === "settle" || phase === "leave" ? "transform 220ms cubic-bezier(.2,.7,.2,1), top 220ms cubic-bezier(.2,.7,.2,1)" : "none",
               animation: phase === "enter" ? "sheet-up 260ms cubic-bezier(.2,.7,.2,1)" : undefined,
             }}
             onAnimationEnd={(e) => e.target === e.currentTarget && setPhase("idle")}
@@ -427,10 +439,12 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
             role="dialog"
             aria-label="Комментарии"
           >
-            {/* Above the install card (z-40), below sign-in sheets (z-50). The head: a grip, the title
-                and count, ✕; dragging it (or the list, from its top) down closes the drawer. */}
+            {/* Above the header and the install card (z-40), below sign-in sheets (z-50). The head: a grip,
+                the title and count, ✕; dragged up it fills the screen, down (or the list, from its top)
+                it goes back under the video or closes. */}
             <div
               className="shrink-0 touch-none border-b border-line px-4 pt-2 pb-2"
+              style={full && phase !== "drag" ? { paddingTop: "calc(8px + env(safe-area-inset-top))" } : undefined}
               onTouchStart={(e) => onSheetTouchStart(e, true)}
               onTouchMove={onSheetTouchMove}
               onTouchEnd={onSheetTouchEnd}

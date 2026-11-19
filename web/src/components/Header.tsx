@@ -6,6 +6,7 @@ import { useInstall } from "@/lib/install";
 import { useTheme } from "@/lib/theme";
 import type { User } from "@/lib/types";
 import { NotificationsBell } from "./Notifications";
+import { PushSwitch } from "./PushSwitch";
 import { SearchBox } from "./SearchBox";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -168,6 +169,7 @@ function AccountMenu({ user }: { user: User }) {
                 <MonitorDown className="size-5 text-ink-2 max-sm:hidden" /> Установить приложение
               </button>
             ) : null}
+            <PushSwitch />
             <button type="button" onClick={toggleTheme} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-hover sm:hidden">
               {theme === "dark" ? <Sun className="size-5 text-ink-2" /> : <Moon className="size-5 text-ink-2" />}
               {theme === "dark" ? "Светлая тема" : "Тёмная тема"}

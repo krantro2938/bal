@@ -1,6 +1,9 @@
 package server
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"encoding/json"
 	"io"
 	"log"
@@ -53,6 +56,13 @@ func newTestServer(t *testing.T) *httptest.Server {
 	s.comments = newLimiter(1000, time.Millisecond)
 	s.checker = &moderation.Checker{}
 	s.events = newHub()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.push, err = newPusher(key, "http://example.test"); err != nil {
+		t.Fatal(err)
+	}
 	lastServer = s
 	ts := httptest.NewServer(s.routes())
 	t.Cleanup(ts.Close)

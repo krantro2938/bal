@@ -6,6 +6,7 @@ import { since } from "@/lib/format";
 import type { Notification } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Avatar } from "./Header";
+import { PushSwitch } from "./PushSwitch";
 
 /** Bell with replies and @mentions; new ones arrive over the user's event stream. */
 export function NotificationsBell() {
@@ -104,6 +105,9 @@ export function NotificationsBell() {
               ))}
             </ul>
           )}
+          <div className="mt-1 border-t border-line pt-1">
+            <PushSwitch />
+          </div>
         </div>
       ) : null}
     </div>

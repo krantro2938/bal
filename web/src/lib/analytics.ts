@@ -20,6 +20,7 @@ export const EVENTS = [
   "signup", // an account was created
   "login", // signed in with email and password
   "install", // installed as an app
+  "push-on", // turned on notifications on a device
 ] as const;
 export type AnalyticsEvent = (typeof EVENTS)[number];
 

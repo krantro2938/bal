@@ -141,6 +141,21 @@ CREATE INDEX notifications_user ON notifications(user_id, created_at);`,
 
 	// 8: verified accounts (the site's own) get a badge next to their handle.
 	`ALTER TABLE users ADD COLUMN verified INTEGER NOT NULL DEFAULT 0;`,
+
+	// 9: push notifications: one row per browser that turned them on (its push service
+	// endpoint and keys), and the dances already announced as new.
+	`CREATE TABLE push_subscriptions (
+  endpoint    TEXT PRIMARY KEY,
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  p256dh      TEXT NOT NULL,
+  auth        TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX push_subscriptions_user ON push_subscriptions(user_id);
+CREATE TABLE announced (
+  dance  TEXT PRIMARY KEY,
+  at     INTEGER NOT NULL
+) WITHOUT ROWID;`,
 }
 
 // migrate applies pending migrations on one connection with foreign keys
