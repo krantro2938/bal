@@ -1,4 +1,4 @@
-import { CircleUserRound, LogOut, MonitorDown, Moon, NotebookPen, Search, Sun } from "lucide-react";
+import { CircleUserRound, Download, LogOut, MonitorDown, Moon, NotebookPen, Search, Sun } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useSession } from "@/lib/session";
@@ -11,6 +11,10 @@ import { ThemeToggle } from "./ThemeToggle";
 
 export function Header() {
   const { user, ready } = useSession();
+  const install = useInstall();
+  // Guests get an install button in the header; on phones it takes the theme switch's place,
+  // which moves to the bottom of the page (signed in, both live in the account menu).
+  const installHere = ready && !user && install.available;
   const loc = useLocation();
   const [mobileSearch, setMobileSearch] = useState(false);
   const loginHref = `/login?return=${encodeURIComponent(loc.pathname + loc.search)}`;
@@ -46,8 +50,19 @@ export function Header() {
         >
           <Search className="size-5" />
         </button>
+        {installHere ? (
+          <button
+            type="button"
+            onClick={() => (install.native ? install.install() : install.showHint())}
+            className="grid size-10 shrink-0 place-items-center rounded-full text-ink hover:bg-hover"
+            aria-label="Установить приложение"
+            title="Установить приложение"
+          >
+            <Download className="size-5" />
+          </button>
+        ) : null}
         {/* Signed in on phones, the theme switch moves into the account menu to make room for the bell. */}
-        <div className={user ? "max-sm:hidden" : undefined}>
+        <div className={user || installHere ? "max-sm:hidden" : undefined}>
           <ThemeToggle />
         </div>
         {user ? <NotificationsBell /> : null}

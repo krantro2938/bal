@@ -1,7 +1,7 @@
 import type { MediaPlayerInstance } from "@vidstack/react";
 import { Bookmark, ChevronDown, ExternalLink, Film, GraduationCap, Maximize2, Music, NotebookPen, Pencil, ScrollText, Share2, Trash2, X } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AudioTrack } from "@/components/AudioTrack";
 import { ChaptersCarousel, ChaptersPanel } from "@/components/ChaptersPanel";
@@ -501,16 +501,17 @@ export function Dance() {
 
           {/* On phones only the badge stays and the actions lose their labels, like YouTube's app. */}
           <div className="mt-4 flex items-center gap-3 sm:flex-wrap sm:gap-x-6 sm:gap-y-4">
-            <div className="flex min-w-0 shrink-0 items-center gap-3">
+            {/* Like a channel on YouTube: the badge and name lead to the ball's own page, @bal. */}
+            <Link to="/@bal" className="group/channel flex min-w-0 shrink-0 items-center gap-3 rounded-full" aria-label="Традиционный бал РТУ МИРЭА — страница @bal">
               <Badge dance={dance} size={40} />
               <div className="min-w-0 leading-tight max-sm:hidden">
-                <p className="truncate text-[15px] font-medium">Традиционный бал РТУ МИРЭА</p>
+                <p className="truncate text-[15px] font-medium group-hover/channel:underline group-hover/channel:underline-offset-4">Традиционный бал РТУ МИРЭА</p>
                 <p className="tnum flex gap-x-2 text-[13px] text-ink-3">
                   <span>{isGlossary ? "Словарь движений" : `Танец ${String(dance.order).padStart(2, "0")}`}</span>
                   {dance.duration ? <span>{timecode(dance.duration)}</span> : null}
                 </p>
               </div>
-            </div>
+            </Link>
             <div className="-mr-3 flex flex-1 gap-2 overflow-x-auto pr-3 max-sm:min-w-0 [scrollbar-width:none] sm:mr-0 sm:flex-auto sm:justify-end sm:overflow-visible sm:pr-0">
               {/* On phones the actions sit at the right edge; the spacer collapses if they need to scroll. */}
               <span className="flex-1 sm:hidden" />

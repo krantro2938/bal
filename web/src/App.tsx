@@ -7,6 +7,7 @@ import { setPage } from "@/lib/analytics";
 import { feedPlace, rememberFeed } from "@/lib/scroll";
 import { MiniPlayer } from "@/components/MiniPlayer";
 import { StateBlock } from "@/components/StateBlock";
+import { FooterThemeToggle } from "@/components/ThemeToggle";
 import { Catalog } from "@/pages/Catalog";
 import { Dance } from "@/pages/Dance";
 import { Login, Register } from "@/pages/Login";
@@ -37,6 +38,7 @@ function Shell() {
       <div id="main">
         <Outlet />
       </div>
+      <FooterThemeToggle />
       <InstallPrompt />
       <MiniPlayer />
       <Toaster
