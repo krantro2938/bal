@@ -1,8 +1,8 @@
-import { Check, LogOut, MonitorDown, Moon, Pencil, Play, Smartphone, Sun, X } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { Check, ChevronLeft, ChevronRight, LogOut, MonitorDown, Moon, Pencil, Play, Smartphone, Sun, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Cover } from "@/components/DanceCard";
+import { CardMenu, Cover, Views } from "@/components/DanceCard";
 import { Avatar } from "@/components/Header";
 import { PushSwitch } from "@/components/PushSwitch";
 import { Button } from "@/components/ui/button";
@@ -26,9 +26,7 @@ export function Me() {
   }, []);
 
   if (ready && !user) return <Navigate to="/login?return=%2Fme" replace />;
-  if (!ready || !state || !data) {
-    return <main className="mx-auto max-w-[1200px] px-3 pt-8 sm:px-4 lg:px-6" aria-busy="true"><div className="h-8 w-56 rounded bg-surface-2" /></main>;
-  }
+  if (!ready || !state || !data) return <MeSkeleton />;
 
   const bySlug = new Map(data.dances.map((d) => [d.slug, d]));
   // Everything watched, newest first; the bar and «с 1:23» only where it's still the same video.
@@ -42,22 +40,14 @@ export function Me() {
 
   return (
     <main className="mx-auto max-w-[1600px] px-3 pt-4 pb-16 sm:px-5 lg:px-6 lg:pt-8">
-      {/* Dark theme: a soft violet glow from the top, behind the see-through header (like YouTube's «Вы»). */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden h-[480px] dark:block"
-        style={{
-          background:
-            "radial-gradient(80% 75% at 18% 0%, #4b3aa866, transparent 70%), radial-gradient(65% 60% at 88% 0%, #2546a35c, transparent 72%)",
-          maskImage: "linear-gradient(to bottom, #000 45%, transparent)",
-        }}
-      />
+      <Glow />
 
-      {/* You: picture, name, @handle; your public profile is one tap away. */}
-      {/* The @handle line is always as tall as its edit field, and the field's hint shows in the room
-          above «Открыть профиль», so editing in place moves nothing. */}
+      {/* You: picture, name, @handle; your public profile is one tap away (below on phones, at the
+          far right on bigger screens, with the name and @handle centred on the picture). */}
+      {/* The @handle line is always as tall as its edit field, and the field's hint hangs below it
+          without taking room, so editing in place moves nothing. */}
       <section className="flex flex-col gap-7 sm:flex-row sm:items-center sm:gap-6">
-        <div className="flex min-w-0 items-center gap-4 sm:gap-6">
+        <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
           <span className="shrink-0 sm:hidden">
             <Avatar user={user!} size={72} />
           </span>
@@ -69,17 +59,11 @@ export function Me() {
             <div className="relative mt-0.5 h-9 text-[14px] text-ink-3">
               <UsernameEditor username={user!.username} />
             </div>
-            <Link
-              to={`/@${user!.username}`}
-              className={cn(profileButton, "mt-7 inline-flex h-9 px-4 text-[14px] max-sm:hidden")}
-            >
-              Открыть профиль
-            </Link>
           </div>
         </div>
         <Link
           to={`/@${user!.username}`}
-          className={cn(profileButton, "flex h-10 justify-center text-[15px] sm:hidden")}
+          className={cn(profileButton, "flex h-10 shrink-0 justify-center text-[15px] sm:h-9 sm:px-4 sm:text-[14px]")}
         >
           Открыть профиль
         </Link>
@@ -100,29 +84,41 @@ export function Me() {
           {history.length ? (
             <section>
               <Title>История</Title>
-              <Shelf>
+              {/* Like YouTube's history: the cover on the left, the title and where you stopped beside it, ⋮ at the end. */}
+              <ul className="space-y-3 sm:space-y-4">
                 {history.map((p) => {
                   const d = bySlug.get(p.dance)!;
                   const same = d.version === p.version;
                   return (
-                    <ShelfItem key={p.dance}>
-                      <Link to={same ? `/dance/${d.slug}?t=${Math.floor(p.position)}` : `/dance/${d.slug}`} state={WATCH} className="group block">
+                    <li key={p.dance} className="flex gap-1">
+                      <Link
+                        to={same ? `/dance/${d.slug}?t=${Math.floor(p.position)}` : `/dance/${d.slug}`}
+                        state={WATCH}
+                        className="group flex min-w-0 flex-1 gap-3 sm:gap-4"
+                      >
                         {/* clipped with the cover so the bar follows its rounded corners */}
-                        <div className="relative overflow-hidden rounded-[var(--radius-frame)]">
-                          <Cover dance={d} />
+                        <div className="relative w-[160px] shrink-0 overflow-hidden rounded-lg sm:w-[246px] sm:rounded-[var(--radius-frame)]">
+                          <Cover dance={d} className="rounded-none" />
                           {same ? (
                             <div className="absolute inset-x-0 bottom-0 h-1 bg-white/25">
                               <div className="h-full bg-[#e8ddc2]" style={{ width: `${Math.min(100, (p.position / (d.duration || 1)) * 100)}%` }} />
                             </div>
                           ) : null}
                         </div>
-                        <p className="mt-2 line-clamp-2 font-title text-[16px] leading-snug group-hover:underline">{d.title}</p>
-                        <p className="tnum text-[13px] text-ink-3">{same ? `с ${timecode(p.position)}` : "видео обновлено"}</p>
+                        <div className="min-w-0 py-0.5">
+                          <p className="line-clamp-2 font-title text-[16px] leading-snug group-hover:underline sm:text-[18px]">{d.title}</p>
+                          <p className="tnum mt-1 flex flex-wrap items-center gap-x-2 text-[12px] text-ink-3 sm:text-[13px]">
+                            <span>{d.kind === "glossary" ? "Словарь движений" : `Танец ${String(d.order).padStart(2, "0")}`}</span>
+                            <Views n={d.views} />
+                          </p>
+                          <p className="tnum text-[12px] text-ink-3 sm:text-[13px]">{same ? `с ${timecode(p.position)}` : "видео обновлено"}</p>
+                        </div>
                       </Link>
-                    </ShelfItem>
+                      <CardMenu dance={d} />
+                    </li>
                   );
                 })}
-              </Shelf>
+              </ul>
             </section>
           ) : null}
 
@@ -192,39 +188,132 @@ export function Me() {
                     },
                     () => toast("Не удалось сохранить, попробуйте ещё раз"),
                   );
-                // The row is the checkbox; the video opens from its own button on the right.
+                // The row is the checkbox; the video opens from its own button on the right. The
+                // whole row, that button too, lights up under the pointer.
                 return (
-                  <li key={d.slug} className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      role="checkbox"
-                      aria-checked={done}
-                      onClick={toggle}
-                      className="group -ml-2 flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-surface"
-                    >
-                      <span
-                        className={cn(
-                          "grid size-5 shrink-0 place-items-center rounded-full border transition-colors",
-                          done ? "border-accent bg-accent text-accent-ink" : "border-line-strong group-hover:border-accent",
-                        )}
+                  <li key={d.slug}>
+                    <div className="group -mx-2 flex items-center gap-1 rounded-lg px-2 transition-colors hover:bg-surface">
+                      <button
+                        type="button"
+                        role="checkbox"
+                        aria-checked={done}
+                        onClick={toggle}
+                        className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-left"
                       >
-                        {done ? <Check className="size-3.5" /> : null}
-                      </span>
-                      <span className={cn("min-w-0 text-[15px]", !done && "text-ink-2")}>{d.title}</span>
-                    </button>
-                    <Link
-                      to={`/dance/${d.slug}`}
-                      aria-label={`Открыть видео «${d.title}»`}
-                      title="Открыть видео"
-                      className="grid size-9 shrink-0 place-items-center rounded-full text-ink-3 transition-colors hover:bg-surface hover:text-ink"
-                    >
-                      <Play className="size-4" />
-                    </Link>
+                        <span
+                          className={cn(
+                            "grid size-5 shrink-0 place-items-center rounded-full border transition-colors",
+                            done ? "border-accent bg-accent text-accent-ink" : "border-line-strong group-hover:border-accent",
+                          )}
+                        >
+                          {done ? <Check className="size-3.5" /> : null}
+                        </span>
+                        <span className={cn("min-w-0 text-[15px]", !done && "text-ink-2")}>{d.title}</span>
+                      </button>
+                      <Link
+                        to={`/dance/${d.slug}`}
+                        aria-label={`Открыть видео «${d.title}»`}
+                        title="Открыть видео"
+                        className="grid size-9 shrink-0 place-items-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                      >
+                        <Play className="size-4" />
+                      </Link>
+                    </div>
                   </li>
                 );
               })}
             </ul>
           </section>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+/** Dark theme: a soft violet glow from the top, behind the see-through header (like YouTube's «Вы»). */
+function Glow() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden h-[480px] dark:block"
+      style={{
+        background:
+          "radial-gradient(80% 75% at 18% 0%, #4b3aa866, transparent 70%), radial-gradient(65% 60% at 88% 0%, #2546a35c, transparent 72%)",
+        maskImage: "linear-gradient(to bottom, #000 45%, transparent)",
+      }}
+    />
+  );
+}
+
+/** The page's own shapes while it loads (you, «История» rows; settings and «Выучено» beside them
+ *  on computers, below on phones), so nothing jumps when it arrives. Once the session is known,
+ *  your picture and name are already the real ones. */
+function MeSkeleton() {
+  const { user } = useSession();
+  const block = "rounded-lg bg-surface-2";
+  return (
+    <main className="mx-auto max-w-[1600px] px-3 pt-4 pb-16 sm:px-5 lg:px-6 lg:pt-8" aria-busy="true" aria-label="Загрузка">
+      <Glow />
+      <section className="flex flex-col gap-7 sm:flex-row sm:items-center sm:gap-6">
+        <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
+          {user ? (
+            <>
+              <span className="shrink-0 sm:hidden">
+                <Avatar user={user} size={72} />
+              </span>
+              <span className="shrink-0 max-sm:hidden">
+                <Avatar user={user} size={112} />
+              </span>
+            </>
+          ) : (
+            <div className="size-[72px] shrink-0 rounded-full bg-surface-2 sm:size-28" />
+          )}
+          <div className="min-w-0 flex-1">
+            {user ? (
+              <h1 className="truncate text-[24px] leading-tight font-semibold sm:text-[32px]">{user.name}</h1>
+            ) : (
+              <div className={cn(block, "h-[30px] w-44 sm:h-10 sm:w-56")} />
+            )}
+            <div className="mt-0.5 flex h-9 items-center">
+              {user ? <span className="text-[14px] text-ink-3">@{user.username}</span> : <div className={cn(block, "h-3.5 w-28")} />}
+            </div>
+          </div>
+        </div>
+        <div className="h-10 shrink-0 rounded-full bg-surface-2 sm:h-9 sm:w-40" />
+      </section>
+
+      <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-12 lg:gap-10">
+        <div className="lg:col-span-7">
+          <div className={cn(block, "mb-3 h-6 w-28")} />
+          <div className="space-y-3 sm:space-y-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="flex gap-3 sm:gap-4">
+                <div className="aspect-video w-[160px] shrink-0 rounded-lg bg-surface-2 sm:w-[246px] sm:rounded-[var(--radius-frame)]" />
+                <div className="min-w-0 flex-1 space-y-2 py-1">
+                  <div className={cn(block, "h-4 w-3/4 max-w-56 sm:h-5")} />
+                  <div className={cn(block, "h-3 w-24")} />
+                  <div className={cn(block, "h-3 w-12")} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col gap-12 lg:col-span-5">
+          <div className="order-last lg:order-first">
+            <div className={cn(block, "mb-3 h-6 w-32")} />
+            <div className="h-[146px] rounded-[var(--radius-sheet)] border border-line" />
+          </div>
+          <div>
+            <div className={cn(block, "mb-3 h-6 w-36")} />
+            <div className="divide-y divide-line border-y border-line">
+              {Array.from({ length: 8 }, (_, i) => (
+                <div key={i} className="flex h-[45px] items-center gap-3">
+                  <div className="size-5 shrink-0 rounded-full bg-surface-2" />
+                  <div className={cn(block, "h-3.5")} style={{ width: `${[52, 38, 44, 30, 56, 46, 36, 48][i]}%` }} />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </main>
@@ -255,7 +344,7 @@ function Settings({ className }: { className?: string }) {
           {dark ? <Moon className="size-5 shrink-0 text-ink-2" /> : <Sun className="size-5 shrink-0 text-ink-2" />}
           <span className="flex-1">Тёмная тема</span>
           <span className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", dark ? "bg-accent" : "bg-line-strong")} aria-hidden>
-            <span className={cn("absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform", dark && "translate-x-4")} />
+            <span className={cn("absolute top-0.5 left-0.5 size-5 rounded-full shadow transition", dark ? "translate-x-4 bg-accent-ink" : "bg-white")} />
           </span>
         </button>
         {/* Off the page first: signed out here, it would send you to the sign-in page. */}
@@ -285,13 +374,49 @@ function Title({ children, count }: { children: ReactNode; count?: ReactNode }) 
   );
 }
 
-/** A row of video covers: swiped sideways on phones, a grid on computers. */
+/** A row of video covers scrolled sideways: swiped on phones; with a mouse, arrows show at
+ *  the ends that have more (like YouTube's shelves). */
 function Shelf({ children }: { children: ReactNode }) {
-  return <ul className="-mx-3 flex gap-3 overflow-x-auto px-3 pb-2 [scrollbar-width:none] sm:-mx-5 sm:gap-4 sm:px-5 lg:mx-0 lg:grid lg:grid-cols-3 lg:px-0">{children}</ul>;
+  const ref = useRef<HTMLUListElement>(null);
+  const [more, setMore] = useState({ left: false, right: false });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setMore({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+    };
+  }, []);
+  const go = (dir: -1 | 1) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.8, behavior: "smooth" });
+  // Centred on the covers (240px wide, 16:9), not on the whole card with its title.
+  const arrow =
+    "absolute top-[67px] z-10 hidden size-10 -translate-y-1/2 place-items-center rounded-full bg-[var(--sheet)] text-ink shadow-[var(--shadow-pop)] hover:bg-surface-2 [@media(hover:hover)]:grid";
+  return (
+    <div className="relative">
+      <ul ref={ref} className="-mx-3 flex snap-x gap-3 overflow-x-auto scroll-px-3 px-3 pb-2 [scrollbar-width:none] sm:-mx-5 sm:gap-4 sm:scroll-px-5 sm:px-5 lg:mx-0 lg:scroll-px-0 lg:px-0">
+        {children}
+      </ul>
+      {more.left ? (
+        <button type="button" onClick={() => go(-1)} className={cn(arrow, "-left-3")} aria-label="Назад">
+          <ChevronLeft className="size-5" />
+        </button>
+      ) : null}
+      {more.right ? (
+        <button type="button" onClick={() => go(1)} className={cn(arrow, "-right-3")} aria-label="Дальше">
+          <ChevronRight className="size-5" />
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 function ShelfItem({ children }: { children: ReactNode }) {
-  return <li className="w-[56vw] max-w-[260px] shrink-0 sm:w-[240px] lg:w-auto lg:max-w-none">{children}</li>;
+  return <li className="w-[56vw] max-w-[260px] shrink-0 snap-start sm:w-[240px]">{children}</li>;
 }
 
 // «Открыть профиль»: a gradient from the site's accent into the violet of the page's glow.

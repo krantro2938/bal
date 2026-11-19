@@ -53,7 +53,7 @@ export function PushSwitch({ className }: { className?: string }) {
         <span className="block text-[13px] text-ink-3">Ответы, упоминания и новые видео</span>
       </span>
       <span className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", on ? "bg-accent" : "bg-line-strong")} aria-hidden>
-        <span className={cn("absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform", on && "translate-x-4")} />
+        <span className={cn("absolute top-0.5 left-0.5 size-5 rounded-full shadow transition", on ? "translate-x-4 bg-accent-ink" : "bg-white")} />
       </span>
     </button>
   );

@@ -241,7 +241,7 @@ function CardActions({ dance }: { dance: DanceSummary }) {
 }
 
 /** The ⋮ menu under a card: save and share without opening the video. */
-function CardMenu({ dance }: { dance: DanceSummary }) {
+export function CardMenu({ dance }: { dance: DanceSummary }) {
   const { user, state, setMark } = useSession();
   const catalog = useCatalog();
   const [open, setOpen] = useState(false);
@@ -280,10 +280,7 @@ function CardMenu({ dance }: { dance: DanceSummary }) {
         aria-label="Действия"
         aria-expanded={open}
         aria-haspopup="menu"
-        className={cn(
-          "grid size-9 place-items-center rounded-full text-ink-2 hover:bg-hover hover:text-ink",
-          !open && "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100",
-        )}
+        className="grid size-9 place-items-center rounded-full text-ink-2 hover:bg-hover hover:text-ink"
       >
         <EllipsisVertical className="size-5" />
       </button>
