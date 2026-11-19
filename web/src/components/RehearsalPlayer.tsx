@@ -153,11 +153,25 @@ export function RehearsalPlayer({
         onVolumeChange={(d) => saveVolume(d.volume, d.muted)}
         keyShortcuts={{ togglePaused: "k Space", seekBackward: "j J ArrowLeft", seekForward: "l L ArrowRight", toggleFullscreen: "f" }}
         onLoadedMetadata={onReady}
-        onMediaSeekRequest={(t) => {
-          // (Pressing play then sends Vidstack's own "seek to 0", which must not replace the choice.)
-          if (player.current?.state.ended && t < video.duration - 0.5 && !(t === 0 && afterEnd.current !== null)) {
+        onMediaSeekRequest={(t, e) => {
+          const p = player.current;
+          // Playing then sends Vidstack's own "seek to 0", which must not replace the choice.
+          if (t === 0 && afterEnd.current !== null) {
+            e.stopImmediatePropagation();
+            return;
+          }
+          // Like YouTube, a seek after the end plays from there. Vidstack stays "ended" otherwise:
+          // the time reads the end and phones show no play button.
+          if (p?.state.ended && t < video.duration - 0.5) {
+            const first = afterEnd.current === null;
             afterEnd.current = t;
             setLeftEnd(true);
+            if (first)
+              queueMicrotask(() =>
+                p.play().catch(() => {
+                  afterEnd.current = null;
+                }),
+              );
           }
         }}
         onPlay={() => {
