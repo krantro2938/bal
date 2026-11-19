@@ -8,6 +8,7 @@ import { Link } from "react-router";
 import { SplitPill, splitHalf } from "@/components/SplitPill";
 import { Tip } from "@/components/Tip";
 import { timecode } from "@/lib/format";
+import { WATCH } from "@/lib/mini";
 import type { DanceDetail, DanceSummary, Note } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -194,9 +195,11 @@ export function RehearsalPlayer({
           window.setTimeout(go, 450);
         }}
         onCanPlay={() => {
-          if (!started.current && startAt !== null && player.current) {
+          if (!started.current && (startAt !== null || autoPlay) && player.current) {
             started.current = true;
-            player.current.currentTime = Math.min(startAt, video.duration - 0.5);
+            if (startAt !== null) player.current.currentTime = Math.min(startAt, video.duration - 0.5);
+            // Opened from a card (or back from the mini player): play at once. A browser that wants
+            // a tap first (iPhones, often) refuses quietly and the play button stays.
             if (autoPlay) player.current.play().catch(() => {});
           }
         }}
@@ -575,7 +578,7 @@ function EndScreen({ next, prev, onReplay, hidden }: { next: DanceSummary[]; pre
             >
               <X className="size-4" />
             </button>
-            <Link to={`/dance/${up.slug}`} className="group flex gap-3 pr-7">
+            <Link to={`/dance/${up.slug}`} state={WATCH} className="group flex gap-3 pr-7">
               <span className="relative block aspect-video w-36 shrink-0 overflow-hidden rounded-md bg-black/40">
                 {up.posterSmall ? <img src={up.posterSmall} alt="" className="size-full object-cover" /> : null}
                 {up.duration ? <span className="tnum absolute right-1 bottom-1 rounded bg-black/75 px-1 text-[11px]">{timecode(up.duration)}</span> : null}
@@ -590,7 +593,7 @@ function EndScreen({ next, prev, onReplay, hidden }: { next: DanceSummary[]; pre
                 <RotateCcw className="size-4" /> Ещё раз
               </button>
               <Link
-                to={`/dance/${up.slug}`}
+                to={`/dance/${up.slug}`} state={WATCH}
                 className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#e8ddc2] text-[13px] font-semibold text-[#0a1028] hover:bg-white"
               >
                 <Play className="size-4 fill-current" /> Смотреть
@@ -600,14 +603,14 @@ function EndScreen({ next, prev, onReplay, hidden }: { next: DanceSummary[]; pre
         ) : (
           <div className="flex items-center gap-6">
             {prev ? (
-              <Link to={`/dance/${prev.slug}`} className={cn(round, "size-11 bg-black/40")} aria-label={`Предыдущий: ${prev.title}`} title={prev.title}>
+              <Link to={`/dance/${prev.slug}`} state={WATCH} className={cn(round, "size-11 bg-black/40")} aria-label={`Предыдущий: ${prev.title}`} title={prev.title}>
                 <SkipBack className="size-6 fill-current" />
               </Link>
             ) : null}
             <button type="button" onClick={onReplay} className={cn(round, "size-16 bg-black/50")} aria-label="Смотреть снова" title="Смотреть снова">
               <RotateCcw className="size-8" />
             </button>
-            <Link to={`/dance/${up.slug}`} className={cn(round, "size-11 bg-black/40")} aria-label={`Следующий: ${up.title}`} title={up.title}>
+            <Link to={`/dance/${up.slug}`} state={WATCH} className={cn(round, "size-11 bg-black/40")} aria-label={`Следующий: ${up.title}`} title={up.title}>
               <SkipForward className="size-6 fill-current" />
             </Link>
           </div>
@@ -840,7 +843,7 @@ function PlayerIconButton({ label, on, onClick, children }: { label: string; on?
 function EndCard({ d, label, className }: { d: DanceSummary; label?: string; className: string }) {
   return (
     <Link
-      to={`/dance/${d.slug}`}
+      to={`/dance/${d.slug}`} state={WATCH}
       className={cn(
         "group pointer-events-auto absolute block aspect-video w-[30cqw] overflow-hidden rounded-[1cqw] bg-black text-white shadow-xl ring-1 ring-white/30 transition hover:ring-2 hover:ring-white",
         className,

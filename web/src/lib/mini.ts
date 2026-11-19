@@ -8,6 +8,11 @@ import { track } from "./analytics";
  */
 export type MiniDance = { slug: string; title: string; order: number; kind: "dance" | "glossary"; url: string; poster?: string };
 
+/** Link state for opening a dance to watch it: a tap on a card or the end screen, and the way
+ *  back from this bar. The page then starts playing at once (where you stopped, on a card);
+ *  shared links, comment links and the 💬 button don't carry it. */
+export const WATCH = { play: true };
+
 let current: MiniDance | null = null;
 let video: HTMLVideoElement | null = null;
 const listeners = new Set<() => void>();

@@ -10,6 +10,7 @@ import { track } from "@/lib/analytics";
 import { api, ApiError } from "@/lib/api";
 import { timecode } from "@/lib/format";
 import { useInstall } from "@/lib/install";
+import { WATCH } from "@/lib/mini";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import type { DanceSummary } from "@/lib/types";
@@ -103,7 +104,7 @@ export function Me() {
                   const same = d.version === p.version;
                   return (
                     <ShelfItem key={p.dance}>
-                      <Link to={same ? `/dance/${d.slug}?t=${Math.floor(p.position)}` : `/dance/${d.slug}`} className="group block">
+                      <Link to={same ? `/dance/${d.slug}?t=${Math.floor(p.position)}` : `/dance/${d.slug}`} state={WATCH} className="group block">
                         {/* clipped with the cover so the bar follows its rounded corners */}
                         <div className="relative overflow-hidden rounded-[var(--radius-frame)]">
                           <Cover dance={d} />
@@ -129,7 +130,7 @@ export function Me() {
               <Shelf>
                 {favorites.map((d) => (
                   <ShelfItem key={d.slug}>
-                    <Link to={`/dance/${d.slug}`} className="group block">
+                    <Link to={`/dance/${d.slug}`} state={WATCH} className="group block">
                       <Cover dance={d} />
                       <p className="mt-2 line-clamp-2 font-title text-[16px] leading-snug group-hover:underline">{d.title}</p>
                       <p className="tnum text-[13px] text-ink-3">{d.kind === "glossary" ? "Словарь движений" : `Танец ${String(d.order).padStart(2, "0")}`}</p>

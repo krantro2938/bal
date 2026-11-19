@@ -57,7 +57,7 @@ export function Dance() {
   const player = useRef<MediaPlayerInstance>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const startAt = useMemo(() => parseTime(params.get("t")), [params]);
-  // Back from the mini player: keep playing.
+  // Opened from a card or the end screen (or back from the mini player): start playing at once.
   const autoPlay = !!(useLocation().state as { play?: boolean } | null)?.play;
 
   // Phones: dragging the video down slides this page away over the feed and hands the dance
@@ -218,6 +218,8 @@ export function Dance() {
     return pos !== null && pos > 5 && pos < dance.video.duration - 5 ? pos : null;
   }, [dance, state, user, startAt]);
   const [resumeDismissed, setResumeDismissed] = useState(false);
+  // Playing at once picks up where you stopped, like YouTube; the banner then offers the start.
+  const resumeStart = autoPlay && startAt === null ? resumeAt : null;
 
   // Save position every 15 s of playback, on pause and when leaving.
   useEffect(() => {
@@ -443,7 +445,7 @@ export function Dance() {
               <RehearsalPlayer
                 dance={dance}
                 player={player}
-                startAt={startAt}
+                startAt={startAt ?? resumeStart}
                 loop={loop}
                 setLoop={setLoop}
                 onNote={startNote}
@@ -528,21 +530,29 @@ export function Dance() {
 
           {resumeAt !== null && !resumeDismissed && !resumeOff ? (
             <div className="mt-5 flex items-center gap-2 rounded-[var(--radius-frame)] bg-accent-soft px-4 py-2.5 text-[15px]">
-              <span className="tnum flex-1">Вы остановились на {timecode(resumeAt)}</span>
+              <span className="tnum flex-1">{resumeStart !== null ? `Продолжаем с ${timecode(resumeAt)}` : `Вы остановились на ${timecode(resumeAt)}`}</span>
+              {resumeStart === null ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    seek(resumeAt);
+                    setResumeDismissed(true);
+                  }}
+                  className="rounded-full bg-accent px-3.5 py-1.5 text-sm font-medium text-accent-ink"
+                >
+                  Продолжить
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => {
-                  seek(resumeAt);
+                  if (resumeStart !== null) seek(0);
                   setResumeDismissed(true);
                 }}
-                className="rounded-full bg-accent px-3.5 py-1.5 text-sm font-medium text-accent-ink"
-              >
-                Продолжить
-              </button>
-              <button
-                type="button"
-                onClick={() => setResumeDismissed(true)}
-                className="rounded-full px-2 py-1.5 text-sm text-ink-2 hover:text-ink"
+                className={cn(
+                  "rounded-full py-1.5 text-sm",
+                  resumeStart !== null ? "bg-accent px-3.5 font-medium text-accent-ink" : "px-2 text-ink-2 hover:text-ink",
+                )}
               >
                 Сначала
               </button>
