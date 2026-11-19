@@ -6,6 +6,13 @@
  */
 export function backToTop(el: HTMLElement | null) {
   if (!el) return;
+  // Inside the phone's comment drawer it is the drawer that scrolls.
+  const box = el.closest<HTMLElement>("[data-scroller]");
+  if (box) {
+    const top = el.getBoundingClientRect().top - box.getBoundingClientRect().top - 12;
+    if (top < 0) box.scrollBy({ top, behavior: "instant" });
+    return;
+  }
   const player = document.querySelector<HTMLElement>("[data-sticky-player]");
   const covered = player && getComputedStyle(player).position === "sticky" ? player.getBoundingClientRect().bottom : 64;
   const top = el.getBoundingClientRect().top - covered - 12;

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, CircleCheck, EllipsisVertical, Flag, Pin, PinOff, ShieldCheck, ThumbsUp, Timer, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, CircleCheck, EllipsisVertical, Flag, Pin, PinOff, ShieldCheck, ThumbsUp, Timer, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
@@ -201,6 +201,39 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
     return out;
   }, [focusId, list]);
 
+  // Phones: the list opens as a drawer over everything below the video, like YouTube's app.
+  const phone = usePhone();
+  const sheet = open && phone;
+  const [sheetTop, setSheetTop] = useState(0);
+  const [closing, setClosing] = useState(false);
+  const [drag, setDrag] = useState(0);
+  const dragFrom = useRef<number | null>(null);
+  useEffect(() => {
+    if (!sheet) return;
+    const measure = () => {
+      const player = document.querySelector("[data-sticky-player]");
+      setSheetTop(Math.max(64, player ? player.getBoundingClientRect().bottom : 64));
+    };
+    measure();
+    // The page underneath stays put while the drawer is open.
+    const root = document.documentElement;
+    const before = root.style.overflow;
+    root.style.overflow = "hidden";
+    window.addEventListener("resize", measure);
+    return () => {
+      root.style.overflow = before;
+      window.removeEventListener("resize", measure);
+    };
+  }, [sheet]);
+  const closeSheet = () => {
+    setClosing(true);
+    setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+      setDrag(0);
+    }, 200);
+  };
+
   const ctx: ThreadCtx = { user, moderator, pinnedBy, duration, now, people, flash, expand, children: replies, onSeek, post, like, act, askLogin };
   const first = threads[0];
   return (
@@ -223,71 +256,112 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
         </button>
       ) : null}
 
-      <div className={cn(!open && "max-lg:hidden")}>
-        <div className="mb-5 flex items-center gap-1 text-[14px]">
-          {(["top", "new"] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setSort(s)}
-              aria-pressed={sort === s}
-              className={cn("h-8 rounded-lg px-3 font-medium", sort === s ? "bg-ink text-bg" : "bg-surface-2 hover:bg-line")}
-            >
-              {s === "top" ? "Популярные" : "Новые"}
-            </button>
-          ))}
-          {open ? (
-            <button type="button" onClick={() => setOpen(false)} className="ml-auto grid size-9 place-items-center rounded-full hover:bg-hover lg:hidden" aria-label="Свернуть комментарии">
-              <ChevronUp className="size-5" />
-            </button>
-          ) : null}
-        </div>
-
-        <Composer
-          user={user}
-          now={now}
-          duration={duration}
-          people={people}
-          placeholder="Напишите комментарий…"
-          onGuest={() => askLogin("Чтобы писать комментарии. Пишите уважительно — грубые комментарии не публикуются.")}
-          onSubmit={(b) => post(b)}
-        />
-
-        {pending.length ? (
-          <div className="mt-5 flex justify-center">
-            <button
-              type="button"
-              onClick={() => {
-                setList((l) => [...(l ?? []).filter((c) => !pending.some((p) => p.id === c.id)), ...pending]);
-                setPending([]);
-                setSort("new");
-              }}
-              className="h-9 rounded-full bg-accent px-4 text-sm font-medium text-accent-ink"
-            >
-              Новые комментарии: {pending.length}
-            </button>
+      <div
+        className={cn(
+          !open && "max-lg:hidden",
+          sheet && "fixed inset-x-0 bottom-0 z-30 flex flex-col rounded-t-[var(--radius-sheet)] bg-[var(--sheet)] shadow-[var(--shadow-pop)]",
+          sheet && !drag && (closing ? "translate-y-full transition-transform duration-200 ease-in" : "animate-[sheet-up_260ms_cubic-bezier(.2,.7,.2,1)]"),
+        )}
+        style={sheet ? { top: sheetTop, transform: drag ? `translateY(${drag}px)` : undefined } : undefined}
+        role={sheet ? "dialog" : undefined}
+        aria-label={sheet ? "Комментарии" : undefined}
+      >
+        {sheet ? (
+          // The drawer's head: a grip, the title and count, ✕. Dragging it down closes the drawer.
+          <div
+            className="shrink-0 touch-none border-b border-line px-4 pt-2 pb-2"
+            onTouchStart={(e) => (dragFrom.current = e.touches[0].clientY)}
+            onTouchMove={(e) => dragFrom.current !== null && setDrag(Math.max(0, e.touches[0].clientY - dragFrom.current))}
+            onTouchEnd={() => {
+              dragFrom.current = null;
+              if (drag > 80) closeSheet();
+              else setDrag(0);
+            }}
+          >
+            <span className="mx-auto mb-1.5 block h-1 w-9 rounded-full bg-line-strong" aria-hidden />
+            <div className="flex items-center gap-2">
+              <h2 className="text-[17px] font-semibold">Комментарии</h2>
+              <span className="tnum text-[15px] text-ink-3">{count}</span>
+              <button type="button" onClick={closeSheet} className="-mr-2 ml-auto grid size-10 place-items-center rounded-full hover:bg-hover" aria-label="Закрыть комментарии">
+                <X className="size-5" />
+              </button>
+            </div>
           </div>
         ) : null}
+        <div data-scroller={sheet ? "" : undefined} className={cn(sheet && "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(24px+env(safe-area-inset-bottom))]")}>
+          <div className="mb-5 flex items-center gap-1 text-[14px]">
+            {(["top", "new"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSort(s)}
+                aria-pressed={sort === s}
+                className={cn("h-8 rounded-lg px-3 font-medium", sort === s ? "bg-ink text-bg" : "bg-surface-2 hover:bg-line")}
+              >
+                {s === "top" ? "Популярные" : "Новые"}
+              </button>
+            ))}
+          </div>
 
-        {error ? (
-          <p className="mt-6 text-[15px] text-ink-3">
-            Не удалось загрузить комментарии.{" "}
-            <button type="button" onClick={load} className="font-medium text-accent">
-              Повторить
-            </button>
-          </p>
-        ) : null}
+          <Composer
+            user={user}
+            now={now}
+            duration={duration}
+            people={people}
+            placeholder="Напишите комментарий…"
+            onGuest={() => askLogin("Чтобы писать комментарии. Пишите уважительно — грубые комментарии не публикуются.")}
+            onSubmit={(b) => post(b)}
+          />
 
-        <ul className="mt-6 space-y-5">
-          {threads.map((c) => (
-            <li key={c.id}>
-              <Thread c={c} depth={0} ctx={ctx} />
-            </li>
-          ))}
-        </ul>
+          {pending.length ? (
+            <div className="mt-5 flex justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setList((l) => [...(l ?? []).filter((c) => !pending.some((p) => p.id === c.id)), ...pending]);
+                  setPending([]);
+                  setSort("new");
+                }}
+                className="h-9 rounded-full bg-accent px-4 text-sm font-medium text-accent-ink"
+              >
+                Новые комментарии: {pending.length}
+              </button>
+            </div>
+          ) : null}
+
+          {error ? (
+            <p className="mt-6 text-[15px] text-ink-3">
+              Не удалось загрузить комментарии.{" "}
+              <button type="button" onClick={load} className="font-medium text-accent">
+                Повторить
+              </button>
+            </p>
+          ) : null}
+
+          <ul className="mt-6 space-y-5">
+            {threads.map((c) => (
+              <li key={c.id}>
+                <Thread c={c} depth={0} ctx={ctx} />
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );
+}
+
+/** Below the two-column layout (lg), where comments open as a drawer. */
+function usePhone() {
+  const query = "(max-width: 1023.98px)";
+  const [on, setOn] = useState(() => matchMedia(query).matches);
+  useEffect(() => {
+    const m = matchMedia(query);
+    const change = () => setOn(m.matches);
+    m.addEventListener("change", change);
+    return () => m.removeEventListener("change", change);
+  }, []);
+  return on;
 }
 
 type ThreadCtx = {
@@ -504,8 +578,8 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
               setExpanded(!expanded);
               if (expanded) requestAnimationFrame(() => backToTop(root.current));
             }}
-            // Notes end in grey footnotes, so their toggle sits further down to stand apart.
-            className={cn("text-[14px] font-medium text-ink-2 hover:text-ink", isNote(c) ? "mt-3" : "mt-1")}
+            // An open note ends in grey footnotes, so «Свернуть» sits further down to stand apart.
+            className={cn("text-[14px] font-medium text-ink-2 hover:text-ink", isNote(c) && expanded ? "mt-3" : "mt-1")}
           >
             {expanded ? "Свернуть" : "Читать дальше"}
           </button>
