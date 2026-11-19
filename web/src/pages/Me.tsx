@@ -315,7 +315,12 @@ function MeSkeleton() {
         <div className="flex flex-col gap-12 lg:col-span-5">
           <div className="order-last lg:order-first">
             <div className={cn(block, "mb-3 h-6 w-32")} />
-            <div className="h-[146px] rounded-[var(--radius-sheet)] border border-line" />
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="flex h-12 items-center gap-3">
+                <div className="size-5 shrink-0 rounded-full bg-surface-2" />
+                <div className={cn(block, "h-3.5")} style={{ width: `${[34, 30, 46, 18][i]}%` }} />
+              </div>
+            ))}
           </div>
           <div>
             <div className={cn(block, "mb-3 h-6 w-36")} />
@@ -334,26 +339,20 @@ function MeSkeleton() {
   );
 }
 
-/** Notifications, installing, theme and signing out: what the account menu used to hold. */
+/** Theme, notifications, installing and signing out: what the account menu used to hold. Plain
+ *  rows under the heading; only the two that open or do something light up under the pointer. */
 function Settings({ className }: { className?: string }) {
   const { logout } = useSession();
   const navigate = useNavigate();
   const install = useInstall();
   const [theme, toggleTheme] = useTheme();
   const dark = theme === "dark";
-  const row = "flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] hover:bg-hover";
+  const row = "flex w-full items-center gap-3 py-3 text-left text-[15px]";
+  const action = cn(row, "-mx-2 w-[calc(100%+16px)] rounded-lg px-2 transition-colors hover:bg-surface");
   return (
     <section className={className}>
       <Title>Настройки</Title>
-      <div className="overflow-hidden rounded-[var(--radius-sheet)] border border-line py-1">
-        <PushSwitch className="py-3" />
-        {install.available ? (
-          <button type="button" onClick={() => (install.native ? install.install() : install.showHint())} className={row}>
-            <Smartphone className="size-5 shrink-0 text-ink-2 sm:hidden" />
-            <MonitorDown className="size-5 shrink-0 text-ink-2 max-sm:hidden" />
-            Установить приложение
-          </button>
-        ) : null}
+      <div>
         <button type="button" role="switch" aria-checked={dark} onClick={toggleTheme} className={row}>
           {dark ? <Moon className="size-5 shrink-0 text-ink-2" /> : <Sun className="size-5 shrink-0 text-ink-2" />}
           <span className="flex-1">Тёмная тема</span>
@@ -361,6 +360,14 @@ function Settings({ className }: { className?: string }) {
             <span className={cn("absolute top-0.5 left-0.5 size-5 rounded-full shadow transition", dark ? "translate-x-4 bg-accent-ink" : "bg-white")} />
           </span>
         </button>
+        <PushSwitch className="px-0 py-3 hover:bg-transparent" />
+        {install.available ? (
+          <button type="button" onClick={() => (install.native ? install.install() : install.showHint())} className={action}>
+            <Smartphone className="size-5 shrink-0 text-ink-2 sm:hidden" />
+            <MonitorDown className="size-5 shrink-0 text-ink-2 max-sm:hidden" />
+            Установить приложение
+          </button>
+        ) : null}
         {/* Off the page first: signed out here, it would send you to the sign-in page. */}
         <button
           type="button"
@@ -368,7 +375,7 @@ function Settings({ className }: { className?: string }) {
             navigate("/");
             logout();
           }}
-          className={row}
+          className={action}
         >
           <LogOut className="size-5 shrink-0 text-ink-2" />
           Выйти
