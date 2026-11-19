@@ -616,12 +616,26 @@ function EndScreen({ next, prev, onReplay, hidden }: { next: DanceSummary[]; pre
  * double-click is fullscreen with a mouse, double-tap on the left or right third seeks ∓5 s on
  * touch (more taps keep adding, like YouTube); press and hold plays at 2× until released.
  */
+/** How long the controls stay up after a tap while the video plays. */
+const IDLE_HIDE = 3000;
+
 function Gestures({ player }: { player: RefObject<MediaPlayerInstance | null> }) {
   const remote = useMediaRemote();
   const [hold, setHold] = useState(false);
   const [jump, setJump] = useState<{ side: -1 | 1; total: number; key: number } | null>(null);
   const g = useRef({ x: 0, y: 0, timer: 0, holding: false, rate: 1, lastTap: 0, lastSide: 0 as -1 | 0 | 1, single: 0, seekUntil: 0, wereShowing: false });
   const jumpTimer = useRef(0);
+
+  // Phones: a tap anywhere outside the playing video puts its controls away, like YouTube's app.
+  useEffect(() => {
+    const away = (e: globalThis.PointerEvent) => {
+      const p = player.current;
+      if (e.pointerType === "mouse" || !p?.el || p.el.contains(e.target as Node)) return;
+      if (!p.state.paused && p.controls.showing) p.controls.hide(0);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [player]);
 
   const side = (e: PointerEvent): -1 | 0 | 1 => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -693,9 +707,14 @@ function Gestures({ player }: { player: RefObject<MediaPlayerInstance | null> })
           s.lastTap = now;
           s.lastSide = where;
           window.clearTimeout(s.single);
-          // One tap shows the controls (they stay until the player's idle timeout) or hides them if they were up.
+          // One tap shows the controls or hides them if they were up. Shown during playback, they
+          // fade again after a few idle seconds (show(0) alone would cancel the player's own timer).
           const wereShowing = s.wereShowing;
-          s.single = window.setTimeout(() => (wereShowing ? p.controls.hide(0) : p.controls.show(0)), 260);
+          s.single = window.setTimeout(() => {
+            if (wereShowing) return p.controls.hide(0);
+            p.controls.show(0);
+            if (!p.state.paused) p.controls.hide(IDLE_HIDE);
+          }, 260);
           return;
         }
         if (now - s.lastTap < 300) {
