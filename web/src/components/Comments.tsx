@@ -23,6 +23,8 @@ type Props = {
   onCount?: (n: number) => void;
   /** A comment to scroll to and highlight (from a notification link). */
   focusId?: number;
+  /** Opened from a card's comments button: phones open the drawer at once. */
+  startOpen?: boolean;
 };
 
 type Action = "delete" | "report" | "approve" | "pin" | "unpin";
@@ -45,14 +47,14 @@ function without(list: Comment[], id: number) {
  * arrive live over SSE; top-level ones wait behind a "show" pill so the list doesn't
  * jump while someone is reading.
  */
-export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount, focusId }: Props) {
+export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount, focusId, startOpen }: Props) {
   const [list, setList] = useState<Comment[] | null>(null);
   const [moderator, setModerator] = useState(false);
   const [pinnedBy, setPinnedBy] = useState<string>();
   const [pending, setPending] = useState<Comment[]>([]);
   const [sort, setSort] = useState<"top" | "new">("top");
   const [error, setError] = useState(false);
-  const [open, setOpen] = useState(!!focusId); // phones: the list opens from a teaser card
+  const [open, setOpen] = useState(!!focusId || !!startOpen); // phones: the list opens from a teaser card
   // On computers the list is always open; on phones only after the teaser is tapped.
   const openRef = useRef(open);
   openRef.current = open || matchMedia("(min-width: 1024px)").matches;

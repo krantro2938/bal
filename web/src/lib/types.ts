@@ -18,6 +18,7 @@ export type DanceSummary = {
   dislikes: number;
   myReaction: -1 | 0 | 1;
   views: number;
+  comments: number;
   published?: string;
 };
 

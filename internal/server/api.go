@@ -38,6 +38,7 @@ type danceSummary struct {
 	Dislikes    int          `json:"dislikes"`
 	MyReaction  int          `json:"myReaction"`
 	Views       int          `json:"views"`
+	Comments    int          `json:"comments"`
 	Published   string       `json:"published,omitempty"`
 }
 
@@ -114,18 +115,26 @@ func (s *Server) reactions(r *http.Request) map[string]store.Reactions {
 	return counts
 }
 
-func (s *Server) views(r *http.Request) map[string]int {
+// tallies are the per-dance view and comment counts shown under each video.
+type tallies struct{ views, comments map[string]int }
+
+func (s *Server) tallies(r *http.Request) tallies {
 	v, err := s.store.ViewCounts(r.Context())
 	if err != nil {
 		logErr(err)
 	}
-	return v
+	c, err := s.store.CommentCounts(r.Context())
+	if err != nil {
+		logErr(err)
+	}
+	return tallies{v, c}
 }
 
-func withReactions(d *danceSummary, rx map[string]store.Reactions, views map[string]int) {
+func withReactions(d *danceSummary, rx map[string]store.Reactions, t tallies) {
 	c := rx[d.Slug]
 	d.Likes, d.Dislikes, d.MyReaction = c.Likes, c.Dislikes, c.Mine
-	d.Views = views[d.Slug]
+	d.Views = t.views[d.Slug]
+	d.Comments = t.comments[d.Slug]
 }
 
 // handleView counts one view per visitor per dance per half hour (see store.AddView).
@@ -161,12 +170,12 @@ func (s *Server) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		httpError(w, err)
 		return
 	}
-	rx, views := s.reactions(r), s.views(r)
+	rx, t := s.reactions(r), s.tallies(r)
 	out := make([]danceSummary, 0, len(src.Dances))
 	for i := range src.Dances {
 		d := &src.Dances[i]
 		sum := summarize(d, metas[d.Slug])
-		withReactions(&sum, rx, views)
+		withReactions(&sum, rx, t)
 		out = append(out, sum)
 	}
 	w.Header().Set("Cache-Control", "no-cache")
@@ -187,7 +196,7 @@ func (s *Server) handleDance(w http.ResponseWriter, r *http.Request) {
 	m := metas[d.Slug]
 	out := danceDetail{danceSummary: summarize(d, m), Caption: d.Caption, CaptionPost: d.CaptionPost,
 		Schemes: []content.SchemeMeta{}, Audio: []content.AudioMeta{}, Chapters: []content.Chapter{}}
-	withReactions(&out.danceSummary, s.reactions(r), s.views(r))
+	withReactions(&out.danceSummary, s.reactions(r), s.tallies(r))
 	for _, a := range d.Assets {
 		out.Assets = append(out.Assets, asset{a.Kind, a.Post, a.Status, a.OriginalFilename})
 	}

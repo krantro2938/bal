@@ -99,6 +99,8 @@ export function Dance() {
     [navigate],
   );
   const focusComment = Number(params.get("c")) || undefined;
+  // A card's comments button: phones open the drawer, computers scroll down to the list.
+  const toComments = params.has("comments");
   const [tab, setTab] = useState<"comments" | "notes">(() => {
     try {
       return localStorage.getItem(TAB_KEY) === "notes" ? "notes" : "comments";
@@ -116,8 +118,14 @@ export function Dance() {
   };
   // A notification link opens the comments.
   useEffect(() => {
-    if (focusComment) setTab("comments");
-  }, [focusComment]);
+    if (focusComment || toComments) setTab("comments");
+  }, [focusComment, toComments]);
+  const loaded = !!dance;
+  useEffect(() => {
+    if (!toComments || !loaded || !matchMedia("(min-width: 1024px)").matches) return;
+    const t = setTimeout(() => document.getElementById("comments")?.scrollIntoView({ behavior: "smooth" }), 150);
+    return () => clearTimeout(t);
+  }, [toComments, loaded]);
   const [commentCount, setCommentCount] = useState(0);
   const [theatreOn, setTheatre] = useState(() => readFlag(THEATRE_KEY));
   // Theatre mode only exists on large screens; phones keep the stored choice for later.
@@ -643,7 +651,7 @@ export function Dance() {
           ) : null}
 
           {/* Comments and private notes share one place; the last choice is remembered. */}
-          <section className="mt-10">
+          <section id="comments" className="mt-10 scroll-mt-24">
             <div role="tablist" className="mb-5 flex gap-6 border-b border-line">
               {(
                 [
@@ -677,6 +685,7 @@ export function Dance() {
                 askLogin={askLogin}
                 onCount={setCommentCount}
                 focusId={focusComment}
+                startOpen={toComments}
               />
             </div>
             <div className={cn(tab !== "notes" && "hidden")}>

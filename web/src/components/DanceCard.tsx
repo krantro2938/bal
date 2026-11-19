@@ -1,7 +1,9 @@
-import { Bookmark, EllipsisVertical, Play, Share2 } from "lucide-react";
+import { Bookmark, EllipsisVertical, MessageSquare, Play, Share2, ThumbsUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
+import { api } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
 import { ago, compactCount, timecode, viewsLabel } from "@/lib/format";
 import { useSession } from "@/lib/session";
@@ -189,8 +191,50 @@ export function VideoCard({ dance, eager, badge, still }: { dance: DanceSummary;
             </p>
           </div>
         </Link>
+        <CardActions dance={dance} />
         <CardMenu dance={dance} />
       </div>
+    </div>
+  );
+}
+
+/** Like and comments beside the ⋮, with their counts: like without opening the video,
+ *  or go straight to the comments. */
+function CardActions({ dance }: { dance: DanceSummary }) {
+  const { user } = useSession();
+  const catalog = useCatalog();
+  const [ask, setAsk] = useState<string | null>(null);
+  const liked = dance.myReaction === 1;
+  const like = async () => {
+    if (!user) return setAsk("Чтобы оценить видео.");
+    const v = liked ? 0 : 1;
+    const prev = { likes: dance.likes, dislikes: dance.dislikes, myReaction: dance.myReaction };
+    catalog.patch(dance.slug, {
+      likes: dance.likes + (v === 1 ? 1 : 0) - (liked ? 1 : 0),
+      dislikes: dance.dislikes - (dance.myReaction === -1 ? 1 : 0),
+      myReaction: v,
+    });
+    try {
+      const r = await api.react(dance.slug, v);
+      if (v) track("reaction");
+      catalog.patch(dance.slug, { likes: r.likes, dislikes: r.dislikes, myReaction: r.mine });
+    } catch {
+      catalog.patch(dance.slug, prev);
+      toast("Не удалось сохранить оценку");
+    }
+  };
+  const pill = "tnum flex h-9 shrink-0 items-center gap-1 rounded-full px-2 text-[13px] text-ink-2 hover:bg-hover hover:text-ink [&_svg]:size-[18px]";
+  return (
+    <div className="-mr-1 flex shrink-0 items-start">
+      <button type="button" onClick={like} aria-pressed={liked} className={pill} title="Нравится" aria-label={`Нравится: ${dance.likes}`}>
+        <ThumbsUp className={cn(liked && "fill-current")} />
+        {dance.likes ? compactCount(dance.likes) : null}
+      </button>
+      <Link to={`/dance/${dance.slug}?comments`} className={pill} title="Комментарии" aria-label={`Комментарии: ${dance.comments}`}>
+        <MessageSquare />
+        {dance.comments ? compactCount(dance.comments) : null}
+      </Link>
+      {ask ? <AuthPrompt reason={ask} returnTo={() => location.pathname + location.search} onClose={() => setAsk(null)} /> : null}
     </div>
   );
 }

@@ -72,3 +72,23 @@ func (s *Store) ViewCounts(ctx context.Context) (map[string]int, error) {
 	}
 	return out, rows.Err()
 }
+
+// CommentCounts counts what a visitor sees under each dance: published comments that
+// aren't deleted (a deleted one kept as a placeholder for its replies doesn't count).
+func (s *Store) CommentCounts(ctx context.Context) (map[string]int, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT dance, count(*) FROM comments WHERE status = 'published' AND deleted_at IS NULL GROUP BY dance`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]int{}
+	for rows.Next() {
+		var d string
+		var n int
+		if err := rows.Scan(&d, &n); err != nil {
+			return nil, err
+		}
+		out[d] = n
+	}
+	return out, rows.Err()
+}
