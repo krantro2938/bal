@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import "./lib/install"; // catches the browser's install offer before React starts
 import { BrowserRouter } from "react-router";
 import { App } from "./App";
 import { CatalogProvider } from "./lib/catalog";

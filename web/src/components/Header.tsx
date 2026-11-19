@@ -1,7 +1,8 @@
-import { CircleUserRound, LogOut, Moon, NotebookPen, Search, Sun } from "lucide-react";
+import { CircleUserRound, LogOut, MonitorDown, Moon, NotebookPen, Search, Sun } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useSession } from "@/lib/session";
+import { useInstall } from "@/lib/install";
 import { useTheme } from "@/lib/theme";
 import type { User } from "@/lib/types";
 import { NotificationsBell } from "./Notifications";
@@ -99,6 +100,7 @@ export function Avatar({ user, size = 32 }: { user: Pick<User, "name" | "picture
 function AccountMenu({ user }: { user: User }) {
   const { logout } = useSession();
   const [theme, toggleTheme] = useTheme();
+  const install = useInstall();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const loc = useLocation();
@@ -132,6 +134,19 @@ function AccountMenu({ user }: { user: User }) {
             <Link to="/me" className="flex items-center gap-3 px-4 py-2.5 text-[15px] hover:bg-hover">
               <NotebookPen className="size-5 text-ink-2" /> Мои репетиции
             </Link>
+            {install.available ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  if (install.native) install.install();
+                  else install.showHint();
+                }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-hover"
+              >
+                <MonitorDown className="size-5 text-ink-2" /> Установить приложение
+              </button>
+            ) : null}
             <button type="button" onClick={toggleTheme} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-hover sm:hidden">
               {theme === "dark" ? <Sun className="size-5 text-ink-2" /> : <Moon className="size-5 text-ink-2" />}
               {theme === "dark" ? "Светлая тема" : "Тёмная тема"}

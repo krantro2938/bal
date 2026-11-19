@@ -1,11 +1,10 @@
 import { Share, X } from "lucide-react";
 import { useEffect, useState } from "react";
-
-type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
+import { useInstall } from "@/lib/install";
 
 const KEY = "bal:install-dismissed";
 const AGAIN_AFTER = 30 * 86400000; // ask again a month after ✕
-const DELAY = 20000; // let people look around first
+const DELAY = 10000; // let people look around first
 
 function dismissedRecently() {
   try {
@@ -15,37 +14,20 @@ function dismissedRecently() {
   }
 }
 
-const standalone = () => matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
-// Safari on iPhone/iPad has no install prompt: people add the site from the share sheet.
-const iosSafari = () => /iPhone|iPad|iPod/.test(navigator.userAgent) && /Safari\//.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
-
 /** «Установить приложение»: the browser's install dialog where there is one, instructions on iPhone. */
 export function InstallPrompt() {
-  const [event, setEvent] = useState<InstallEvent | null>(null);
-  const [ios, setIos] = useState(false);
+  const { available, native, install, hintOpen, hideHint } = useInstall();
   const [ready, setReady] = useState(false);
-  const [hidden, setHidden] = useState(() => standalone() || dismissedRecently());
+  const [dismissed, setDismissed] = useState(dismissedRecently);
 
   useEffect(() => {
-    if (hidden) return;
-    const onPrompt = (e: Event) => {
-      e.preventDefault();
-      setEvent(e as InstallEvent);
-    };
-    const onInstalled = () => setHidden(true);
-    addEventListener("beforeinstallprompt", onPrompt);
-    addEventListener("appinstalled", onInstalled);
-    setIos(iosSafari());
     const t = setTimeout(() => setReady(true), DELAY);
-    return () => {
-      removeEventListener("beforeinstallprompt", onPrompt);
-      removeEventListener("appinstalled", onInstalled);
-      clearTimeout(t);
-    };
-  }, [hidden]);
+    return () => clearTimeout(t);
+  }, []);
 
   const close = () => {
-    setHidden(true);
+    hideHint();
+    setDismissed(true);
     try {
       localStorage.setItem(KEY, String(Date.now()));
     } catch {
@@ -53,7 +35,8 @@ export function InstallPrompt() {
     }
   };
 
-  if (hidden || !ready || (!event && !ios)) return null;
+  // Opened from the account menu it shows right away, even after an earlier ✕.
+  if (!available || !(hintOpen || (ready && !dismissed))) return null;
   return (
     <div
       role="dialog"
@@ -63,16 +46,14 @@ export function InstallPrompt() {
       <img src="/icons/icon-192.png" alt="" className="size-11 shrink-0 rounded-xl" />
       <div className="min-w-0 flex-1">
         <p className="text-[15px] font-semibold">Установить как приложение</p>
-        {event ? (
+        {native ? (
           <>
             <p className="mt-0.5 text-[13px] leading-snug text-ink-2">Своя иконка, открывается без адресной строки — удобно на репетиции.</p>
             <button
               type="button"
               onClick={async () => {
-                await event.prompt();
-                const { outcome } = await event.userChoice;
-                if (outcome === "accepted") setHidden(true);
-                else close();
+                if (!(await install())) close();
+                else hideHint();
               }}
               className="mt-2.5 h-9 rounded-full bg-accent px-4 text-[14px] font-medium text-accent-ink"
             >
