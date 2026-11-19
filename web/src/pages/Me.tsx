@@ -1,14 +1,18 @@
-import { Check, NotebookPen, Pencil, Play, X } from "lucide-react";
+import { Check, LogOut, MonitorDown, Moon, NotebookPen, Pencil, Play, Smartphone, Sun, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, Navigate } from "react-router";
+import { Link, Navigate, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Cover, VideoCard } from "@/components/DanceCard";
+import { Avatar } from "@/components/Header";
+import { PushSwitch } from "@/components/PushSwitch";
 import { Star } from "@/components/Star";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
 import { api, ApiError } from "@/lib/api";
 import { timecode } from "@/lib/format";
+import { useInstall } from "@/lib/install";
 import { useSession } from "@/lib/session";
+import { useTheme } from "@/lib/theme";
 import type { DanceSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useCatalog } from "@/lib/catalog";
@@ -35,14 +39,47 @@ export function Me() {
   const empty = progress.length === 0 && state.notes.length === 0 && state.favorites.length === 0 && state.learned.length === 0;
 
   return (
-    <main className="mx-auto max-w-[1600px] px-3 pt-6 pb-16 sm:px-5 lg:px-6 lg:pt-8">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="font-title text-[28px] lg:text-[40px]">Мои репетиции</h1>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-3">
-          <span>{user!.name}</span>
-          <UsernameEditor username={user!.username} />
+    <main className="mx-auto max-w-[1600px] px-3 pt-4 pb-16 sm:px-5 lg:px-6 lg:pt-8">
+      {/* Dark theme: a soft violet glow from the top, behind the see-through header (like YouTube's «Вы»). */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden h-[480px] dark:block"
+        style={{
+          background:
+            "radial-gradient(80% 75% at 18% 0%, #4b3aa866, transparent 70%), radial-gradient(65% 60% at 88% 0%, #2546a35c, transparent 72%)",
+          maskImage: "linear-gradient(to bottom, #000 45%, transparent)",
+        }}
+      />
+
+      {/* You: picture, name, @handle; your public profile is one tap away. */}
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+        <div className="flex min-w-0 items-center gap-4 sm:gap-6">
+          <span className="sm:hidden">
+            <Avatar user={user!} size={72} />
+          </span>
+          <span className="max-sm:hidden">
+            <Avatar user={user!} size={112} />
+          </span>
+          <div className="min-w-0">
+            <h1 className="truncate text-[24px] leading-tight font-semibold sm:text-[32px]">{user!.name}</h1>
+            <div className="mt-1 text-[14px] text-ink-3">
+              <UsernameEditor username={user!.username} />
+            </div>
+            <Link
+              to={`/@${user!.username}`}
+              className="mt-3 inline-flex h-9 items-center rounded-full bg-accent-soft px-4 text-[14px] font-medium hover:brightness-110 max-sm:hidden"
+            >
+              Открыть профиль
+            </Link>
+          </div>
         </div>
-      </div>
+        <Link
+          to={`/@${user!.username}`}
+          className="flex h-10 items-center justify-center rounded-full bg-accent-soft text-[15px] font-medium active:brightness-110 sm:hidden"
+        >
+          Открыть профиль
+        </Link>
+      </section>
 
       {empty ? (
         <div className="mt-8">
@@ -114,7 +151,10 @@ export function Me() {
           ) : null}
         </div>
 
-        <div className="space-y-12 lg:col-span-5">
+        <div className="flex flex-col gap-12 lg:col-span-5">
+          {/* Last on phones, first beside the rehearsals on computers. */}
+          <Settings className="order-last lg:order-first" />
+
           {state.favorites.length ? (
             <section>
               <Title>Избранное</Title>
@@ -175,6 +215,50 @@ export function Me() {
         </div>
       </div>
     </main>
+  );
+}
+
+/** Notifications, installing, theme and signing out: what the account menu used to hold. */
+function Settings({ className }: { className?: string }) {
+  const { logout } = useSession();
+  const navigate = useNavigate();
+  const install = useInstall();
+  const [theme, toggleTheme] = useTheme();
+  const dark = theme === "dark";
+  const row = "flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] hover:bg-hover";
+  return (
+    <section className={className}>
+      <Title>Настройки</Title>
+      <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-sheet)] border border-line">
+        <PushSwitch className="py-3" />
+        {install.available ? (
+          <button type="button" onClick={() => (install.native ? install.install() : install.showHint())} className={row}>
+            <Smartphone className="size-5 shrink-0 text-ink-2 sm:hidden" />
+            <MonitorDown className="size-5 shrink-0 text-ink-2 max-sm:hidden" />
+            Установить приложение
+          </button>
+        ) : null}
+        <button type="button" role="switch" aria-checked={dark} onClick={toggleTheme} className={row}>
+          {dark ? <Moon className="size-5 shrink-0 text-ink-2" /> : <Sun className="size-5 shrink-0 text-ink-2" />}
+          <span className="flex-1">Тёмная тема</span>
+          <span className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", dark ? "bg-accent" : "bg-line-strong")} aria-hidden>
+            <span className={cn("absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform", dark && "translate-x-4")} />
+          </span>
+        </button>
+        {/* Off the page first: signed out here, it would send you to the sign-in page. */}
+        <button
+          type="button"
+          onClick={() => {
+            navigate("/");
+            logout();
+          }}
+          className={row}
+        >
+          <LogOut className="size-5 shrink-0 text-ink-2" />
+          Выйти
+        </button>
+      </div>
+    </section>
   );
 }
 

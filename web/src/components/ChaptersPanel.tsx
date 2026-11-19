@@ -30,7 +30,7 @@ export function ChaptersPanel({ chapters, cues, player, onSeek, onLoop, onShare 
       <ol className="max-h-[min(560px,60dvh)] overflow-y-auto py-1">
         {chapters.map((c, i) => (
           // The one playing sits on a small rounded backdrop.
-          <li key={c.start} className={cn("group mx-1.5 flex items-center gap-3 rounded-xl px-1.5 py-1.5 hover:bg-hover", i === current && "bg-hover")}>
+          <li key={c.start} className={cn("group mx-1.5 flex items-center gap-3 rounded-xl px-1.5 py-1.5", i === current ? "bg-selected" : "hover:bg-hover")}>
             <button type="button" onClick={() => onSeek(c.start)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
               <Thumb cues={cues} t={c.start + 1} width={96} />
               <span className="min-w-0">
@@ -78,7 +78,7 @@ export function ChaptersCarousel({ chapters, cues, player, onSeek }: Pick<Props,
           return (
             // The one playing sits on a small rounded backdrop.
             <li key={c.start} className="w-[160px] shrink-0">
-              <button type="button" onClick={() => onSeek(c.start)} className={cn("w-full rounded-xl p-1.5 text-left transition-colors", on && "bg-hover")}>
+              <button type="button" onClick={() => onSeek(c.start)} className={cn("w-full rounded-xl p-1.5 text-left transition-colors", on && "bg-selected")}>
                 <Thumb cues={cues} t={c.start + 1} width={148} />
                 <span className="mt-1.5 line-clamp-2 text-[13px] leading-snug font-medium">{c.title}</span>
                 <span className="tnum text-[12px] text-accent">{timecode(c.start)}</span>

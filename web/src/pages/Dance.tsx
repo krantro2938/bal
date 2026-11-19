@@ -512,9 +512,8 @@ export function Dance() {
                 </p>
               </div>
             </Link>
-            <div className="-mr-3 flex flex-1 gap-2 overflow-x-auto pr-3 max-sm:min-w-0 [scrollbar-width:none] sm:mr-0 sm:flex-auto sm:justify-end sm:overflow-visible sm:pr-0">
-              {/* On phones the actions sit at the right edge; the spacer collapses if they need to scroll. */}
-              <span className="flex-1 sm:hidden" />
+            {/* On phones the actions sit at the right edge, icons only, and always fit (no scrolling). */}
+            <div className="flex flex-1 justify-end gap-2 max-sm:min-w-0 max-[370px]:gap-1.5 sm:flex-auto">
               <ReactionPill likes={dance.likes} dislikes={dance.dislikes} mine={dance.myReaction} onReact={react} />
               <Pill onClick={() => share()} icon={<Share2 />} label="Поделиться" iconOnly />
               <Pill

@@ -26,6 +26,7 @@
   --danger: #a8322d;
   --player-bg: #05091a;
   --hover: #0b12300d;
+  --selected: #0b12301c; /* what's playing now (a fragment): a step past hover */
   --shadow-sheet: 0 -8px 32px #0b123014;
   --shadow-pop: 0 12px 40px #0b12301f, 0 2px 8px #0b123014;
   --card-hover: #f0f0ec;
@@ -52,6 +53,7 @@
   --ink-soft: #ece6d6d1;
   --danger: #f0938a;
   --hover: #ffffff0f;
+  --selected: #ffffff24;
   --shadow-sheet: none;
   --shadow-pop: 0 16px 48px #00000080;
   --card-hover: var(--surface);
@@ -79,6 +81,7 @@
   --color-danger: var(--danger);
   --color-player: var(--player-bg);
   --color-hover: var(--hover);
+  --color-selected: var(--selected);
   --font-sans: "Onest", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Playfair Display", "Times New Roman", serif;
   --radius-frame: 12px;

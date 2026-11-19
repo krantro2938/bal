@@ -1,12 +1,11 @@
-import { CircleUserRound, LogOut, MonitorDown, Moon, NotebookPen, Search, Smartphone, Sun } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { CircleUserRound, Search, Smartphone } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useSession } from "@/lib/session";
+import { cn } from "@/lib/utils";
 import { useInstall } from "@/lib/install";
-import { useTheme } from "@/lib/theme";
 import type { User } from "@/lib/types";
 import { NotificationsBell } from "./Notifications";
-import { PushSwitch } from "./PushSwitch";
 import { SearchBox } from "./SearchBox";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -14,16 +13,26 @@ export function Header() {
   const { user, ready } = useSession();
   const install = useInstall();
   // Phones, guests: an install button takes the theme switch's place, which moves to the
-  // bottom of the page. On computers and when signed in, installing is in the account menu.
+  // bottom of the page. On computers and when signed in, installing is on the account page.
   const installHere = ready && !user && install.available;
   const loc = useLocation();
   const [mobileSearch, setMobileSearch] = useState(false);
   const loginHref = `/login?return=${encodeURIComponent(loc.pathname + loc.search)}`;
 
   useEffect(() => setMobileSearch(false), [loc.pathname]);
+  // The account page has a glow at its top (dark theme): the header lets it through until scrolled.
+  const glow = loc.pathname === "/me";
+  const [atTop, setAtTop] = useState(true);
+  useEffect(() => {
+    if (!glow) return;
+    const on = () => setAtTop(window.scrollY < 8);
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, [glow]);
 
   return (
-    <header className="sticky top-0 z-40 bg-bg">
+    <header className={cn("sticky top-0 z-40 transition-colors", glow && atTop ? "bg-transparent" : "bg-bg")}>
       {mobileSearch ? (
         <div className="flex h-16 items-center gap-2 px-2 sm:hidden">
           <SearchBox autoFocus onClose={() => setMobileSearch(false)} />
@@ -63,7 +72,7 @@ export function Header() {
           </button>
         ) : null}
         {/* Shown with the rest of the right side once the session is known, so nothing shifts.
-            Signed in on phones, the theme switch moves into the account menu to make room for the bell. */}
+            Signed in on phones, the theme switch moves to the account page to make room for the bell. */}
         {ready ? (
           <div className={user || installHere ? "max-sm:hidden" : undefined}>
             <ThemeToggle />
@@ -73,7 +82,10 @@ export function Header() {
         {!ready ? (
           <span className="size-10" />
         ) : user ? (
-          <AccountMenu user={user} />
+          // Like YouTube's «Вы»: the account opens as its own page (rehearsals, profile, settings).
+          <Link to="/me" className="grid size-10 shrink-0 place-items-center rounded-full hover:bg-hover" aria-label="Мои репетиции, профиль и настройки">
+            <Avatar user={user} />
+          </Link>
         ) : (
           <Link
             to={loginHref}
@@ -114,72 +126,5 @@ export function Avatar({ user, size = 32 }: { user: Pick<User, "name" | "picture
     >
       {user.name.trim().charAt(0).toUpperCase() || <CircleUserRound className="size-[60%]" />}
     </span>
-  );
-}
-
-function AccountMenu({ user }: { user: User }) {
-  const { logout } = useSession();
-  const [theme, toggleTheme] = useTheme();
-  const install = useInstall();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const loc = useLocation();
-  useEffect(() => setOpen(false), [loc.pathname]);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-  return (
-    <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="grid size-10 shrink-0 place-items-center rounded-full hover:bg-hover" aria-label="Аккаунт" aria-expanded={open}>
-        <Avatar user={user} />
-      </button>
-      {open ? (
-        <div className="absolute top-12 right-0 z-50 w-72 overflow-hidden rounded-[var(--radius-sheet)] border border-line bg-bg py-2 shadow-[var(--shadow-pop)]">
-          <Link to={`/@${user.username}`} className="flex items-center gap-3 px-4 pt-2 pb-3 hover:bg-hover">
-            <Avatar user={user} size={40} />
-            <div className="min-w-0">
-              <p className="truncate font-medium">{user.name}</p>
-              <p className="truncate text-[13px] text-ink-3">@{user.username}</p>
-              <p className="mt-0.5 text-[13px] text-link">Открыть профиль</p>
-            </div>
-          </Link>
-          <div className="pt-1">
-            <Link to="/me" className="flex items-center gap-3 px-4 py-2.5 text-[15px] hover:bg-hover">
-              <NotebookPen className="size-5 text-ink-2" /> Мои репетиции
-            </Link>
-            {install.available ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  if (install.native) install.install();
-                  else install.showHint();
-                }}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-hover"
-              >
-                <Smartphone className="size-5 text-ink-2 sm:hidden" />
-                <MonitorDown className="size-5 text-ink-2 max-sm:hidden" /> Установить приложение
-              </button>
-            ) : null}
-            <PushSwitch />
-            <button type="button" onClick={toggleTheme} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-hover sm:hidden">
-              {theme === "dark" ? <Sun className="size-5 text-ink-2" /> : <Moon className="size-5 text-ink-2" />}
-              {theme === "dark" ? "Светлая тема" : "Тёмная тема"}
-            </button>
-            <button type="button" onClick={logout} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-hover">
-              <LogOut className="size-5 text-ink-2" /> Выйти
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </div>
   );
 }
