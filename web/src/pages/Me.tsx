@@ -242,7 +242,7 @@ function Settings({ className }: { className?: string }) {
   return (
     <section className={className}>
       <Title>Настройки</Title>
-      <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-sheet)] border border-line">
+      <div className="overflow-hidden rounded-[var(--radius-sheet)] border border-line py-1">
         <PushSwitch className="py-3" />
         {install.available ? (
           <button type="button" onClick={() => (install.native ? install.install() : install.showHint())} className={row}>
