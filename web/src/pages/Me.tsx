@@ -80,9 +80,9 @@ export function Me() {
       ) : null}
 
       <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-12 lg:gap-10">
-        <div className="space-y-12 lg:col-span-7">
+        <div className="flex flex-col gap-12 max-lg:contents lg:col-span-7">
           {favorites.length ? (
-            <section>
+            <section className="max-lg:order-1">
               <Title count={favorites.length}>Избранное</Title>
               <Shelf>
                 {favorites.map((d) => (
@@ -99,10 +99,40 @@ export function Me() {
           ) : null}
 
           {history.length ? (
-            <section>
+            <section className="max-lg:order-2">
               <Title>История</Title>
+              {/* Phones and tablets: a sideways row of the latest, like «Избранное». */}
+              <div className="lg:hidden">
+                <Shelf>
+                  {history.slice(0, 12).map((p) => {
+                    const d = bySlug.get(p.dance)!;
+                    const same = d.version === p.version;
+                    return (
+                      <ShelfItem key={p.dance}>
+                        <Link to={same ? `/dance/${d.slug}?t=${Math.floor(p.position)}` : `/dance/${d.slug}`} state={WATCH} className="group block">
+                          <div className="relative overflow-hidden rounded-[var(--radius-frame)]">
+                            <Cover dance={d} className="rounded-none" />
+                            {same ? (
+                              <div className="absolute inset-x-0 bottom-0 h-1 bg-white/25">
+                                <div className="h-full bg-[#e8ddc2]" style={{ width: `${Math.min(100, (p.position / (d.duration || 1)) * 100)}%` }} />
+                              </div>
+                            ) : null}
+                          </div>
+                        </Link>
+                        <div className="mt-2 flex gap-1">
+                          <Link to={same ? `/dance/${d.slug}?t=${Math.floor(p.position)}` : `/dance/${d.slug}`} state={WATCH} className="group min-w-0 flex-1">
+                            <p className="line-clamp-2 font-title text-[16px] leading-snug group-hover:underline">{d.title}</p>
+                            <p className="tnum text-[13px] text-ink-3">{same ? `с ${timecode(p.position)}` : "видео обновлено"}</p>
+                          </Link>
+                          <CardMenu dance={d} />
+                        </div>
+                      </ShelfItem>
+                    );
+                  })}
+                </Shelf>
+              </div>
               {/* Like YouTube's history: the cover on the left, the title and where you stopped beside it, ⋮ at the end. */}
-              <ul className="space-y-3 sm:space-y-4">
+              <ul className="space-y-4 max-lg:hidden">
                 {history.map((p) => {
                   const d = bySlug.get(p.dance)!;
                   const same = d.version === p.version;
@@ -141,7 +171,7 @@ export function Me() {
           ) : null}
 
           {state.notes.length ? (
-            <section>
+            <section className="max-lg:order-4">
               <Title count={state.notes.length}>Заметки</Title>
               <div className="space-y-6">
                 {[...notesByDance.entries()].map(([slug, notes]) => {
@@ -172,8 +202,8 @@ export function Me() {
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-12 lg:col-span-5">
-          <section>
+        <div className="flex flex-col gap-12 max-lg:contents lg:col-span-5">
+          <section className="max-lg:order-3">
             <Title count={`${learnedCount} из ${dances.length}`}>Выучено</Title>
             <ul className="divide-y divide-line border-y border-line">
               {dances.map((d) => {
@@ -222,7 +252,7 @@ export function Me() {
               })}
             </ul>
           </section>
-          <Settings />
+          <Settings className="max-lg:order-5" />
         </div>
       </div>
     </main>
@@ -282,22 +312,17 @@ function MeSkeleton() {
       </section>
 
       <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-12 lg:gap-10">
-        <div className="space-y-12 lg:col-span-7">
-          <div>
+        <div className="flex flex-col gap-12 max-lg:contents lg:col-span-7">
+          <div className="max-lg:order-1">
             <div className={cn(block, "mb-3 h-6 w-36")} />
-            <div className="-mx-3 flex gap-3 overflow-hidden px-3 pb-2 sm:-mx-5 sm:gap-4 sm:px-5 lg:mx-0 lg:px-0">
-              {Array.from({ length: 4 }, (_, i) => (
-                <div key={i} className="w-[56vw] max-w-[260px] shrink-0 sm:w-[240px]">
-                  <div className="aspect-video rounded-[var(--radius-frame)] bg-surface-2" />
-                  <div className={cn(block, "mt-2 h-4 w-3/5")} />
-                  <div className={cn(block, "mt-1.5 h-3 w-16")} />
-                </div>
-              ))}
-            </div>
+            <SkelShelf />
           </div>
-          <div>
+          <div className="max-lg:order-2">
             <div className={cn(block, "mb-3 h-6 w-28")} />
-            <div className="space-y-3 sm:space-y-4">
+            <div className="lg:hidden">
+              <SkelShelf />
+            </div>
+            <div className="space-y-3 sm:space-y-4 max-lg:hidden">
               {Array.from({ length: 4 }, (_, i) => (
                 <div key={i} className="flex gap-3 sm:gap-4">
                   <div className="aspect-video w-[160px] shrink-0 rounded-lg bg-surface-2 sm:w-[246px] sm:rounded-[var(--radius-frame)]" />
@@ -311,46 +336,8 @@ function MeSkeleton() {
             </div>
           </div>
         </div>
-        <div className="flex flex-col gap-12 lg:col-span-5">
-          <div>
-            <div className={cn(block, "mb-3 h-6 w-36")} />
-            <div className="-mx-3 flex gap-3 overflow-hidden px-3 pb-2 sm:-mx-5 sm:gap-4 sm:px-5 lg:mx-0 lg:px-0">
-              {Array.from({ length: 4 }, (_, i) => (
-                <div key={i} className="w-[56vw] max-w-[260px] shrink-0 sm:w-[240px]">
-                  <div className="aspect-video rounded-[var(--radius-frame)] bg-surface-2" />
-                  <div className={cn(block, "mt-2 h-4 w-3/5")} />
-                  <div className={cn(block, "mt-1.5 h-3 w-16")} />
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className={cn(block, "mb-3 h-6 w-28")} />
-            <div className="space-y-3 sm:space-y-4">
-              {Array.from({ length: 4 }, (_, i) => (
-                <div key={i} className="flex gap-3 sm:gap-4">
-                  <div className="aspect-video w-[160px] shrink-0 rounded-lg bg-surface-2 sm:w-[246px] sm:rounded-[var(--radius-frame)]" />
-                  <div className="min-w-0 flex-1 space-y-2 py-1">
-                    <div className={cn(block, "h-4 w-3/4 max-w-56 sm:h-5")} />
-                    <div className={cn(block, "h-3 w-24")} />
-                    <div className={cn(block, "h-3 w-12")} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col gap-12 lg:col-span-5">
-          <div className="order-last lg:order-first">
-            <div className={cn(block, "mb-3 h-6 w-32")} />
-            {Array.from({ length: 4 }, (_, i) => (
-              <div key={i} className="flex h-12 items-center gap-3">
-                <div className="size-5 shrink-0 rounded-full bg-surface-2" />
-                <div className={cn(block, "h-3.5")} style={{ width: `${[34, 30, 46, 18][i]}%` }} />
-              </div>
-            ))}
-          </div>
-          <div>
+        <div className="flex flex-col gap-12 max-lg:contents lg:col-span-5">
+          <div className="max-lg:order-3">
             <div className={cn(block, "mb-3 h-6 w-36")} />
             <div className="divide-y divide-line border-y border-line">
               {Array.from({ length: 8 }, (_, i) => (
@@ -361,9 +348,32 @@ function MeSkeleton() {
               ))}
             </div>
           </div>
+          <div className="max-lg:order-5">
+            <div className={cn(block, "mb-3 h-6 w-32")} />
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="flex h-12 items-center gap-3">
+                <div className="size-5 shrink-0 rounded-full bg-surface-2" />
+                <div className={cn(block, "h-3.5")} style={{ width: `${[34, 30, 46, 18][i]}%` }} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </main>
+  );
+}
+
+function SkelShelf() {
+  return (
+    <div className="-mx-3 flex gap-3 overflow-hidden px-3 pb-2 sm:-mx-5 sm:gap-4 sm:px-5 lg:mx-0 lg:px-0">
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i} className="w-[56vw] max-w-[260px] shrink-0 sm:w-[240px]">
+          <div className="aspect-video rounded-[var(--radius-frame)] bg-surface-2" />
+          <div className="mt-2 h-4 w-3/5 rounded-lg bg-surface-2" />
+          <div className="mt-1.5 h-3 w-16 rounded-lg bg-surface-2" />
+        </div>
+      ))}
+    </div>
   );
 }
 
