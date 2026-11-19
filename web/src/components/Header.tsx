@@ -38,12 +38,20 @@ export function Header() {
           <SearchBox autoFocus onClose={() => setMobileSearch(false)} />
         </div>
       ) : null}
-      <div className={`flex h-16 items-center gap-1 px-3 sm:h-[72px] sm:gap-3 sm:px-6 ${mobileSearch ? "hidden sm:flex" : ""}`}>
+      {/* Computers: three columns, the sides equally wide and never narrower than 200px, so the
+          search stays put while the page loads: the right side fills in once the session is known,
+          and the logo's title widens when its font arrives. */}
+      <div
+        className={cn(
+          "flex h-16 items-center gap-1 px-3 sm:grid sm:h-[72px] sm:grid-cols-[minmax(200px,1fr)_minmax(0,680px)_minmax(200px,1fr)] sm:gap-3 sm:px-6",
+          mobileSearch && "max-sm:hidden",
+        )}
+      >
         {/* Back to the feed where you left it; already on it, to its top (like YouTube's logo). */}
         <Link
           to="/"
           onClick={() => loc.pathname === "/" && !loc.search && window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="flex min-w-0 items-center gap-2.5 rounded-full py-1 pr-2"
+          className="flex min-w-0 items-center gap-2.5 justify-self-start rounded-full py-1 pr-2"
           aria-label="Звёздная одиссея — все танцы"
         >
           <img src="/icons/logo.webp" alt="" className="size-8 shrink-0 rounded-full" />
@@ -53,55 +61,56 @@ export function Header() {
           </span>
         </Link>
 
-        <div className="hidden flex-1 justify-center sm:flex">
-          <SearchBox className="max-w-[680px]" />
+        <div className="hidden sm:flex">
+          <SearchBox />
         </div>
-        <span className="flex-1 sm:hidden" />
 
-        <button
-          type="button"
-          onClick={() => setMobileSearch(true)}
-          className="grid size-10 shrink-0 place-items-center rounded-full text-ink hover:bg-hover sm:hidden"
-          aria-label="Поиск"
-        >
-          <Search className="size-5" />
-        </button>
-        {installHere ? (
+        <div className="flex flex-1 items-center justify-end gap-1 sm:gap-3">
           <button
             type="button"
-            onClick={() => (install.native ? install.install() : install.showHint())}
+            onClick={() => setMobileSearch(true)}
             className="grid size-10 shrink-0 place-items-center rounded-full text-ink hover:bg-hover sm:hidden"
-            aria-label="Установить приложение"
-            title="Установить приложение"
+            aria-label="Поиск"
           >
-            <Smartphone className="size-5" />
+            <Search className="size-5" />
           </button>
-        ) : null}
-        {/* Shown with the rest of the right side once the session is known, so nothing shifts.
-            Signed in on phones, the theme switch moves to the account page to make room for the bell. */}
-        {ready ? (
-          <div className={user || installHere ? "max-sm:hidden" : undefined}>
-            <ThemeToggle />
-          </div>
-        ) : null}
-        {user ? <NotificationsBell /> : null}
-        {!ready ? (
-          <span className="size-10" />
-        ) : user ? (
-          // Like YouTube's «Вы»: the account opens as its own page (rehearsals, profile, settings).
-          <Link to="/me" className="grid size-10 shrink-0 place-items-center rounded-full hover:bg-hover" aria-label="Мои репетиции, профиль и настройки">
-            <Avatar user={user} />
-          </Link>
-        ) : (
-          <Link
-            to={loginHref}
-            aria-label="Войти"
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line-strong px-3 text-sm font-medium text-accent hover:bg-hover max-[400px]:w-9 max-[400px]:justify-center max-[400px]:px-0"
-          >
-            <CircleUserRound className="size-5" />
-            <span className="max-[400px]:hidden">Войти</span>
-          </Link>
-        )}
+          {installHere ? (
+            <button
+              type="button"
+              onClick={() => (install.native ? install.install() : install.showHint())}
+              className="grid size-10 shrink-0 place-items-center rounded-full text-ink hover:bg-hover sm:hidden"
+              aria-label="Установить приложение"
+              title="Установить приложение"
+            >
+              <Smartphone className="size-5" />
+            </button>
+          ) : null}
+          {/* Shown with the rest of the right side once the session is known, so nothing shifts.
+              Signed in on phones, the theme switch moves to the account page to make room for the bell. */}
+          {ready ? (
+            <div className={user || installHere ? "max-sm:hidden" : undefined}>
+              <ThemeToggle />
+            </div>
+          ) : null}
+          {user ? <NotificationsBell /> : null}
+          {!ready ? (
+            <span className="size-10" />
+          ) : user ? (
+            // Like YouTube's «Вы»: the account opens as its own page (rehearsals, profile, settings).
+            <Link to="/me" className="grid size-10 shrink-0 place-items-center rounded-full hover:bg-hover" aria-label="Мои репетиции, профиль и настройки">
+              <Avatar user={user} />
+            </Link>
+          ) : (
+            <Link
+              to={loginHref}
+              aria-label="Войти"
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line-strong px-3 text-sm font-medium text-accent hover:bg-hover max-[400px]:w-9 max-[400px]:justify-center max-[400px]:px-0"
+            >
+              <CircleUserRound className="size-5" />
+              <span className="max-[400px]:hidden">Войти</span>
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );
