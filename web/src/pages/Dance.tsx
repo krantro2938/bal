@@ -27,6 +27,7 @@ import { useSession } from "@/lib/session";
 import { shareLink } from "@/lib/share";
 import { useThumbs } from "@/lib/thumbs";
 import type { Chapter, DanceDetail, Note } from "@/lib/types";
+import { backToTop } from "@/lib/scroll";
 import { cn } from "@/lib/utils";
 
 // The player bundle (Vidstack) is only fetched when a dance page opens.
@@ -52,6 +53,7 @@ export function Dance() {
   const [loginAsk, setLoginAsk] = useState<string | null>(null);
   const [scheme, setScheme] = useState<number | null>(null);
   const [more, setMore] = useState(false);
+  const descRef = useRef<HTMLDivElement>(null);
   const player = useRef<MediaPlayerInstance>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const startAt = useMemo(() => parseTime(params.get("t")), [params]);
@@ -559,6 +561,7 @@ export function Dance() {
 
           {/* Description card, like YouTube's: short text, expands to the organizers' caption and sources. */}
           <div
+            ref={descRef}
             className={cn(
               "mt-5 rounded-[var(--radius-sheet)] bg-surface-2 p-4 text-[15px] leading-normal lg:p-5",
               !more && "cursor-pointer transition-colors hover:bg-line/60",
@@ -613,7 +616,13 @@ export function Dance() {
                     })}
                   </ul>
                 </div>
-                <button type="button" onClick={() => setMore(false)} className="mt-5 text-[15px] font-medium underline-offset-4 hover:underline">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMore(false);
+                    requestAnimationFrame(() => backToTop(descRef.current));
+                  }}
+                  className="mt-5 text-[15px] font-medium underline-offset-4 hover:underline">
                   Свернуть
                 </button>
               </>

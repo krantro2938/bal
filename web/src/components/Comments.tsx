@@ -6,6 +6,7 @@ import { track } from "@/lib/analytics";
 import { api, ApiError } from "@/lib/api";
 import { since, timecode } from "@/lib/format";
 import type { Author, Comment, CommentEvent, User } from "@/lib/types";
+import { backToTop } from "@/lib/scroll";
 import { cn } from "@/lib/utils";
 import { Avatar } from "./Header";
 import { NoteInput } from "./NoteInput";
@@ -565,18 +566,6 @@ function NoteBody({ text, rich }: { text: string; rich: (s: string) => ReactNode
   );
 }
 
-/**
- * After «Свернуть» on a long comment, the page jumps back to where the comment starts if that
- * is now above the screen (like YouTube), just below the header, or below the player where it
- * sticks to the top (phones). No animation: you land on the comment you were reading at once.
- */
-function backToTop(el: HTMLElement | null) {
-  if (!el) return;
-  const player = document.querySelector<HTMLElement>("[data-sticky-player]");
-  const covered = player && getComputedStyle(player).position === "sticky" ? player.getBoundingClientRect().bottom : 64;
-  const top = el.getBoundingClientRect().top - covered - 12;
-  if (top < 0) window.scrollBy({ top, behavior: "instant" });
-}
 
 const TOKENS = /(^|[^\p{L}\d_.@:])(?:(\d{1,2}):([0-5]\d)(?![\d:])|@([a-z][a-z0-9_.]{2,29}))/giu;
 
