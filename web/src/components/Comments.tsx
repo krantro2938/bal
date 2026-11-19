@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, EllipsisVertical, Flag, Pin, PinOff, ShieldCheck, ThumbsUp, Timer, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 import { api, ApiError } from "@/lib/api";
 import { since, timecode } from "@/lib/format";
 import type { Author, Comment, CommentEvent, User } from "@/lib/types";
@@ -143,6 +144,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   const post = async (body: string, parentId?: number) => {
     try {
       const r = await api.createComment(slug, body, parentId);
+      track("comment");
       setList((l) => (l && !l.some((c) => c.id === r.comment.id) ? [...l, r.comment] : l));
       if (r.notice) toast(r.notice);
       return true;

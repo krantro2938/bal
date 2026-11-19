@@ -19,6 +19,7 @@ import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
 import { AuthPrompt } from "@/components/AuthPrompt";
 import { NoteInput } from "@/components/NoteInput";
+import { track, trackOnce } from "@/lib/analytics";
 import { api, ApiError } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
 import { ago, fullDate, parseTime, timecode } from "@/lib/format";
@@ -248,13 +249,23 @@ export function Dance() {
     const p = player.current;
     if (!p || !dance?.video) return;
     let counted = false;
-    return p.subscribe(({ playing }) => {
+    return p.subscribe(({ playing, ended, playbackRate }) => {
       if (playing && !counted) {
         counted = true;
         api.view(dance.slug).catch(() => {});
       }
+      if (playing) trackOnce("play");
+      if (ended) trackOnce("finished");
+      if (playbackRate < 1) trackOnce("slowed");
     });
   }, [dance, playerReady]);
+
+  useEffect(() => {
+    if (loop) trackOnce("loop");
+  }, [loop]);
+  useEffect(() => {
+    if (scheme !== null) trackOnce("scheme-opened");
+  }, [scheme]);
 
   const currentTime = () => player.current?.currentTime ?? startAt ?? 0;
 
@@ -290,6 +301,7 @@ export function Dance() {
         setNotes((ns) => ns.map((x) => (x.id === n.id ? n : x)));
       } else {
         const n = await api.createNote({ dance: slug, version: dance.version, t: noteDraft.t, text: noteDraft.text });
+        track("note-saved");
         setNotes((ns) => [...ns, n].sort((a, b) => a.t - b.t));
       }
       setNoteDraft(null);
@@ -318,7 +330,10 @@ export function Dance() {
     const on = !list?.includes(slug);
     const done = kind === "favorite" ? (on ? "Сохранено — танец есть в «Избранном»" : "Убрано из сохранённых") : on ? "Отмечено как выученное" : "Отметка «Выучено» снята";
     setMark(kind, slug, on).then(
-      () => toast(done),
+      () => {
+        if (on) track(kind);
+        toast(done);
+      },
       () => toast("Не удалось сохранить, попробуйте ещё раз"),
     );
   };
@@ -331,6 +346,7 @@ export function Dance() {
     setDance({ ...dance, likes, dislikes, myReaction: v });
     try {
       const r = await api.react(slug, v);
+      if (v !== 0) track("reaction");
       setDance((d) => (d ? { ...d, likes: r.likes, dislikes: r.dislikes, myReaction: r.mine } : d));
       catalog.patch(slug, { likes: r.likes, dislikes: r.dislikes, myReaction: r.mine });
     } catch {

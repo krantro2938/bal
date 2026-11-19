@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { PixelSky } from "@/components/PixelSky";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { track } from "@/lib/analytics";
 import { api, ApiError } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import type { AuthConfig } from "@/lib/types";
@@ -132,6 +133,7 @@ export function Login() {
     setFormError(null);
     try {
       await api.login({ email, password });
+      track("login");
       await refresh();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Не удалось войти");
@@ -202,6 +204,7 @@ export function Register() {
     setErr(null);
     try {
       await api.register({ name, email, password });
+      track("signup");
       await refresh();
     } catch (e) {
       setErr(e instanceof ApiError ? { field: e.field, message: e.message } : { message: "Не удалось зарегистрироваться" });

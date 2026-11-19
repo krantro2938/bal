@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { track } from "./analytics";
 
 /**
  * Phones: the dance keeps playing in a small bar at the bottom after the video is dragged down,
@@ -38,6 +39,7 @@ export function openMini(dance: MiniDance, at: number, sound: { volume: number; 
   video.volume = sound.volume;
   video.muted = sound.muted;
   if (sound.play) video.play().catch(() => {});
+  track("mini-player");
   emit();
 }
 

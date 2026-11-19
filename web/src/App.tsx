@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { Header } from "@/components/Header";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { setPage } from "@/lib/analytics";
 import { MiniPlayer } from "@/components/MiniPlayer";
 import { StateBlock } from "@/components/StateBlock";
 import { Catalog } from "@/pages/Catalog";
@@ -15,6 +16,7 @@ function Shell() {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
+    setPage(pathname);
   }, [pathname]);
   return (
     <>

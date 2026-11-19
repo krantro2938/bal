@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import "./lib/install"; // catches the browser's install offer before React starts
 import { BrowserRouter } from "react-router";
 import { App } from "./App";
+import { configureAnalytics } from "./lib/analytics";
+import { api } from "./lib/api";
 import { CatalogProvider } from "./lib/catalog";
 import { SessionProvider } from "./lib/session";
 import "./styles.css";
@@ -15,6 +17,12 @@ addEventListener("keydown", (e) => e.key === "Tab" && delete document.documentEl
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 }
+
+// Visit counting is on only if the server has an Umami to pass reports to.
+api.authConfig().then(
+  (c) => configureAnalytics(!!c.analytics),
+  () => configureAnalytics(false),
+);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
