@@ -188,6 +188,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("PUT /api/dances/{slug}/reaction", s.requireUser(s.handleReaction))
 	mux.HandleFunc("POST /api/dances/{slug}/view", s.handleView)
 	mux.HandleFunc("GET /api/dances/{slug}/comments", s.handleListComments)
+	mux.HandleFunc("GET /api/users/{username}", s.handleProfile)
 	mux.HandleFunc("GET /api/dances/{slug}/events", s.handleEvents)
 	mux.Handle("POST /api/dances/{slug}/comments", s.requireUser(s.handleCreateComment))
 	mux.Handle("DELETE /api/comments/{id}", s.requireUser(s.handleDeleteComment))

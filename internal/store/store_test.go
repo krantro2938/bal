@@ -157,3 +157,25 @@ func TestOfficialPinnedComment(t *testing.T) {
 		t.Fatalf("update: %+v changed=%v", c2, changed)
 	}
 }
+
+func TestProfile(t *testing.T) {
+	s, _ := Open(filepath.Join(t.TempDir(), "t.db"))
+	defer s.Close()
+	ctx := context.Background()
+	u, _ := s.CreateUser(ctx, NewUser{Name: "Аня", Username: "anya"})
+	fan, _ := s.CreateUser(ctx, NewUser{Name: "Боря", Username: "borya"})
+	c, _ := s.CreateComment(ctx, u.ID, Comment{Dance: "vals", Body: "hi", Status: "published"})
+	s.CreateComment(ctx, u.ID, Comment{Dance: "vals", Body: "held", Status: "held"})
+	s.LikeComment(ctx, fan.ID, c.ID, true)
+	p, err := s.ProfileByUsername(ctx, "@Anya")
+	if err != nil || p.Comments != 1 || p.Likes != 1 || p.LastComment != c.CreatedAt || p.CreatedAt == 0 {
+		t.Fatalf("profile = %+v, %v", p, err)
+	}
+	list, _ := s.UserComments(ctx, u.ID, fan.ID, 10)
+	if len(list) != 1 || !list[0].Liked {
+		t.Fatalf("comments = %+v", list)
+	}
+	if _, err := s.ProfileByUsername(ctx, "nobody"); err != ErrNotFound {
+		t.Fatalf("missing user: %v", err)
+	}
+}

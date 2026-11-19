@@ -1,4 +1,4 @@
-import type { AuthConfig, Catalog, Comment, DanceDetail, Note, Notification, User, UserState } from "./types";
+import type { AuthConfig, Catalog, Comment, DanceDetail, Note, Notification, Profile, ProfileComment, User, UserState } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -53,6 +53,7 @@ export const api = {
   deleteNote: (id: number) => request<void>("DELETE", `/api/notes/${id}`),
   mark: (kind: "favorite" | "learned", slug: string, on: boolean) =>
     request<void>(on ? "PUT" : "DELETE", `/api/marks/${kind}/${encodeURIComponent(slug)}`),
+  profile: (username: string) => request<{ profile: Profile; comments: ProfileComment[] }>("GET", `/api/users/${encodeURIComponent(username)}`),
   comments: (slug: string) => request<{ comments: Comment[]; moderator: boolean; pinnedBy?: string }>("GET", `/api/dances/${encodeURIComponent(slug)}/comments`),
   createComment: (slug: string, body: string, parentId?: number) =>
     request<{ comment: Comment; notice?: string }>("POST", `/api/dances/${encodeURIComponent(slug)}/comments`, { body, parentId }),

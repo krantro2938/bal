@@ -56,6 +56,10 @@ export type Progress = { dance: string; version: string; position: number; updat
 export type UserState = { favorites: string[]; learned: string[]; progress: Progress[]; notes: Note[] };
 
 /** verified: the site's own account (a badge and a pill around its handle, like a channel owner on YouTube). */
+/** Anyone's public page: the account and what they posted publicly (times in ms). */
+export type Profile = Author & { createdAt: number; comments: number; likes: number; lastComment?: number };
+export type ProfileComment = Comment & { danceTitle: string };
+
 export type Author = { id: number; name: string; username: string; picture?: string; verified?: boolean };
 
 export type Comment = {

@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp, CircleCheck, EllipsisVertical, Flag, Pin, PinOff, ShieldCheck, ThumbsUp, Timer, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import { track } from "@/lib/analytics";
 import { api, ApiError } from "@/lib/api";
@@ -206,16 +207,17 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       {/* Phones: a teaser card like YouTube's app; tapping it opens the list. */}
       {!open ? (
         <button type="button" onClick={() => setOpen(true)} className="w-full rounded-[var(--radius-sheet)] bg-surface-2 p-3.5 text-left lg:hidden">
-          <span className="flex items-center gap-2.5 text-[14px]">
+          <span className="flex items-start gap-2.5 text-[14px]">
             {first ? (
               <>
                 <Avatar user={first.author} size={24} />
-                <span className="line-clamp-1 min-w-0 flex-1">{first.body}</span>
+                {/* Two lines, like YouTube's app, so it reads as a comment rather than a stray caption. */}
+                <span className="line-clamp-2 min-w-0 flex-1 leading-[20px]">{first.body.replace(/\s*\n+\s*/g, " ")}</span>
               </>
             ) : (
               <span className="flex-1 text-ink-3">{list ? "Напишите первый комментарий" : "Загрузка…"}</span>
             )}
-            <ChevronDown className="size-4 shrink-0 text-ink-3" />
+            <ChevronDown className="mt-0.5 size-4 shrink-0 self-start text-ink-3" />
           </span>
         </button>
       ) : null}
@@ -421,7 +423,7 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
   const mine = c.author.id === user?.id;
   const [long, setLong] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const body = useRef<HTMLParagraphElement>(null);
+  const body = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
   // Measured again whenever the text's box changes: on phones the list starts hidden behind
   // the teaser card (nothing to measure yet), and widths change with the window.
@@ -454,7 +456,9 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
       id={`comment-${c.id}`}
       className={cn("group -mx-2 flex scroll-mt-40 gap-3 rounded-xl px-2 transition-colors duration-700", ctx.flash === c.id && "bg-accent-soft")}
     >
-      <Avatar user={c.author} size={reply ? 28 : 36} />
+      <Link to={`/@${c.author.username}`} className="h-fit shrink-0 rounded-full" aria-label={`Профиль @${c.author.username}`}>
+        <Avatar user={c.author} size={reply ? 28 : 36} />
+      </Link>
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-x-2 text-[13px]">
           {c.pinned ? (
@@ -465,30 +469,33 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
           ) : null}
           {c.author.verified ? (
             // The site's own account: its handle in a pill with a check, like a channel owner's on YouTube.
-            <span className="inline-flex h-[22px] items-center gap-1 rounded-full bg-ink-2 pr-1.5 pl-2 font-medium text-bg" title={`${c.author.name} · официальный аккаунт сайта`}>
+            <Link to={`/@${c.author.username}`} className="inline-flex h-[22px] items-center gap-1 rounded-full bg-ink-2 pr-1.5 pl-2 font-medium text-bg hover:opacity-90" title={`${c.author.name} · аккаунт этого сайта`}>
               @{c.author.username}
               <CircleCheck className="size-3.5 fill-current [&_path]:stroke-ink-2" strokeWidth={3} aria-label="Подтверждённый аккаунт" />
-            </span>
+            </Link>
           ) : (
-            <span className="font-medium" title={c.author.name}>
+            <Link to={`/@${c.author.username}`} className="font-medium hover:underline" title={c.author.name}>
               @{c.author.username}
-            </span>
+            </Link>
           )}
           <span className="text-ink-3" title={new Date(c.createdAt).toLocaleString("ru-RU")}>
             {since(c.createdAt)}
           </span>
           {c.status === "held" ? <span className="rounded-md bg-accent-soft px-1.5 text-[12px] font-medium text-accent">на проверке</span> : null}
         </p>
-        <p ref={body} className={cn("mt-0.5 text-[15px] leading-normal break-words whitespace-pre-wrap", !expanded && "line-clamp-4")}>
-          {headed(c) ? (
-            <>
-              <span className="font-medium">{richText(c.body.slice(0, c.body.indexOf("\n")), ctx.duration, ctx.onSeek)}</span>
-              {richText(c.body.slice(c.body.indexOf("\n")), ctx.duration, ctx.onSeek)}
-            </>
-          ) : (
-            richText(c.body, ctx.duration, ctx.onSeek)
-          )}
-        </p>
+        {isNote(c) ? (
+          // Collapsed, a note fades out after about four lines (a list can't be line-clamped).
+          <div
+            ref={body}
+            className={cn("mt-1 max-w-[65ch] text-[15px] leading-normal break-words", !expanded && "max-h-[96px] overflow-hidden [mask-image:linear-gradient(black_55%,transparent)]")}
+          >
+            <NoteBody text={c.body} rich={(t) => richText(t, ctx.duration, ctx.onSeek)} />
+          </div>
+        ) : (
+          <div ref={body} className={cn("mt-0.5 text-[15px] leading-normal break-words whitespace-pre-wrap", !expanded && "line-clamp-4")}>
+            {richText(c.body, ctx.duration, ctx.onSeek)}
+          </div>
+        )}
         {long || expanded ? (
           <button
             type="button"
@@ -524,20 +531,50 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
   );
 }
 
-/** The site's own notes open with a heading line ending in «:», set in medium weight. */
-const headed = (c: Comment) => !!c.author.verified && /^[^\n]+:\n/.test(c.body);
+/** The site's own notes (pinned exam lists): a heading line ending in «:» and «• » bullets. */
+const isNote = (c: Comment) => !!c.author.verified && /^[^\n]+:\n• /.test(c.body);
 
 /**
- * After «Свернуть» on a long comment, the page glides back to where the comment starts if
- * that is now above the screen (like YouTube), just below the header, or below the player
- * where it sticks to the top (phones).
+ * A note laid out for reading: the heading in medium weight, bullets with hanging indents and a
+ * little room between them, and the paragraphs after the list (general advice, the source) as
+ * smaller grey footnotes.
+ */
+function NoteBody({ text, rich }: { text: string; rich: (s: string) => ReactNode }) {
+  const [first, ...rest] = text.split(/\n{2,}/);
+  const [head, ...items] = first.split("\n");
+  return (
+    <>
+      <p className="font-medium">{rich(head)}</p>
+      <ul className="mt-1.5 space-y-1.5">
+        {items.map((item, i) => (
+          <li key={i} className="relative pl-4">
+            <span className="absolute left-0.5 text-ink-3" aria-hidden>
+              •
+            </span>
+            {rich(item.replace(/^•\s*/, ""))}
+          </li>
+        ))}
+      </ul>
+      {rest.map((p, i) => (
+        <p key={i} className="mt-3 text-[13px] leading-relaxed text-ink-3">
+          {rich(p)}
+        </p>
+      ))}
+    </>
+  );
+}
+
+/**
+ * After «Свернуть» on a long comment, the page jumps back to where the comment starts if that
+ * is now above the screen (like YouTube), just below the header, or below the player where it
+ * sticks to the top (phones). No animation: you land on the comment you were reading at once.
  */
 function backToTop(el: HTMLElement | null) {
   if (!el) return;
   const player = document.querySelector<HTMLElement>("[data-sticky-player]");
   const covered = player && getComputedStyle(player).position === "sticky" ? player.getBoundingClientRect().bottom : 64;
   const top = el.getBoundingClientRect().top - covered - 12;
-  if (top < 0) window.scrollBy({ top, behavior: "smooth" });
+  if (top < 0) window.scrollBy({ top, behavior: "instant" });
 }
 
 const TOKENS = /(^|[^\p{L}\d_.@:])(?:(\d{1,2}):([0-5]\d)(?![\d:])|@([a-z][a-z0-9_.]{2,29}))/giu;

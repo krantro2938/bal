@@ -11,6 +11,7 @@ import { Dance } from "@/pages/Dance";
 import { Login, Register } from "@/pages/Login";
 import { Me } from "@/pages/Me";
 import { OgCard } from "@/pages/OgCard";
+import { Profile } from "@/pages/Profile";
 
 function Shell() {
   const { pathname } = useLocation();
@@ -69,6 +70,8 @@ export function App() {
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
         <Route path="me" element={<Me />} />
+        {/* /@username (a route segment can't be part "@", part param, so the page checks the "@") */}
+        <Route path=":handle" element={<Profile />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

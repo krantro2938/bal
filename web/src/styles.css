@@ -148,6 +148,26 @@
     --video-border-radius: 0;
   }
 }
+/* Profile page: things arrive one after another (rise), timeline dots pop, its line draws. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.25);
+  }
+}
+@keyframes draw {
+  from {
+    transform: scaleX(0);
+  }
+}
 @keyframes sheet-up {
   from {
     transform: translateY(100%);

@@ -132,13 +132,14 @@ function AccountMenu({ user }: { user: User }) {
       </button>
       {open ? (
         <div className="absolute top-12 right-0 z-50 w-72 overflow-hidden rounded-[var(--radius-sheet)] border border-line bg-bg py-2 shadow-[var(--shadow-pop)]">
-          <div className="flex items-center gap-3 px-4 pt-2 pb-3">
+          <Link to={`/@${user.username}`} className="flex items-center gap-3 px-4 pt-2 pb-3 hover:bg-hover">
             <Avatar user={user} size={40} />
             <div className="min-w-0">
               <p className="truncate font-medium">{user.name}</p>
               <p className="truncate text-[13px] text-ink-3">@{user.username}</p>
+              <p className="mt-0.5 text-[13px] text-link">Открыть профиль</p>
             </div>
-          </div>
+          </Link>
           <div className="pt-1">
             <Link to="/me" className="flex items-center gap-3 px-4 py-2.5 text-[15px] hover:bg-hover">
               <NotebookPen className="size-5 text-ink-2" /> Мои репетиции

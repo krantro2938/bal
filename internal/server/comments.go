@@ -533,3 +533,44 @@ func (s *Server) handleUsernameFree(w http.ResponseWriter, r *http.Request, u *s
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"valid": store.ValidUsername(name), "free": free})
 }
+
+type profileComment struct {
+	store.Comment
+	DanceTitle string `json:"danceTitle"`
+}
+
+// handleProfile is a user's public page: the account, its public counts and latest comments.
+func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
+	p, err := s.store.ProfileByUsername(r.Context(), r.PathValue("username"))
+	if errors.Is(err, store.ErrNotFound) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Такого пользователя нет"})
+		return
+	} else if err != nil {
+		httpError(w, err)
+		return
+	}
+	var viewer int64
+	if u := s.currentUser(r); u != nil {
+		viewer = u.ID
+	}
+	list, err := s.store.UserComments(r.Context(), p.ID, viewer, 30)
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+	src, _, err := s.lib.Snapshot()
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+	out := make([]profileComment, 0, len(list))
+	for _, c := range list {
+		pc := profileComment{Comment: c}
+		if d := src.Find(c.Dance); d != nil {
+			pc.DanceTitle = d.Title
+		}
+		out = append(out, pc)
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]any{"profile": p, "comments": out})
+}
