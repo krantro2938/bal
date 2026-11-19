@@ -27,7 +27,7 @@ import { useSession } from "@/lib/session";
 import { shareLink } from "@/lib/share";
 import { useThumbs } from "@/lib/thumbs";
 import type { Chapter, DanceDetail, Note } from "@/lib/types";
-import { backToTop } from "@/lib/scroll";
+import { backToTop, feedPlace } from "@/lib/scroll";
 import { cn } from "@/lib/utils";
 
 // The player bundle (Vidstack) is only fetched when a dance page opens.
@@ -89,7 +89,7 @@ export function Dance() {
             play: playing,
           });
           setPull({ dy: h, settle: true });
-          window.setTimeout(() => navigate("/"), 200);
+          window.setTimeout(() => navigate(feedPlace().href, { state: { feed: true } }), 200);
         } else {
           setPull({ dy: 0, settle: true });
           window.setTimeout(() => setPull(null), 220);
@@ -418,7 +418,10 @@ export function Dance() {
     <>
       {pull ? (
         <div inert className="fixed inset-x-0 top-16 bottom-0 overflow-hidden">
-          <Catalog peek />
+          {/* The feed as it was left (the unfiltered one; a search or filter shows from the top). */}
+          <div style={{ transform: `translateY(${feedPlace().href === "/" ? -feedPlace().y : 0}px)` }}>
+            <Catalog peek />
+          </div>
         </div>
       ) : null}
     <main

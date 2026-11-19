@@ -1,9 +1,10 @@
-import { Link, Outlet, Route, Routes, useLocation } from "react-router";
-import { useEffect } from "react";
+import { Link, Outlet, Route, Routes, useLocation, useNavigationType } from "react-router";
+import { useEffect, useLayoutEffect } from "react";
 import { Toaster } from "sonner";
 import { Header } from "@/components/Header";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { setPage } from "@/lib/analytics";
+import { feedPlace, rememberFeed } from "@/lib/scroll";
 import { MiniPlayer } from "@/components/MiniPlayer";
 import { StateBlock } from "@/components/StateBlock";
 import { Catalog } from "@/pages/Catalog";
@@ -14,11 +15,19 @@ import { OgCard } from "@/pages/OgCard";
 import { Profile } from "@/pages/Profile";
 
 function Shell() {
-  const { pathname } = useLocation();
-  useEffect(() => {
-    window.scrollTo(0, 0);
+  const loc = useLocation();
+  const { pathname, search } = loc;
+  const navType = useNavigationType();
+  // A new page starts at the top; back to the feed (the back button, or the video dragged down)
+  // returns to where it was left.
+  useLayoutEffect(() => {
+    const feed = feedPlace();
+    const back = navType === "POP" || !!(loc.state as { feed?: boolean } | null)?.feed;
+    window.scrollTo(0, back && feed.href === pathname + search ? feed.y : 0);
+    rememberFeed();
     setPage(pathname);
   }, [pathname]);
+  useEffect(rememberFeed, [search]);
   return (
     <>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-bg focus:px-3 focus:py-2">

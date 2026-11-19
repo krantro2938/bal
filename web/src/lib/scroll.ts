@@ -18,3 +18,19 @@ export function backToTop(el: HTMLElement | null) {
   const top = el.getBoundingClientRect().top - covered - 12;
   if (top < 0) window.scrollBy({ top, behavior: "instant" });
 }
+
+/**
+ * Where the feed was left, so coming back to it (the video dragged down, the back button) lands
+ * on the same row instead of the top. Kept in memory only: a reload starts at the top.
+ */
+const feed = { href: "/", y: 0 };
+
+export function rememberFeed() {
+  // The URL changes before the next page renders, so the jump to the top when leaving isn't recorded.
+  if (location.pathname !== "/") return;
+  feed.href = location.pathname + location.search;
+  feed.y = scrollY;
+}
+addEventListener("scroll", rememberFeed, { passive: true });
+
+export const feedPlace = () => feed;

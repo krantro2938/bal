@@ -7,7 +7,6 @@ import { useTheme } from "@/lib/theme";
 import type { User } from "@/lib/types";
 import { NotificationsBell } from "./Notifications";
 import { SearchBox } from "./SearchBox";
-import { Star } from "./Star";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function Header() {
@@ -27,9 +26,7 @@ export function Header() {
       ) : null}
       <div className={`flex h-16 items-center gap-1 px-3 sm:h-[72px] sm:gap-3 sm:px-6 ${mobileSearch ? "hidden sm:flex" : ""}`}>
         <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-full py-1 pr-2" aria-label="Звёздная одиссея — все танцы">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#081028] text-[#e8ddc2]">
-            <Star className="size-4" />
-          </span>
+          <img src="/icons/logo.webp" alt="" className="size-8 shrink-0 rounded-full" />
           <span className="min-w-0 leading-none">
             <span className="block truncate font-display text-[18px] font-semibold italic">Звёздная одиссея</span>
             <span className="mt-0.5 block truncate text-[11px] tracking-[0.08em] whitespace-nowrap text-ink-3 uppercase">Репетиции бала</span>
@@ -77,14 +74,9 @@ export function Header() {
  *  (Google's image host is not always reachable from Russia). */
 export function Avatar({ user, size = 32 }: { user: Pick<User, "name" | "picture"> & { verified?: boolean }; size?: number }) {
   const [broken, setBroken] = useState(false);
-  // The site's own account wears the logo's star; in the dark theme its circle is lifted a
-  // shade so it doesn't sink into the page.
+  // The site's own account wears the ball's emblem (the organizers' Telegram picture).
   if (user.verified) {
-    return (
-      <span className="grid shrink-0 place-items-center rounded-full bg-[#081028] text-[#e8ddc2] dark:bg-line" style={{ width: size, height: size }} aria-hidden>
-        <Star style={{ width: size * 0.45, height: size * 0.45 }} />
-      </span>
-    );
+    return <img src="/icons/logo.webp" alt="" className="shrink-0 rounded-full" style={{ width: size, height: size }} />;
   }
   return user.picture && !broken ? (
     <img
