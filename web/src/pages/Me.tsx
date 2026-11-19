@@ -53,7 +53,7 @@ export function Me() {
         </div>
       ) : null}
 
-      <div className="mt-8 grid gap-12 lg:grid-cols-12 lg:gap-10">
+      <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-12 lg:gap-10">
         <div className="space-y-12 lg:col-span-7">
           {progress.length ? (
             <section>
@@ -117,7 +117,7 @@ export function Me() {
           {state.favorites.length ? (
             <section>
               <Title>Избранное</Title>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-6 sm:grid-cols-2 lg:grid-cols-1">
                 {state.favorites.map((s) => bySlug.get(s)).filter((d): d is DanceSummary => !!d).map((d) => <VideoCard key={d.slug} dance={d} />)}
               </div>
             </section>
@@ -125,7 +125,7 @@ export function Me() {
 
           <section>
             <Title>
-              Выучено <span className="tnum font-normal normal-case tracking-normal">· {learnedCount} из {dances.length}</span>
+              Выучено <span className="tnum ml-1 font-normal normal-case tracking-normal">{learnedCount} из {dances.length}</span>
             </Title>
             <ul className="divide-y divide-line border-y border-line">
               {dances.map((d) => {
