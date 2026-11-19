@@ -393,6 +393,16 @@ export function Dance() {
   // End screen: the dances after this one in programme order, wrapping round to the start.
   const programme = others.filter((d) => d.available && d.kind === "dance").sort((a, b) => a.order - b.order);
   const upNext = [...programme.filter((d) => d.order > dance.order), ...programme.filter((d) => d.order < dance.order)];
+  // Sidebar: the next dance in the programme first (where a rehearsal goes on), then the rest by
+  // popularity; dances you marked learned sink to the bottom.
+  const done = new Set(state?.learned ?? []);
+  const popularity = (d: (typeof others)[number]) => d.views + 3 * d.likes - d.dislikes;
+  const recommended = [
+    ...upNext.slice(0, 1),
+    ...others
+      .filter((d) => d.slug !== upNext[0]?.slug)
+      .sort((a, b) => Number(done.has(a.slug)) - Number(done.has(b.slug)) || popularity(b) - popularity(a) || a.order - b.order),
+  ];
   const caption = dance.caption.replace(/\s*#\S+/g, "").trim();
   const facts = [
     dance.hasScheme && "схема",
@@ -823,8 +833,12 @@ export function Dance() {
           <section className="!mt-12 border-t border-line pt-8">
             <h2 className="mb-3 px-1 text-[18px] font-semibold">Другие танцы</h2>
             <div className="space-y-2">
-              {others.map((d) => (
-                <CompactCard key={d.slug} dance={d} />
+              {recommended.map((d, i) => (
+                <CompactCard
+                  key={d.slug}
+                  dance={d}
+                  note={i === 0 && d.slug === upNext[0]?.slug ? "Далее по программе" : done.has(d.slug) ? "Выучено" : undefined}
+                />
               ))}
             </div>
           </section>

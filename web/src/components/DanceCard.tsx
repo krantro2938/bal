@@ -260,7 +260,8 @@ function CardMenu({ dance }: { dance: DanceSummary }) {
 }
 
 /** Small row for the "next" list beside the player. */
-export function CompactCard({ dance, current }: { dance: DanceSummary; current?: boolean }) {
+/** note: a short tag under the title («Далее по программе», «Выучено»). */
+export function CompactCard({ dance, current, note }: { dance: DanceSummary; current?: boolean; note?: string }) {
   const { ref, on, handlers } = usePreview();
   return (
     <div ref={ref} {...handlers}>
@@ -278,6 +279,7 @@ export function CompactCard({ dance, current }: { dance: DanceSummary; current?:
             {dance.published ? <span>{ago(dance.published)}</span> : null}
             {current ? <span className="text-accent">сейчас</span> : null}
           </p>
+          {note ? <p className="mt-1 text-[12px] font-medium text-accent">{note}</p> : null}
         </div>
       </Link>
     </div>
