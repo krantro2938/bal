@@ -2,7 +2,7 @@ import { CircleUserRound, Search, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useSession } from "@/lib/session";
-import { cn } from "@/lib/utils";
+import { cn, hueStyle, userHue } from "@/lib/utils";
 import { useInstall } from "@/lib/install";
 import type { User } from "@/lib/types";
 import { NotificationsBell } from "./Notifications";
@@ -103,7 +103,7 @@ export function Header() {
 
 /** Profile picture, or the first letter of the name when there is none or it fails to load
  *  (Google's image host is not always reachable from Russia). */
-export function Avatar({ user, size = 32 }: { user: Pick<User, "name" | "picture"> & { verified?: boolean }; size?: number }) {
+export function Avatar({ user, size = 32 }: { user: Pick<User, "name" | "picture"> & { id?: number; verified?: boolean }; size?: number }) {
   const [broken, setBroken] = useState(false);
   // The site's own account wears the ball's emblem (the organizers' Telegram picture).
   if (user.verified) {
@@ -119,9 +119,10 @@ export function Avatar({ user, size = 32 }: { user: Pick<User, "name" | "picture
       onError={() => setBroken(true)}
     />
   ) : (
+    // The letter on the person's own colour, deep in the light theme and pale in the dark one.
     <span
-      className="grid shrink-0 place-items-center rounded-full bg-accent font-medium text-accent-ink"
-      style={{ width: size, height: size, fontSize: size * 0.45 }}
+      className="grid shrink-0 place-items-center rounded-full bg-[hsl(var(--hue)_48%_44%)] font-medium text-white dark:bg-[hsl(var(--hue)_62%_76%)] dark:text-[#0a1028]"
+      style={{ ...hueStyle(userHue(user)), width: size, height: size, fontSize: size * 0.45 }}
       aria-hidden
     >
       {user.name.trim().charAt(0).toUpperCase() || <CircleUserRound className="size-[60%]" />}
