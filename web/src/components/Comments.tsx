@@ -206,6 +206,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   const phone = usePhone();
   const sheet = open && phone;
   const [sheetTop, setSheetTop] = useState(0);
+  const [keyboard, setKeyboard] = useState(0);
   // enter: sliding up; idle; drag: following a finger (no transition); settle: easing back to
   // the top; leave: sliding away, then the drawer unmounts.
   const [phase, setPhase] = useState<"enter" | "idle" | "drag" | "settle" | "leave">("enter");
@@ -222,6 +223,11 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       setSheetTop(Math.max(64, video ? video.getBoundingClientRect().bottom : 64));
     };
     measure();
+    // The on-screen keyboard: lift the drawer's bottom (and its comment box) above it.
+    const vv = window.visualViewport;
+    const lift = () => vv && setKeyboard(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
+    vv?.addEventListener("resize", lift);
+    vv?.addEventListener("scroll", lift);
     // The page underneath stays put while the drawer is open.
     const root = document.documentElement;
     const before = root.style.overflow;
@@ -235,6 +241,9 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       root.style.overflow = before;
       window.removeEventListener("resize", measure);
       window.removeEventListener("popstate", onPop);
+      vv?.removeEventListener("resize", lift);
+      vv?.removeEventListener("scroll", lift);
+      setKeyboard(0);
     };
   }, [sheet]);
   // Should a transitionend never arrive (a backgrounded tab), the drawer still goes.
@@ -243,6 +252,15 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
     const t = setTimeout(() => setOpen(false), 400);
     return () => clearTimeout(t);
   }, [phase]);
+  // A tap on the preview while the drawer is still sliding away brings it straight back.
+  const openSheet = () => {
+    if (!open) return setOpen(true);
+    if (phase === "leave") {
+      if (!history.state?.commentsSheet) history.pushState({ ...history.state, commentsSheet: true }, "");
+      setDrag(0);
+      setPhase("settle");
+    }
+  };
   // ✕, a drag past the threshold: step back over the drawer's history entry (popstate closes it).
   const closeSheet = () => (history.state?.commentsSheet ? history.back() : setPhase("leave"));
   const onSheetTouchStart = (e: TouchEvent, head: boolean) => {
@@ -272,6 +290,19 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
 
   const ctx: ThreadCtx = { user, moderator, pinnedBy, duration, now, people, flash, expand, children: replies, onSeek, post, like, act, askLogin };
   const first = threads[0];
+  // On computers the comment box heads the list; in the phone drawer it sits at the bottom, like YouTube's.
+  const composer = (
+    <Composer
+      user={user}
+      now={now}
+      duration={duration}
+      people={people}
+      placeholder="Напишите комментарий…"
+      onGuest={() => askLogin("Чтобы писать комментарии. Пишите уважительно — грубые комментарии не публикуются.")}
+      dropUp={sheet}
+      onSubmit={(b) => post(b)}
+    />
+  );
   // The list itself: in the page on computers, inside the drawer on phones.
   const body = (
     <div
@@ -280,7 +311,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       onTouchStart={sheet ? (e) => onSheetTouchStart(e, false) : undefined}
       onTouchMove={sheet ? onSheetTouchMove : undefined}
       onTouchEnd={sheet ? onSheetTouchEnd : undefined}
-      className={cn(sheet && "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(24px+env(safe-area-inset-bottom))]")}
+      className={cn(sheet && "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-6")}
     >
       <div className="mb-5 flex items-center gap-1 text-[14px]">
         {(["top", "new"] as const).map((s) => (
@@ -296,15 +327,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
         ))}
       </div>
 
-      <Composer
-        user={user}
-        now={now}
-        duration={duration}
-        people={people}
-        placeholder="Напишите комментарий…"
-        onGuest={() => askLogin("Чтобы писать комментарии. Пишите уважительно — грубые комментарии не публикуются.")}
-        onSubmit={(b) => post(b)}
-      />
+      {sheet ? null : composer}
 
       {pending.length ? (
         <div className="mt-5 flex justify-center">
@@ -331,7 +354,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
         </p>
       ) : null}
 
-      <ul className="mt-6 space-y-5">
+      <ul className={cn("space-y-5", sheet ? "mt-1" : "mt-6")}>
         {threads.map((c) => (
           <li key={c.id}>
             <Thread c={c} depth={0} ctx={ctx} />
@@ -343,8 +366,9 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   return (
     <div>
       {/* Phones: a teaser card like YouTube's app; tapping it opens the drawer. */}
-      {!open ? (
-        <button type="button" onClick={() => setOpen(true)} className="block w-full touch-manipulation rounded-[var(--radius-sheet)] bg-surface-2 p-3.5 text-left lg:hidden">
+      {/* It stays in place under the drawer, so the page doesn't shift as the drawer opens and closes. */}
+      {phone || !open ? (
+        <button type="button" onClick={openSheet} className="block w-full touch-manipulation rounded-[var(--radius-sheet)] bg-surface-2 p-3.5 text-left lg:hidden">
           <span className="flex items-baseline gap-2">
             <span className="text-[15px] font-semibold">Комментарии</span>
             {list ? <span className="tnum text-[14px] text-ink-3">{count}</span> : null}
@@ -369,6 +393,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
             className="fixed inset-x-0 bottom-0 z-[45] flex flex-col bg-bg shadow-[var(--shadow-pop)]"
             style={{
               top: sheetTop,
+              bottom: keyboard,
               transform: phase === "leave" ? "translateY(100%)" : `translateY(${drag}px)`,
               transition: phase === "settle" || phase === "leave" ? "transform 220ms cubic-bezier(.2,.7,.2,1)" : "none",
               animation: phase === "enter" ? "sheet-up 260ms cubic-bezier(.2,.7,.2,1)" : undefined,
@@ -400,6 +425,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
               </div>
             </div>
             {body}
+            <div className="shrink-0 border-t border-line bg-bg px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))]">{composer}</div>
           </div>,
           document.body,
         )
@@ -819,6 +845,7 @@ function Composer({
   placeholder,
   small,
   autoFocus,
+  dropUp,
   initial = "",
   onGuest,
   onCancel,
@@ -831,6 +858,8 @@ function Composer({
   placeholder: string;
   small?: boolean;
   autoFocus?: boolean;
+  /** At the bottom of the screen (the phone drawer): @-suggestions open upwards. */
+  dropUp?: boolean;
   initial?: string;
   onGuest: () => void;
   onCancel?: () => void;
@@ -914,7 +943,12 @@ function Composer({
           />
         </div>
         {suggestions.length ? (
-          <ul className="absolute top-full left-0 z-30 mt-1 w-64 overflow-hidden rounded-xl bg-[var(--sheet)] py-1.5 shadow-[var(--shadow-pop)]">
+          <ul
+            className={cn(
+              "absolute left-0 z-30 w-64 overflow-hidden rounded-xl bg-[var(--sheet)] py-1.5 shadow-[var(--shadow-pop)]",
+              dropUp ? "bottom-full mb-1" : "top-full mt-1",
+            )}
+          >
             {suggestions.map((p) => (
               <li key={p.id}>
                 <button
