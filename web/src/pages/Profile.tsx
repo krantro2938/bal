@@ -1,8 +1,9 @@
-import { CircleCheck, MessageSquare, ThumbsUp } from "lucide-react";
+import { CircleCheck, ThumbsUp } from "lucide-react";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { Cover } from "@/components/DanceCard";
 import { Avatar } from "@/components/Header";
+import { PixelLetter } from "@/components/PixelLetter";
 import { PixelSky } from "@/components/PixelSky";
 import { Star } from "@/components/Star";
 import { StateBlock } from "@/components/StateBlock";
@@ -69,7 +70,7 @@ export function Profile() {
   return data.profile.verified ? (
     <SiteProfile profile={data.profile} comments={data.comments} />
   ) : (
-    <UserProfile profile={data.profile} comments={data.comments} />
+    <UserProfile profile={data.profile} />
   );
 }
 
@@ -90,13 +91,7 @@ function Handle({ profile }: { profile: ProfileData }) {
 
 // --- everyone ---
 
-function UserProfile({
-  profile,
-  comments,
-}: {
-  profile: ProfileData;
-  comments: ProfileComment[];
-}) {
+function UserProfile({ profile }: { profile: ProfileData }) {
   const joined = new Date(profile.createdAt);
   const days = Math.max(
     1,
@@ -138,7 +133,7 @@ function UserProfile({
         <ol className="relative grid grid-cols-2">
           <Milestone
             delay={400}
-            title="На сайте с"
+            title="В приложении с"
             value={joined.toLocaleDateString("ru-RU", {
               day: "numeric",
               month: "long",
@@ -165,63 +160,13 @@ function UserProfile({
         </ol>
       </div>
 
-      <div className="mt-10 grid grid-cols-2 gap-3" style={rise(500)}>
-        <Stat
-          icon={<MessageSquare className="size-4" />}
-          n={profile.comments}
-          label={plural(
-            profile.comments,
-            "комментарий",
-            "комментария",
-            "комментариев",
-          )}
-        />
-        <Stat
-          icon={<ThumbsUp className="size-4" />}
-          n={profile.likes}
-          label={plural(
-            profile.likes,
-            "отметка «нравится»",
-            "отметки «нравится»",
-            "отметок «нравится»",
-          )}
-        />
+      {/* Their initial, drawn by the night sky: star pixels fly in and settle into the letter. */}
+      <div
+        className="mx-auto mt-10 h-44 max-w-[520px] overflow-hidden rounded-[var(--radius-sheet)] bg-[#05091a] sm:h-52"
+        style={rise(500)}
+      >
+        <PixelLetter letter={profile.name} className="size-full" />
       </div>
-
-      <section className="mt-12" style={rise(650)}>
-        <h2 className="mb-4 text-[13px] font-semibold tracking-[0.06em] text-ink-3 uppercase">
-          Комментарии
-        </h2>
-        {comments.length ? (
-          <ul className="divide-y divide-line border-y border-line">
-            {comments.map((c) => (
-              <li key={c.id}>
-                <Link
-                  to={`/dance/${c.dance}?c=${c.id}`}
-                  className="block py-3.5 hover:bg-surface"
-                >
-                  <p className="flex items-baseline gap-2 text-[13px]">
-                    <span className="font-medium">
-                      {c.danceTitle || c.dance}
-                    </span>
-                    <span className="text-ink-3">{since(c.createdAt)}</span>
-                  </p>
-                  <p className="mt-0.5 line-clamp-3 text-[15px] break-words whitespace-pre-line">
-                    {c.body}
-                  </p>
-                  {c.likes ? (
-                    <p className="mt-1 flex items-center gap-1 text-[13px] text-ink-3">
-                      <ThumbsUp className="size-3.5" /> {c.likes}
-                    </p>
-                  ) : null}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-[15px] text-ink-3">Пока ни одного комментария.</p>
-        )}
-      </section>
     </main>
   );
 }
