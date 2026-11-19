@@ -1,10 +1,13 @@
 package server
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/json"
+	"image"
+	"image/jpeg"
 	"io"
 	"log"
 	"net/http"
@@ -74,7 +77,11 @@ func TestSharePage(t *testing.T) {
 	s := lastServer
 	s.cfg.ShareURL = "https://share.example.test"
 	poster := filepath.Join(s.cfg.MediaDir, "demo", "poster.jpg")
-	if err := os.WriteFile(poster, []byte("test poster"), 0o644); err != nil {
+	var jpegData bytes.Buffer
+	if err := jpeg.Encode(&jpegData, image.NewRGBA(image.Rect(0, 0, 800, 450)), nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(poster, jpegData.Bytes(), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -107,10 +114,21 @@ func TestSharePage(t *testing.T) {
 		}
 	}
 
-	check("/", `property="og:image" content="https://share.example.test/og.png"`)
+	check("/",
+		`property="og:site_name" content="Звёздная одиссея"`,
+		`property="og:title" content="Репетиции бала"`,
+		`name="twitter:title" content="Репетиции бала"`,
+		`property="og:image" content="https://share.example.test/og.png"`,
+		`property="og:image:width" content="1200"`,
+		`property="og:image:height" content="630"`,
+		`name="twitter:card" content="summary_large_image"`,
+		`name="twitter:image" content="https://share.example.test/og.png"`)
 	check("/dance/demo?t=42&v=2",
-		`property="og:title" content="Демо · Звёздная одиссея"`,
+		`property="og:title" content="Демо"`,
 		`property="og:image" content="https://share.example.test/media/demo/poster.jpg"`,
+		`property="og:image:width" content="800"`,
+		`property="og:image:height" content="450"`,
+		`name="twitter:image" content="https://share.example.test/media/demo/poster.jpg"`,
 		`property="og:url" content="https://share.example.test/dance/demo?t=42&amp;v=2"`,
 		`href="http://example.test/dance/demo?t=42&amp;v=2"`)
 	if err := os.Remove(poster); err != nil {

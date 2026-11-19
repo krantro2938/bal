@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"html/template"
+	"image/jpeg"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,7 +17,8 @@ const defaultDescription = "Видео-инструкции, схемы и му�
 // pageMeta is what link previews (Telegram, VK, search engines) see without
 // running JavaScript: title, description, image and canonical URL.
 type pageMeta struct {
-	Title, Description, Image, Path string
+	Title, ShareTitle, Description, Image, Path string
+	ImageWidth, ImageHeight                     int
 }
 
 var sharePage = template.Must(template.New("share").Parse(`<!doctype html>
@@ -26,11 +28,17 @@ var sharePage = template.Must(template.New("share").Parse(`<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{.Title}}</title>
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Звёздная одиссея · Репетиции">
-  <meta property="og:title" content="{{.Title}}">
+  <meta property="og:site_name" content="Звёздная одиссея">
+  <meta property="og:title" content="{{.ShareTitle}}">
   <meta property="og:description" content="{{.Description}}">
   <meta property="og:image" content="{{.Image}}">
+  {{if .ImageWidth}}<meta property="og:image:width" content="{{.ImageWidth}}">
+  <meta property="og:image:height" content="{{.ImageHeight}}">{{end}}
   <meta property="og:url" content="{{.URL}}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{.ShareTitle}}">
+  <meta name="twitter:description" content="{{.Description}}">
+  <meta name="twitter:image" content="{{.Image}}">
 </head>
 <body>
   <main>
@@ -42,7 +50,10 @@ var sharePage = template.Must(template.New("share").Parse(`<!doctype html>
 </html>`))
 
 func (s *Server) metaFor(path string) pageMeta {
-	m := pageMeta{Title: "Звёздная одиссея · Репетиции бала", Description: defaultDescription, Image: "/og.png", Path: path}
+	m := pageMeta{
+		Title: "Звёздная одиссея · Репетиции бала", ShareTitle: "Репетиции бала", Description: defaultDescription,
+		Image: "/og.png", Path: path, ImageWidth: 1200, ImageHeight: 630,
+	}
 	slug, ok := strings.CutPrefix(path, "/dance/")
 	if !ok || strings.Contains(slug, "/") {
 		return m
@@ -53,15 +64,31 @@ func (s *Server) metaFor(path string) pageMeta {
 	}
 	if d := src.Find(slug); d != nil {
 		m.Title = d.Title + " · Звёздная одиссея"
+		m.ShareTitle = d.Title
 		m.Description = d.Description
 		if metas[slug] != nil {
 			poster := slug + "/poster.jpg"
-			if info, err := os.Stat(filepath.Join(s.cfg.MediaDir, poster)); err == nil && info.Mode().IsRegular() {
+			posterPath := filepath.Join(s.cfg.MediaDir, poster)
+			if info, err := os.Stat(posterPath); err == nil && info.Mode().IsRegular() {
 				m.Image = mediaURL(poster)
+				m.ImageWidth, m.ImageHeight = jpegDimensions(posterPath)
 			}
 		}
 	}
 	return m
+}
+
+func jpegDimensions(path string) (width, height int) {
+	f, err := os.Open(path)
+	if err != nil {
+		return 0, 0
+	}
+	defer f.Close()
+	config, err := jpeg.DecodeConfig(f)
+	if err != nil {
+		return 0, 0
+	}
+	return config.Width, config.Height
 }
 
 func (s *Server) serveSharePage(w http.ResponseWriter, r *http.Request, path string) {
