@@ -58,11 +58,11 @@ export function Me() {
           {progress.length ? (
             <section>
               <Title>Продолжить</Title>
-              <ul className="-mx-3 flex snap-x gap-4 overflow-x-auto px-3 pb-2 sm:-mx-4 sm:px-4 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-2 lg:px-0">
+              <ul className="-mx-3 flex gap-4 overflow-x-auto px-3 pb-2 [scrollbar-width:none] sm:-mx-5 sm:px-5 lg:mx-0 lg:grid lg:grid-cols-2 lg:px-0">
                 {progress.map((p) => {
                   const d = bySlug.get(p.dance)!;
                   return (
-                    <li key={p.dance} className="w-[72vw] shrink-0 snap-start sm:w-[300px] lg:w-auto">
+                    <li key={p.dance} className="w-[72vw] shrink-0 sm:w-[300px] lg:w-auto">
                       <Link to={`/dance/${d.slug}?t=${Math.floor(p.position)}`} className="group block">
                         {/* clipped with the cover so the bar follows its rounded corners */}
                         <div className="relative overflow-hidden rounded-[var(--radius-frame)]">
