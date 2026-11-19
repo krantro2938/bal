@@ -39,7 +39,7 @@ export type DanceDetail = DanceSummary & {
 
 export type User = { id: number; name: string; username: string; picture?: string; email?: string };
 
-export type AuthConfig = { google: boolean; password: boolean; dev: boolean };
+export type AuthConfig = { google: boolean; password: boolean; dev: boolean; analytics?: boolean };
 
 export type Note = {
   id: number;

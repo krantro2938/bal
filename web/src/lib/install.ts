@@ -1,4 +1,5 @@
 import { useEffect, useReducer } from "react";
+import { track } from "./analytics";
 
 // The browser offers installation once (beforeinstallprompt) and only if someone is listening
 // early, so the offer is caught here at startup and shared by the card and the account menu.
@@ -47,7 +48,10 @@ export function useInstall() {
       if (!e) return false;
       await e.prompt();
       const { outcome } = await e.userChoice;
-      if (outcome === "accepted") offer = null;
+      if (outcome === "accepted") {
+        offer = null;
+        track("install");
+      }
       emit();
       return outcome === "accepted";
     },

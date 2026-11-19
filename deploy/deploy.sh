@@ -11,7 +11,8 @@
 # when moderation/ changes, and bal reaches it over the private "bal" network.
 set -euo pipefail
 host="${1:?usage: deploy/deploy.sh <ssh-host>}"
-port="${BAL_HOST_PORT:-18090}"
+blue="${BAL_BLUE_PORT:-18090}"
+green="${BAL_GREEN_PORT:-18091}"
 cd "$(dirname "$0")/.."
 
 tag="bal:$(git rev-parse --short HEAD)$(git diff --quiet || echo -dirty)"
@@ -45,17 +46,39 @@ fi"
 echo "==> shipping image"
 docker save "$tag" bal:latest | gzip -1 | ssh "$host" 'gunzip | docker load'
 
-echo "==> restarting"
-ssh "$host" "docker rm -f bal >/dev/null 2>&1 || true
-docker run -d --name bal --restart unless-stopped \
+# Zero downtime: the host's Caddy proxies to two ports (deploy/Caddyfile) and uses whichever is up.
+# The new version starts on the free port as bal-blue (18090) or bal-green (18091); once it answers
+# /healthz the old one is stopped gracefully (SIGTERM: it finishes requests in flight, Caddy retries
+# the rest on the new one). If the new one never gets healthy it is removed and the old one keeps going.
+echo "==> switching over"
+ssh "$host" "set -e
+caddy_has() { curl -fsS http://127.0.0.1:2019/config/ 2>/dev/null | grep -q \"127.0.0.1:\$1\" || grep -qs \"127.0.0.1:\$1\" /etc/caddy/Caddyfile; }
+if ! caddy_has $blue || ! caddy_has $green; then
+  echo 'Caddy does not proxy to both $blue and $green yet: update its site block from deploy/Caddyfile and reload Caddy first.'
+  exit 1
+fi
+if docker ps -q --filter name=^bal-blue\$ | grep -q .; then old=bal-blue new=bal-green newport=$green
+elif docker ps -q --filter name=^bal-green\$ | grep -q .; then old=bal-green new=bal-blue newport=$blue
+elif docker ps -q --filter name=^bal\$ | grep -q .; then old=bal new=bal-green newport=$green   # before blue/green
+else old= new=bal-blue newport=$blue; fi
+docker rm -f \$new >/dev/null 2>&1 || true
+docker run -d --name \$new --restart unless-stopped \
   --env-file /srv/bal/bal.env \
   -e BAL_MODERATION_URL=http://bal-mod:8000 \
   --network bal \
-  -p 127.0.0.1:$port:8080 \
+  -p 127.0.0.1:\$newport:8080 \
   -v /srv/bal/media:/data/media:ro \
   -v /srv/bal/db:/data/db \
   --read-only --tmpfs /tmp \
   --memory 300m \
-  $tag
-sleep 2; docker ps --filter name=^bal\$ --format '{{.Status}}'; curl -fsS http://127.0.0.1:$port/healthz && echo ' healthy'
+  $tag >/dev/null
+for i in \$(seq 60); do curl -fsS http://127.0.0.1:\$newport/healthz >/dev/null 2>&1 && break; sleep 0.5; done
+if ! curl -fsS http://127.0.0.1:\$newport/healthz >/dev/null 2>&1; then
+  echo \"\$new did not get healthy; keeping \${old:-nothing} running. Its log:\"
+  docker logs --tail 30 \$new; docker rm -f \$new >/dev/null; exit 1
+fi
+echo \"\$new is healthy on :\$newport\"
+# Give Caddy's health check a moment to see it before the old one goes.
+sleep 3
+if [ -n \"\$old\" ]; then docker stop -t 20 \$old >/dev/null && docker rm \$old >/dev/null && echo \"stopped \$old\"; fi
 docker image prune -f >/dev/null"

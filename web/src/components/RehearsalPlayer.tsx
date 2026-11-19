@@ -90,6 +90,8 @@ export function RehearsalPlayer({
   onTheatre,
   next = [],
   prev,
+  pull,
+  autoPlay,
 }: {
   dance: DanceDetail;
   player: RefObject<MediaPlayerInstance | null>;
@@ -104,6 +106,9 @@ export function RehearsalPlayer({
   /** Dances offered on the end screen, next in the programme first. */
   next?: DanceSummary[];
   prev?: DanceSummary;
+  pull?: Pull;
+  /** Continue playing at startAt (coming back from the mini player). */
+  autoPlay?: boolean;
 }) {
   const video = dance.video!;
   const [sound] = useState(savedVolume);
@@ -153,11 +158,25 @@ export function RehearsalPlayer({
         onVolumeChange={(d) => saveVolume(d.volume, d.muted)}
         keyShortcuts={{ togglePaused: "k Space", seekBackward: "j J ArrowLeft", seekForward: "l L ArrowRight", toggleFullscreen: "f" }}
         onLoadedMetadata={onReady}
-        onMediaSeekRequest={(t) => {
-          // (Pressing play then sends Vidstack's own "seek to 0", which must not replace the choice.)
-          if (player.current?.state.ended && t < video.duration - 0.5 && !(t === 0 && afterEnd.current !== null)) {
+        onMediaSeekRequest={(t, e) => {
+          const p = player.current;
+          // Playing then sends Vidstack's own "seek to 0", which must not replace the choice.
+          if (t === 0 && afterEnd.current !== null) {
+            e.stopImmediatePropagation();
+            return;
+          }
+          // Like YouTube, a seek after the end plays from there. Vidstack stays "ended" otherwise:
+          // the time reads the end and phones show no play button.
+          if (p?.state.ended && t < video.duration - 0.5) {
+            const first = afterEnd.current === null;
             afterEnd.current = t;
             setLeftEnd(true);
+            if (first)
+              queueMicrotask(() =>
+                p.play().catch(() => {
+                  afterEnd.current = null;
+                }),
+              );
           }
         }}
         onPlay={() => {
@@ -178,6 +197,7 @@ export function RehearsalPlayer({
           if (!started.current && startAt !== null && player.current) {
             started.current = true;
             player.current.currentTime = Math.min(startAt, video.duration - 0.5);
+            if (autoPlay) player.current.play().catch(() => {});
           }
         }}
       >
@@ -215,7 +235,7 @@ export function RehearsalPlayer({
             beforeFullscreenButton: <TheatreButton on={theatre} onToggle={onTheatre} />,
           }}
         />
-        <Gestures player={player} />
+        <Gestures player={player} pull={pull} />
         <EndScreen next={next} prev={prev} onReplay={replay} hidden={!!loop || leftEnd} />
       </MediaPlayer>
       </div>
@@ -254,7 +274,7 @@ export function RehearsalBar({
   };
 
   return (
-    <div className="bg-bg pb-1 sm:pt-3">
+    <div className="bg-bg sm:pt-3 sm:pb-1">
       {/* Phones: these controls live in the player (repeat, note, speed) and in gestures (±5 s). */}
       <div className="flex flex-wrap items-center gap-1.5 max-sm:hidden sm:gap-2">
         <SplitPill label="Перемотка" className="h-10">
@@ -602,12 +622,89 @@ function EndScreen({ next, prev, onReplay, hidden }: { next: DanceSummary[]; pre
  * double-click is fullscreen with a mouse, double-tap on the left or right third seeks ∓5 s on
  * touch (more taps keep adding, like YouTube); press and hold plays at 2× until released.
  */
-function Gestures({ player }: { player: RefObject<MediaPlayerInstance | null> }) {
+/** How long the controls stay up after a tap while the video plays. */
+const IDLE_HIDE = 3000;
+
+/** Phones: dragging the video down hands it to the mini player and shows the feed (see Dance). */
+export type Pull = { move: (dy: number) => void; end: (dy: number, velocity: number) => void };
+
+function Gestures({ player, pull }: { player: RefObject<MediaPlayerInstance | null>; pull?: Pull }) {
   const remote = useMediaRemote();
+  const layer = useRef<HTMLDivElement>(null);
+  const pullRef = useRef(pull);
+  pullRef.current = pull;
   const [hold, setHold] = useState(false);
   const [jump, setJump] = useState<{ side: -1 | 1; total: number; key: number } | null>(null);
-  const g = useRef({ x: 0, y: 0, timer: 0, holding: false, rate: 1, lastTap: 0, lastSide: 0 as -1 | 0 | 1, single: 0, seekUntil: 0, wereShowing: false });
+  const g = useRef({ x: 0, y: 0, timer: 0, holding: false, rate: 1, lastTap: 0, lastSide: 0 as -1 | 0 | 1, single: 0, seekUntil: 0, wereShowing: false, pulled: false });
   const jumpTimer = useRef(0);
+
+  // Phones: a tap anywhere outside the playing video puts its controls away, like YouTube's app.
+  useEffect(() => {
+    const away = (e: globalThis.PointerEvent) => {
+      const p = player.current;
+      if (e.pointerType === "mouse" || !p?.el || p.el.contains(e.target as Node)) return;
+      if (!p.state.paused && p.controls.showing) p.controls.hide(0);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [player]);
+
+  // Touch events rather than pointer events: only a cancelled touchmove keeps the page from
+  // scrolling (or bouncing on iPhones) while the finger drags the video down.
+  useEffect(() => {
+    const el = layer.current;
+    if (!el) return;
+    let start: { x: number; y: number } | null = null;
+    let mode: "pull" | "other" | null = null;
+    let dy = 0;
+    let last = { y: 0, t: 0, v: 0 };
+    const onStart = (e: TouchEvent) => {
+      g.current.pulled = false;
+      start = null;
+      if (e.touches.length !== 1 || !pullRef.current || player.current?.state.fullscreen || matchMedia("(min-width: 640px)").matches) return;
+      const t = e.touches[0];
+      start = { x: t.clientX, y: t.clientY };
+      mode = null;
+      dy = 0;
+      last = { y: t.clientY, t: e.timeStamp, v: 0 };
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!start || mode === "other") return;
+      const t = e.touches[0];
+      const dx = t.clientX - start.x;
+      dy = t.clientY - start.y;
+      if (mode === null) {
+        // Undecided small moves stay ours too, or the browser would start scrolling first.
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+          if (dy >= 0) e.preventDefault();
+          return;
+        }
+        mode = dy > 0 && dy > Math.abs(dx) ? "pull" : "other";
+        if (mode === "other") return;
+        g.current.pulled = true;
+        window.clearTimeout(g.current.timer);
+      }
+      e.preventDefault();
+      const dt = e.timeStamp - last.t;
+      if (dt > 0) last = { y: t.clientY, t: e.timeStamp, v: (t.clientY - last.y) / dt };
+      pullRef.current?.move(Math.max(0, dy));
+    };
+    const onEnd = () => {
+      if (start && mode === "pull") pullRef.current?.end(Math.max(0, dy), last.v);
+      start = null;
+      mode = null;
+    };
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, [player]);
 
   const side = (e: PointerEvent): -1 | 0 | 1 => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -625,6 +722,7 @@ function Gestures({ player }: { player: RefObject<MediaPlayerInstance | null> })
 
   return (
     <div
+      ref={layer}
       className="absolute inset-0 z-0 touch-manipulation select-none [-webkit-touch-callout:none]"
       onContextMenu={(e) => e.preventDefault()}
       onPointerDown={(e) => {
@@ -654,7 +752,7 @@ function Gestures({ player }: { player: RefObject<MediaPlayerInstance | null> })
         const s = g.current;
         const p = player.current;
         window.clearTimeout(s.timer);
-        if (!p) return;
+        if (!p || s.pulled) return;
         if (s.holding) {
           s.holding = false;
           p.playbackRate = s.rate;
@@ -679,9 +777,14 @@ function Gestures({ player }: { player: RefObject<MediaPlayerInstance | null> })
           s.lastTap = now;
           s.lastSide = where;
           window.clearTimeout(s.single);
-          // One tap shows the controls (they stay until the player's idle timeout) or hides them if they were up.
+          // One tap shows the controls or hides them if they were up. Shown during playback, they
+          // fade again after a few idle seconds (show(0) alone would cancel the player's own timer).
           const wereShowing = s.wereShowing;
-          s.single = window.setTimeout(() => (wereShowing ? p.controls.hide(0) : p.controls.show(0)), 260);
+          s.single = window.setTimeout(() => {
+            if (wereShowing) return p.controls.hide(0);
+            p.controls.show(0);
+            if (!p.state.paused) p.controls.hide(IDLE_HIDE);
+          }, 260);
           return;
         }
         if (now - s.lastTap < 300) {

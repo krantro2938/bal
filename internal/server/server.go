@@ -45,6 +45,11 @@ type Config struct {
 	// Moderators are emails (verified sign-ins only) that can approve, pin and delete comments.
 	Moderators []string
 
+	// AnalyticsURL is a self-hosted Umami origin and AnalyticsSiteID the website's UUID in it;
+	// both empty means no counting (see analytics.go).
+	AnalyticsURL    string
+	AnalyticsSiteID string
+
 	Log *log.Logger
 }
 
@@ -59,6 +64,15 @@ type Server struct {
 	checker   *moderation.Checker
 	events    *hub
 	secure    bool
+	// closing is closed when the server starts shutting down, so open event streams end and
+	// the old process can exit while the new one takes the traffic.
+	closing chan struct{}
+
+	analyticsURL    string // Umami origin; empty while counting is off
+	analyticsClient *http.Client
+	publicHost      string
+	pulses          *limiter
+	pulseSlots      chan struct{}
 }
 
 const sessionCookie = "bal_session"
@@ -88,6 +102,17 @@ func Run(ctx context.Context, cfg Config) error {
 		lib:    &content.Library{SourcesPath: cfg.SourcesPath, MediaDir: cfg.MediaDir},
 		secret: secret,
 		secure: pub.Scheme == "https",
+
+		closing:         make(chan struct{}),
+		analyticsClient: newAnalyticsClient(),
+		publicHost:      pub.Hostname(),
+		pulses:          newLimiter(30, 2*time.Second),
+		pulseSlots:      make(chan struct{}, 16),
+	}
+	if s.analyticsURL, err = analyticsOrigin(cfg.AnalyticsURL, cfg.AnalyticsSiteID); err != nil {
+		cfg.Log.Printf("visit counting off: %v", err)
+	} else if s.analyticsURL != "" {
+		cfg.Log.Printf("visit counting: reports go to %s", s.analyticsURL)
 	}
 	s.providers = map[string]*auth.Provider{}
 	s.limiter = newLimiter(10, 6*time.Second)
@@ -115,6 +140,7 @@ func Run(ctx context.Context, cfg Config) error {
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
+	srv.RegisterOnShutdown(func() { close(s.closing) })
 	ln, err := net.Listen("tcp", cfg.Addr)
 	if err != nil {
 		return err
@@ -170,6 +196,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("POST /api/notifications/read", s.requireUser(s.handleReadNotifications))
 
 	mux.Handle("GET /media/", http.StripPrefix("/media/", mediaHandler(s.cfg.MediaDir)))
+	mux.HandleFunc("POST /api/pulse", s.handlePulse)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
 	mux.HandleFunc("GET /robots.txt", s.handleRobots)
 	mux.HandleFunc("GET /sitemap.xml", s.handleSitemap)

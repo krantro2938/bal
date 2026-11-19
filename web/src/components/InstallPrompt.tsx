@@ -1,6 +1,8 @@
 import { Share, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useInstall } from "@/lib/install";
+import { useMini } from "@/lib/mini";
+import { cn } from "@/lib/utils";
 
 const KEY = "bal:install-dismissed";
 const AGAIN_AFTER = 30 * 86400000; // ask again a month after ✕
@@ -19,6 +21,7 @@ export function InstallPrompt() {
   const { available, native, install, hintOpen, hideHint } = useInstall();
   const [ready, setReady] = useState(false);
   const [dismissed, setDismissed] = useState(dismissedRecently);
+  const mini = useMini();
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), DELAY);
@@ -41,7 +44,11 @@ export function InstallPrompt() {
     <div
       role="dialog"
       aria-label="Установить приложение"
-      className="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-40 flex items-start gap-3 rounded-2xl bg-[var(--sheet)] p-3.5 shadow-[var(--shadow-pop)] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[380px]"
+      className={cn(
+        "fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-40 flex items-start gap-3 rounded-2xl bg-[var(--sheet)] p-3.5 shadow-[var(--shadow-pop)] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[380px]",
+        // Phones: above the mini player.
+        mini && "max-sm:bottom-[calc(76px+env(safe-area-inset-bottom))]",
+      )}
     >
       <img src="/icons/icon-192.png" alt="" className="size-11 shrink-0 rounded-xl" />
       <div className="min-w-0 flex-1">

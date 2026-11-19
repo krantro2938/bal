@@ -146,6 +146,8 @@ func main() {
 		cfg.DevLogin = os.Getenv("BAL_DEV_LOGIN") == "1"
 		cfg.TrustProxy = os.Getenv("BAL_TRUST_PROXY") == "1"
 		cfg.ModerationURL = os.Getenv("BAL_MODERATION_URL")
+		cfg.AnalyticsURL = os.Getenv("BAL_ANALYTICS_URL")
+		cfg.AnalyticsSiteID = os.Getenv("BAL_ANALYTICS_SITE_ID")
 		for _, e := range strings.Split(os.Getenv("BAL_MODERATORS"), ",") {
 			if e = strings.ToLower(strings.TrimSpace(e)); e != "" {
 				cfg.Moderators = append(cfg.Moderators, e)

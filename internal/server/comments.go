@@ -393,6 +393,8 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request, key string) {
 		select {
 		case <-r.Context().Done():
 			return
+		case <-s.closing:
+			return // shutting down: the browser reconnects (retry above) to the new process
 		case b := <-ch:
 			w.Write([]byte("data: "))
 			w.Write(b)

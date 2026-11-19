@@ -252,6 +252,8 @@ func (s *Server) handleAuthConfig(w http.ResponseWriter, r *http.Request) {
 		"google":   s.providers["google"] != nil,
 		"password": true,
 		"dev":      s.cfg.DevLogin,
+		// Not about sign-in, but the page already asks for this once: whether to send /api/pulse.
+		"analytics": s.analyticsURL != "",
 	})
 }
 
