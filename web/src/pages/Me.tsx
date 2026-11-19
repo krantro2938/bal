@@ -1,4 +1,4 @@
-import { Check, LogOut, MonitorDown, Moon, Pencil, Play, Smartphone, Sun, X } from "lucide-react";
+import { Check, LogOut, MonitorDown, Moon, Pencil, Play, Smartphone, Sun } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -6,6 +6,7 @@ import { Cover } from "@/components/DanceCard";
 import { Avatar } from "@/components/Header";
 import { PushSwitch } from "@/components/PushSwitch";
 import { Button } from "@/components/ui/button";
+import { Sheet } from "@/components/ui/sheet";
 import { track } from "@/lib/analytics";
 import { api, ApiError } from "@/lib/api";
 import { timecode } from "@/lib/format";
@@ -54,18 +55,15 @@ export function Me() {
       />
 
       {/* You: picture, name, @handle; your public profile is one tap away. */}
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-        {/* Anchored at the top with a fixed-size picture, so editing the @handle (a taller field and
-            a hint) only grows downwards: the picture keeps its size and the name stays put.
-            The top padding centres the name and handle on the picture when not editing. */}
-        <div className="flex min-w-0 items-start gap-4 sm:gap-6">
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+        <div className="flex min-w-0 items-center gap-4 sm:gap-6">
           <span className="shrink-0 sm:hidden">
             <Avatar user={user!} size={72} />
           </span>
           <span className="shrink-0 max-sm:hidden">
             <Avatar user={user!} size={112} />
           </span>
-          <div className="min-w-0 flex-1 pt-2.5 sm:pt-0">
+          <div className="min-w-0 flex-1">
             <h1 className="truncate text-[24px] leading-tight font-semibold sm:text-[32px]">{user!.name}</h1>
             <div className="mt-1 text-[14px] text-ink-3">
               <UsernameEditor username={user!.username} />
@@ -298,7 +296,8 @@ function ShelfItem({ children }: { children: ReactNode }) {
 // «Открыть профиль»: the site's soft accent, as before; the person's colour is on their avatar.
 const profileButton = "items-center rounded-full bg-accent-soft font-medium transition hover:brightness-110";
 
-/** The public @handle used in comments and mentions; unique, checked while typing. */
+/** The public @handle used in comments and mentions; unique, checked while typing. It is
+ *  edited in a sheet over the page (a window on computers), so nothing on the page moves. */
 function UsernameEditor({ username }: { username: string }) {
   const { refresh } = useSession();
   const [edit, setEdit] = useState(false);
@@ -311,69 +310,62 @@ function UsernameEditor({ username }: { username: string }) {
     const t = setTimeout(() => api.usernameFree(clean).then(setCheck, () => setCheck(null)), 300);
     return () => clearTimeout(t);
   }, [clean, edit, username]);
-  if (!edit) {
-    return (
-      <button type="button" onClick={() => setEdit(true)} className="group flex items-center gap-1 hover:text-ink" title="Изменить имя пользователя">
-        @{username} <Pencil className="size-3.5 opacity-60 group-hover:opacity-100" />
-      </button>
-    );
-  }
   const hint = error || (check ? (!check.valid ? "3–30 символов: a–z, цифры, «_» и «.», первая — буква" : check.free ? "Свободно" : "Уже занято") : "");
   const ok = clean === username || (check?.valid && check.free);
-  const cancel = () => {
+  const open = () => {
     setValue(username);
     setError("");
-    setEdit(false);
+    setEdit(true);
   };
   return (
-    // One row that never wraps (the field gives way), the hint under it.
-    <form
-      className="flex max-w-[360px] flex-col gap-1"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        if (clean === username) return setEdit(false);
-        try {
-          await api.setUsername(clean);
-          await refresh();
-          setEdit(false);
-          toast(`Теперь вы @${clean}`);
-        } catch (err) {
-          setError(err instanceof ApiError ? err.message : "Не удалось сохранить");
-        }
-      }}
-    >
-      <div className="flex items-center gap-1.5">
-        <label className="flex h-9 min-w-0 flex-1 items-center rounded-full bg-surface-2 pr-1 pl-3 text-ink focus-within:ring-1 focus-within:ring-line-strong">
-          <span className="text-ink-3">@</span>
-          <input
-            autoFocus
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              setError("");
-            }}
-            onKeyDown={(e) => e.key === "Escape" && cancel()}
-            maxLength={31}
-            spellCheck={false}
-            autoCapitalize="none"
-            className="w-full min-w-0 bg-transparent px-0.5 text-[14px] outline-none"
-            aria-label="Имя пользователя"
-          />
-          <button type="submit" disabled={!ok} className="h-7 shrink-0 rounded-full bg-accent px-3 text-[13px] font-medium text-accent-ink disabled:opacity-40">
-            Сохранить
-          </button>
-        </label>
-        <button
-          type="button"
-          onClick={cancel}
-          className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-ink-3 hover:bg-line hover:text-ink"
-          aria-label="Отмена"
-          title="Отмена"
+    <>
+      <button type="button" onClick={open} className="group flex items-center gap-1 hover:text-ink" title="Изменить имя пользователя">
+        @{username} <Pencil className="size-3.5 opacity-60 group-hover:opacity-100" />
+      </button>
+      <Sheet open={edit} onOpenChange={setEdit} title="Имя пользователя" description="Его видят в комментариях, по нему вас упоминают и открывают ваш профиль.">
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (clean === username) return setEdit(false);
+            try {
+              await api.setUsername(clean);
+              await refresh();
+              setEdit(false);
+              toast(`Теперь вы @${clean}`);
+            } catch (err) {
+              setError(err instanceof ApiError ? err.message : "Не удалось сохранить");
+            }
+          }}
         >
-          <X className="size-4" />
-        </button>
-      </div>
-      {hint ? <span className={check?.free && !error ? "text-accent" : "text-danger"}>{hint}</span> : null}
-    </form>
+          <label className="flex h-12 items-center rounded-xl bg-surface-2 px-4 text-ink focus-within:ring-2 focus-within:ring-line-strong">
+            <span className="text-ink-3">@</span>
+            <input
+              autoFocus
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value);
+                setError("");
+              }}
+              maxLength={31}
+              spellCheck={false}
+              autoCapitalize="none"
+              autoComplete="off"
+              className="w-full min-w-0 bg-transparent px-0.5 text-[16px] outline-none"
+              aria-label="Имя пользователя"
+            />
+          </label>
+          {/* Always one line tall, so the sheet doesn't jump as the hint comes and goes. */}
+          <p className={cn("mt-2 min-h-5 text-[13px]", check?.free && !error ? "text-accent" : "text-danger")}>{hint}</p>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setEdit(false)}>
+              Отмена
+            </Button>
+            <Button type="submit" variant="primary" disabled={!ok}>
+              Сохранить
+            </Button>
+          </div>
+        </form>
+      </Sheet>
+    </>
   );
 }
