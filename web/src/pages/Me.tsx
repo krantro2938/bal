@@ -81,6 +81,23 @@ export function Me() {
 
       <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-12 lg:gap-10">
         <div className="space-y-12 lg:col-span-7">
+          {favorites.length ? (
+            <section>
+              <Title count={favorites.length}>Избранное</Title>
+              <Shelf>
+                {favorites.map((d) => (
+                  <ShelfItem key={d.slug}>
+                    <Link to={`/dance/${d.slug}`} state={WATCH} className="group block">
+                      <Cover dance={d} />
+                      <p className="mt-2 line-clamp-2 font-title text-[16px] leading-snug group-hover:underline">{d.title}</p>
+                      <p className="tnum text-[13px] text-ink-3">{d.kind === "glossary" ? "Словарь движений" : `Танец ${String(d.order).padStart(2, "0")}`}</p>
+                    </Link>
+                  </ShelfItem>
+                ))}
+              </Shelf>
+            </section>
+          ) : null}
+
           {history.length ? (
             <section>
               <Title>История</Title>
@@ -119,23 +136,6 @@ export function Me() {
                   );
                 })}
               </ul>
-            </section>
-          ) : null}
-
-          {favorites.length ? (
-            <section>
-              <Title count={favorites.length}>Избранное</Title>
-              <Shelf>
-                {favorites.map((d) => (
-                  <ShelfItem key={d.slug}>
-                    <Link to={`/dance/${d.slug}`} state={WATCH} className="group block">
-                      <Cover dance={d} />
-                      <p className="mt-2 line-clamp-2 font-title text-[16px] leading-snug group-hover:underline">{d.title}</p>
-                      <p className="tnum text-[13px] text-ink-3">{d.kind === "glossary" ? "Словарь движений" : `Танец ${String(d.order).padStart(2, "0")}`}</p>
-                    </Link>
-                  </ShelfItem>
-                ))}
-              </Shelf>
             </section>
           ) : null}
 
@@ -245,9 +245,9 @@ function Glow() {
   );
 }
 
-/** The page's own shapes while it loads (you, «История» rows; settings and «Выучено» beside them
- *  on computers, below on phones), so nothing jumps when it arrives. Once the session is known,
- *  your picture and name are already the real ones. */
+/** The page's own shapes while it loads (you, the «Избранное» row, «История» rows; settings and
+ *  «Выучено» beside them on computers, below on phones), so nothing jumps when it arrives. Once
+ *  the session is known, your picture and name are already the real ones. */
 function MeSkeleton() {
   const { user } = useSession();
   const block = "rounded-lg bg-surface-2";
@@ -283,19 +283,33 @@ function MeSkeleton() {
       </section>
 
       <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-12 lg:gap-10">
-        <div className="lg:col-span-7">
-          <div className={cn(block, "mb-3 h-6 w-28")} />
-          <div className="space-y-3 sm:space-y-4">
-            {Array.from({ length: 4 }, (_, i) => (
-              <div key={i} className="flex gap-3 sm:gap-4">
-                <div className="aspect-video w-[160px] shrink-0 rounded-lg bg-surface-2 sm:w-[246px] sm:rounded-[var(--radius-frame)]" />
-                <div className="min-w-0 flex-1 space-y-2 py-1">
-                  <div className={cn(block, "h-4 w-3/4 max-w-56 sm:h-5")} />
-                  <div className={cn(block, "h-3 w-24")} />
-                  <div className={cn(block, "h-3 w-12")} />
+        <div className="space-y-12 lg:col-span-7">
+          <div>
+            <div className={cn(block, "mb-3 h-6 w-36")} />
+            <div className="-mx-3 flex gap-3 overflow-hidden px-3 pb-2 sm:-mx-5 sm:gap-4 sm:px-5 lg:mx-0 lg:px-0">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="w-[56vw] max-w-[260px] shrink-0 sm:w-[240px]">
+                  <div className="aspect-video rounded-[var(--radius-frame)] bg-surface-2" />
+                  <div className={cn(block, "mt-2 h-4 w-3/5")} />
+                  <div className={cn(block, "mt-1.5 h-3 w-16")} />
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className={cn(block, "mb-3 h-6 w-28")} />
+            <div className="space-y-3 sm:space-y-4">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="flex gap-3 sm:gap-4">
+                  <div className="aspect-video w-[160px] shrink-0 rounded-lg bg-surface-2 sm:w-[246px] sm:rounded-[var(--radius-frame)]" />
+                  <div className="min-w-0 flex-1 space-y-2 py-1">
+                    <div className={cn(block, "h-4 w-3/4 max-w-56 sm:h-5")} />
+                    <div className={cn(block, "h-3 w-24")} />
+                    <div className={cn(block, "h-3 w-12")} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         <div className="flex flex-col gap-12 lg:col-span-5">
