@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
-import { VideoCard } from "@/components/DanceCard";
+import { isNew, VideoCard } from "@/components/DanceCard";
 import { PixelSearch } from "@/components/PixelSearch";
 import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
@@ -43,11 +43,15 @@ export function Catalog({ peek }: { peek?: boolean } = {}) {
       learned: (d) => !!state?.learned.includes(d.slug),
       todo: (d) => d.kind === "dance" && !state?.learned.includes(d.slug),
     };
-    return data.dances.filter(
+    const found = data.dances.filter(
       (d) =>
         pass[filter](d) &&
         (!key || searchKey([d.title, d.description, ...(d.chapters ?? []).map((c) => c.title)].join(" ")).includes(key)),
     );
+    // A video that has just come out leads the feed (newest first) while it is «Новое»;
+    // the rest keep the programme order.
+    const fresh = (d: DanceSummary) => (d.available && isNew(d) ? new Date(d.published!).getTime() : 0);
+    return found.sort((a, b) => fresh(b) - fresh(a));
   }, [data, q, filter, state]);
 
   const glossaryHit = (d: DanceSummary) => {

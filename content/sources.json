@@ -646,6 +646,44 @@
       ],
       "coverAt": 240,
       "published": "2026-11-14T17:01:20+00:00"
+    },
+    {
+      "slug": "fokstrot-zig-zag",
+      "order": 12,
+      "title": "Фокстрот «Зиг-Заг»",
+      "kind": "dance",
+      "description": "Парный танец в духе 60-х: шаги по линии танца, «роки», зиг-заг накрест и поворот ту степом. Повторяется по кругу, пока не кончится музыка.",
+      "sourcePost": "https://t.me/bal_rtumirea/2244",
+      "captionPost": "https://t.me/bal_rtumirea/2243",
+      "caption": "Почувствуйте ритм!\n\n🪩 Пришло время вспомнить самый зажигательный танец этого бала — Фокстрот Зиг-Заг!\n\n🖇️  Повторяйте за танцмейстерами и окунитесь в эпоху 60-х через видео-инструкцию!\n\n#sumirea #БалРТУМИРЭА #ЗвёзднаяОдиссея #СхемыТанцев",
+      "assets": [
+        {
+          "kind": "video",
+          "post": "https://t.me/bal_rtumirea/2244",
+          "originalFilename": "Фокстрот Зиг-Заг.mp4",
+          "downloadedAs": "Фокстрот Зиг-Заг.mp4",
+          "status": "obtained",
+          "sha256": "7b2de6341461de2c3627a3e0fb6f2f4f33fd17248dcc99a9743d8a72f1647884"
+        },
+        {
+          "kind": "scheme",
+          "post": "https://t.me/bal_rtumirea/2243",
+          "originalFilename": "photo_5474482856311595523_w.jpg",
+          "downloadedAs": "photo_5474482856311595523_w.jpg",
+          "status": "obtained",
+          "sha256": "6ff176534906f2eb9cf792c9e6c6f71826f82a229f363921f29e622c8788d830"
+        },
+        {
+          "kind": "audio",
+          "post": "https://t.me/bal_rtumirea/2245",
+          "originalFilename": "Фокстрот _Зиг-заг_.mp3",
+          "downloadedAs": "Фокстрот _Зиг-заг_.mp3",
+          "status": "obtained",
+          "sha256": "9a48868b20272aac6e0f08a9fa0e39a92e938a07ff630b51c15ee49e678bee44"
+        }
+      ],
+      "coverAt": 48,
+      "published": "2026-11-19T17:34:26+00:00"
     }
   ]
 }
