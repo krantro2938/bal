@@ -54,15 +54,18 @@ export function Me() {
       />
 
       {/* You: picture, name, @handle; your public profile is one tap away. */}
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-        <div className="flex min-w-0 items-center gap-4 sm:gap-6">
-          <span className="sm:hidden">
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+        {/* Anchored at the top with a fixed-size picture, so editing the @handle (a taller field and
+            a hint) only grows downwards: the picture keeps its size and the name stays put.
+            The top padding centres the name and handle on the picture when not editing. */}
+        <div className="flex min-w-0 items-start gap-4 sm:gap-6">
+          <span className="shrink-0 sm:hidden">
             <Avatar user={user!} size={72} />
           </span>
-          <span className="max-sm:hidden">
+          <span className="shrink-0 max-sm:hidden">
             <Avatar user={user!} size={112} />
           </span>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1 pt-2.5 sm:pt-0">
             <h1 className="truncate text-[24px] leading-tight font-semibold sm:text-[32px]">{user!.name}</h1>
             <div className="mt-1 text-[14px] text-ink-3">
               <UsernameEditor username={user!.username} />
