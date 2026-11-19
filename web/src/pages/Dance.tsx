@@ -383,7 +383,7 @@ export function Dance() {
               <RehearsalBar player={player} duration={dance.video.duration} loop={loop} setLoop={setLoop} notes={notes} onNote={startNote} />
             </Suspense>
           ) : null}
-          <h1 className="font-title mt-4 text-[24px] leading-tight sm:mt-6 lg:text-[30px]">{dance.title}</h1>
+          <h1 className="font-title mt-3 text-[24px] leading-tight sm:mt-6 lg:text-[30px]">{dance.title}</h1>
           {/* Phones: views and date under the title, like YouTube's app; the description card drops them. */}
           <p className="tnum mt-1 flex flex-wrap gap-x-2 text-[13px] text-ink-3 sm:hidden">
             <Views n={dance.views} />

@@ -268,7 +268,7 @@ export function RehearsalBar({
   };
 
   return (
-    <div className="bg-bg pb-1 sm:pt-3">
+    <div className="bg-bg sm:pt-3 sm:pb-1">
       {/* Phones: these controls live in the player (repeat, note, speed) and in gestures (±5 s). */}
       <div className="flex flex-wrap items-center gap-1.5 max-sm:hidden sm:gap-2">
         <SplitPill label="Перемотка" className="h-10">
