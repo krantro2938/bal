@@ -1,4 +1,4 @@
-import { Check, LogOut, MonitorDown, Moon, Pencil, Play, Smartphone, Sun } from "lucide-react";
+import { Check, LogOut, MonitorDown, Moon, Pencil, Play, Smartphone, Sun, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -6,7 +6,6 @@ import { Cover } from "@/components/DanceCard";
 import { Avatar } from "@/components/Header";
 import { PushSwitch } from "@/components/PushSwitch";
 import { Button } from "@/components/ui/button";
-import { Sheet } from "@/components/ui/sheet";
 import { track } from "@/lib/analytics";
 import { api, ApiError } from "@/lib/api";
 import { timecode } from "@/lib/format";
@@ -55,7 +54,9 @@ export function Me() {
       />
 
       {/* You: picture, name, @handle; your public profile is one tap away. */}
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+      {/* The @handle line is always as tall as its edit field, and the field's hint shows in the room
+          above «Открыть профиль», so editing in place moves nothing. */}
+      <section className="flex flex-col gap-7 sm:flex-row sm:items-center sm:gap-6">
         <div className="flex min-w-0 items-center gap-4 sm:gap-6">
           <span className="shrink-0 sm:hidden">
             <Avatar user={user!} size={72} />
@@ -65,12 +66,12 @@ export function Me() {
           </span>
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-[24px] leading-tight font-semibold sm:text-[32px]">{user!.name}</h1>
-            <div className="mt-1 text-[14px] text-ink-3">
+            <div className="relative mt-0.5 h-9 text-[14px] text-ink-3">
               <UsernameEditor username={user!.username} />
             </div>
             <Link
               to={`/@${user!.username}`}
-              className={cn(profileButton, "mt-3 inline-flex h-9 px-4 text-[14px] max-sm:hidden")}
+              className={cn(profileButton, "mt-7 inline-flex h-9 px-4 text-[14px] max-sm:hidden")}
             >
               Открыть профиль
             </Link>
@@ -293,11 +294,13 @@ function ShelfItem({ children }: { children: ReactNode }) {
   return <li className="w-[56vw] max-w-[260px] shrink-0 sm:w-[240px] lg:w-auto lg:max-w-none">{children}</li>;
 }
 
-// «Открыть профиль»: the site's soft accent, as before; the person's colour is on their avatar.
-const profileButton = "items-center rounded-full bg-accent-soft font-medium transition hover:brightness-110";
+// «Открыть профиль»: a gradient from the site's accent into the violet of the page's glow.
+// Light theme: navy to indigo with white text; dark: moon-ivory to lavender with dark text.
+const profileButton =
+  "items-center rounded-full bg-gradient-to-r from-[#1c2b6e] to-[#4b3aa8] font-medium text-white shadow-sm transition hover:brightness-110 dark:from-[#e8ddc2] dark:to-[#c4b8f2] dark:text-[#0a1028] dark:hover:brightness-105";
 
-/** The public @handle used in comments and mentions; unique, checked while typing. It is
- *  edited in a sheet over the page (a window on computers), so nothing on the page moves. */
+/** The public @handle used in comments and mentions; unique, checked while typing. Edited in
+ *  place: the field takes the handle's own row (h-9) and its hint hangs below it. */
 function UsernameEditor({ username }: { username: string }) {
   const { refresh } = useSession();
   const [edit, setEdit] = useState(false);
@@ -310,62 +313,69 @@ function UsernameEditor({ username }: { username: string }) {
     const t = setTimeout(() => api.usernameFree(clean).then(setCheck, () => setCheck(null)), 300);
     return () => clearTimeout(t);
   }, [clean, edit, username]);
+  if (!edit) {
+    return (
+      <button type="button" onClick={() => setEdit(true)} className="group flex h-9 items-center gap-1.5 hover:text-ink" title="Изменить имя пользователя">
+        @{username} <Pencil className="size-3.5 text-ink-2 group-hover:text-ink" />
+      </button>
+    );
+  }
   const hint = error || (check ? (!check.valid ? "3–30 символов: a–z, цифры, «_» и «.», первая — буква" : check.free ? "Свободно" : "Уже занято") : "");
   const ok = clean === username || (check?.valid && check.free);
-  const open = () => {
+  const cancel = () => {
     setValue(username);
     setError("");
-    setEdit(true);
+    setEdit(false);
   };
   return (
-    <>
-      <button type="button" onClick={open} className="group flex items-center gap-1 hover:text-ink" title="Изменить имя пользователя">
-        @{username} <Pencil className="size-3.5 opacity-60 group-hover:opacity-100" />
-      </button>
-      <Sheet open={edit} onOpenChange={setEdit} title="Имя пользователя" description="Его видят в комментариях, по нему вас упоминают и открывают ваш профиль.">
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (clean === username) return setEdit(false);
-            try {
-              await api.setUsername(clean);
-              await refresh();
-              setEdit(false);
-              toast(`Теперь вы @${clean}`);
-            } catch (err) {
-              setError(err instanceof ApiError ? err.message : "Не удалось сохранить");
-            }
+    <form
+      className="flex h-9 max-w-[360px] items-center gap-1.5"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (clean === username) return setEdit(false);
+        try {
+          await api.setUsername(clean);
+          await refresh();
+          setEdit(false);
+          toast(`Теперь вы @${clean}`);
+        } catch (err) {
+          setError(err instanceof ApiError ? err.message : "Не удалось сохранить");
+        }
+      }}
+    >
+      <label className="flex h-9 min-w-0 flex-1 items-center rounded-full bg-surface-2 pr-1 pl-3 text-ink focus-within:ring-1 focus-within:ring-line-strong">
+        <span className="text-ink-3">@</span>
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setError("");
           }}
-        >
-          <label className="flex h-12 items-center rounded-xl bg-surface-2 px-4 text-ink focus-within:ring-2 focus-within:ring-line-strong">
-            <span className="text-ink-3">@</span>
-            <input
-              autoFocus
-              value={value}
-              onChange={(e) => {
-                setValue(e.target.value);
-                setError("");
-              }}
-              maxLength={31}
-              spellCheck={false}
-              autoCapitalize="none"
-              autoComplete="off"
-              className="w-full min-w-0 bg-transparent px-0.5 text-[16px] outline-none"
-              aria-label="Имя пользователя"
-            />
-          </label>
-          {/* Always one line tall, so the sheet doesn't jump as the hint comes and goes. */}
-          <p className={cn("mt-2 min-h-5 text-[13px]", check?.free && !error ? "text-accent" : "text-danger")}>{hint}</p>
-          <div className="mt-4 flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setEdit(false)}>
-              Отмена
-            </Button>
-            <Button type="submit" variant="primary" disabled={!ok}>
-              Сохранить
-            </Button>
-          </div>
-        </form>
-      </Sheet>
-    </>
+          onKeyDown={(e) => e.key === "Escape" && cancel()}
+          maxLength={31}
+          spellCheck={false}
+          autoCapitalize="none"
+          autoComplete="off"
+          className="w-full min-w-0 bg-transparent px-0.5 text-[14px] outline-none"
+          aria-label="Имя пользователя"
+        />
+        <button type="submit" disabled={!ok} className="h-7 shrink-0 rounded-full bg-accent px-3 text-[13px] font-medium text-accent-ink disabled:opacity-40">
+          Сохранить
+        </button>
+      </label>
+      <button
+        type="button"
+        onClick={cancel}
+        className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-ink-3 hover:bg-line hover:text-ink"
+        aria-label="Отмена"
+        title="Отмена"
+      >
+        <X className="size-4" />
+      </button>
+      {hint ? (
+        <span className={cn("absolute inset-x-0 top-full mt-1 truncate text-[13px]", check?.free && !error ? "text-accent" : "text-danger")}>{hint}</span>
+      ) : null}
+    </form>
   );
 }
