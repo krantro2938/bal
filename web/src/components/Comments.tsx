@@ -231,10 +231,13 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
     const lift = () => vv && setKeyboard(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
     vv?.addEventListener("resize", lift);
     vv?.addEventListener("scroll", lift);
-    // The page underneath stays put while the drawer is open.
+    // The page underneath stays put while the drawer is open: swipes are held back below
+    // (noPageScroll) and the page doesn't bounce. Not overflow: hidden on <html>: with the
+    // sign-in sheet's own lock on <body> that turns <body> into the scroller, the sticky
+    // video lets go and the page jumps away from under the drawer.
     const root = document.documentElement;
-    const before = root.style.overflow;
-    root.style.overflow = "hidden";
+    const before = root.style.overscrollBehavior;
+    root.style.overscrollBehavior = "none";
     window.addEventListener("resize", measure);
     // Swipes while the drawer is open move the drawer or scroll its list, never the page beneath:
     // overflow: hidden doesn't stop a finger on iPhones, and a page left gliding after a drag
@@ -249,7 +252,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
     const onPop = () => !history.state?.commentsSheet && setPhase("leave");
     window.addEventListener("popstate", onPop);
     return () => {
-      root.style.overflow = before;
+      root.style.overscrollBehavior = before;
       window.removeEventListener("resize", measure);
       document.removeEventListener("touchmove", noPageScroll);
       window.removeEventListener("popstate", onPop);
