@@ -1,4 +1,4 @@
-import { CircleUserRound, Download, LogOut, MonitorDown, Moon, NotebookPen, Search, Sun } from "lucide-react";
+import { CircleUserRound, LogOut, MonitorDown, Moon, NotebookPen, Search, Smartphone, Sun } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useSession } from "@/lib/session";
@@ -12,8 +12,8 @@ import { ThemeToggle } from "./ThemeToggle";
 export function Header() {
   const { user, ready } = useSession();
   const install = useInstall();
-  // Guests get an install button in the header; on phones it takes the theme switch's place,
-  // which moves to the bottom of the page (signed in, both live in the account menu).
+  // Phones, guests: an install button takes the theme switch's place, which moves to the
+  // bottom of the page. On computers and when signed in, installing is in the account menu.
   const installHere = ready && !user && install.available;
   const loc = useLocation();
   const [mobileSearch, setMobileSearch] = useState(false);
@@ -54,17 +54,20 @@ export function Header() {
           <button
             type="button"
             onClick={() => (install.native ? install.install() : install.showHint())}
-            className="grid size-10 shrink-0 place-items-center rounded-full text-ink hover:bg-hover"
+            className="grid size-10 shrink-0 place-items-center rounded-full text-ink hover:bg-hover sm:hidden"
             aria-label="Установить приложение"
             title="Установить приложение"
           >
-            <Download className="size-5" />
+            <Smartphone className="size-5" />
           </button>
         ) : null}
-        {/* Signed in on phones, the theme switch moves into the account menu to make room for the bell. */}
-        <div className={user || installHere ? "max-sm:hidden" : undefined}>
-          <ThemeToggle />
-        </div>
+        {/* Shown with the rest of the right side once the session is known, so nothing shifts.
+            Signed in on phones, the theme switch moves into the account menu to make room for the bell. */}
+        {ready ? (
+          <div className={user || installHere ? "max-sm:hidden" : undefined}>
+            <ThemeToggle />
+          </div>
+        ) : null}
         {user ? <NotificationsBell /> : null}
         {!ready ? (
           <span className="size-10" />
@@ -161,7 +164,8 @@ function AccountMenu({ user }: { user: User }) {
                 }}
                 className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-hover"
               >
-                <MonitorDown className="size-5 text-ink-2" /> Установить приложение
+                <Smartphone className="size-5 text-ink-2 sm:hidden" />
+                <MonitorDown className="size-5 text-ink-2 max-sm:hidden" /> Установить приложение
               </button>
             ) : null}
             <button type="button" onClick={toggleTheme} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-hover sm:hidden">

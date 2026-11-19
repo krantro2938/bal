@@ -35,7 +35,8 @@ function Shell() {
         К содержимому
       </a>
       <Header />
-      <div id="main">
+      {/* Phones: at least a screen tall, so the theme switch below stays out of sight while a page loads. */}
+      <div id="main" className="max-sm:min-h-[calc(100dvh-64px)]">
         <Outlet />
       </div>
       <FooterThemeToggle />
