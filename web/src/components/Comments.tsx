@@ -214,6 +214,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   const [phase, setPhase] = useState<"enter" | "idle" | "drag" | "settle" | "leave">("enter");
   const [drag, setDrag] = useState(0);
   const touch = useRef<{ y: number; pull: boolean } | null>(null);
+  const dragging = useRef(false);
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!sheet) return;
@@ -235,6 +236,14 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
     const before = root.style.overflow;
     root.style.overflow = "hidden";
     window.addEventListener("resize", measure);
+    // Swipes while the drawer is open move the drawer or scroll its list, never the page beneath:
+    // overflow: hidden doesn't stop a finger on iPhones, and a page left gliding after a drag
+    // swallows the next tap (it only stops the glide), so the preview needed two taps.
+    const noPageScroll = (e: globalThis.TouchEvent) => {
+      const el = e.target instanceof Element ? e.target : null;
+      if (dragging.current || !el?.closest("[data-scroller], [data-sheet-footer]")) e.preventDefault();
+    };
+    document.addEventListener("touchmove", noPageScroll, { passive: false });
     // Back (Android's button, a browser's) closes the drawer first: opening it adds a history entry.
     if (!history.state?.commentsSheet) history.pushState({ ...history.state, commentsSheet: true }, "");
     const onPop = () => !history.state?.commentsSheet && setPhase("leave");
@@ -242,6 +251,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
     return () => {
       root.style.overflow = before;
       window.removeEventListener("resize", measure);
+      document.removeEventListener("touchmove", noPageScroll);
       window.removeEventListener("popstate", onPop);
       vv?.removeEventListener("resize", lift);
       vv?.removeEventListener("scroll", lift);
@@ -278,11 +288,13 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       t.pull = false; // an upward swipe scrolls the list instead
       return;
     }
+    dragging.current = true;
     setPhase("drag");
     setDrag(Math.max(0, dy));
   };
   const onSheetTouchEnd = () => {
     touch.current = null;
+    dragging.current = false;
     if (phase !== "drag") return;
     if (drag > 90) closeSheet();
     else {
@@ -393,7 +405,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       {sheet ? (
         createPortal(
           <div
-            className="fixed inset-x-0 bottom-0 z-[45] flex flex-col bg-bg shadow-[var(--shadow-pop)]"
+            className="fixed inset-x-0 bottom-0 z-[45] flex flex-col overscroll-none bg-bg shadow-[var(--shadow-pop)]"
             style={{
               top: sheetTop,
               // None at rest: a transformed drawer would trap the fixed comment box (while typing) inside it.
@@ -446,6 +458,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
                 writing ? "fixed inset-x-0 z-[47] max-h-[45dvh] overflow-y-auto overscroll-contain pb-3" : "pb-[calc(12px+env(safe-area-inset-bottom))]",
               )}
               style={writing ? { bottom: keyboard } : undefined}
+              data-sheet-footer=""
               onFocus={() => setWriting(true)}
               onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setWriting(false)}
             >
