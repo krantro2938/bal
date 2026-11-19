@@ -198,3 +198,30 @@ func TestAnnounceOnlyNewDances(t *testing.T) {
 		t.Fatalf("again: %v %v", fresh, err)
 	}
 }
+
+func TestReplacePictureOnlyIfUnchanged(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	ctx := context.Background()
+	src := "https://lh3.googleusercontent.com/a/x=s96-c"
+	u, err := s.CreateUser(ctx, NewUser{Name: "A", Username: "a", Picture: src})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pics, _ := s.ExternalPictures(ctx); pics[u.ID] != src {
+		t.Fatalf("external pictures: %v", pics)
+	}
+	// A picture that changed since the download started is left alone.
+	if err := s.ReplacePicture(ctx, u.ID, "https://other", "/pictures/x.jpg"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ReplacePicture(ctx, u.ID, src, "/pictures/1-abc.jpg"); err != nil {
+		t.Fatal(err)
+	}
+	if pics, _ := s.ExternalPictures(ctx); len(pics) != 0 {
+		t.Fatalf("still external: %v", pics)
+	}
+}

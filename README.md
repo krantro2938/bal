@@ -96,7 +96,7 @@ Production runs at **https://bal.aansl.com**: one Docker container behind the ho
 | Host path | Container | Contents |
 |---|---|---|
 | `/srv/bal/media` | `/data/media` (read-only) | prepared media, rsynced from the laptop (not in Git) |
-| `/srv/bal/db` | `/data/db` | `bal.db` (SQLite WAL) + `secret.key` + `vapid.key` (push) |
+| `/srv/bal/db` | `/data/db` | `bal.db` (SQLite WAL) + `secret.key` + `vapid.key` (push) + `pictures/` (copies of Google profile pictures) |
 | `/srv/bal/bal.env` | env file | public URL, Google credentials (see `deploy/bal.env.example`) |
 
 ```sh

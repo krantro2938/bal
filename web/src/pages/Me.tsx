@@ -13,7 +13,7 @@ import { useInstall } from "@/lib/install";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import type { DanceSummary } from "@/lib/types";
-import { cn, hueStyle, userHue } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useCatalog } from "@/lib/catalog";
 
 export function Me() {
@@ -53,7 +53,7 @@ export function Me() {
       />
 
       {/* You: picture, name, @handle; your public profile is one tap away. */}
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6" style={hueStyle(userHue(user!))}>
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
         <div className="flex min-w-0 items-center gap-4 sm:gap-6">
           <span className="sm:hidden">
             <Avatar user={user!} size={72} />
@@ -291,10 +291,8 @@ function ShelfItem({ children }: { children: ReactNode }) {
   return <li className="w-[56vw] max-w-[260px] shrink-0 sm:w-[240px] lg:w-auto lg:max-w-none">{children}</li>;
 }
 
-// «Открыть профиль» in the person's own colour (see userHue): pale with deep text in the
-// light theme, light with dark text in the dark one.
-const profileButton =
-  "items-center rounded-full bg-[hsl(var(--hue)_75%_92%)] font-medium text-[hsl(var(--hue)_45%_26%)] transition hover:brightness-[.97] dark:bg-[hsl(var(--hue)_62%_80%)] dark:text-[#0a1028] dark:hover:brightness-110";
+// «Открыть профиль»: the site's soft accent, as before; the person's colour is on their avatar.
+const profileButton = "items-center rounded-full bg-accent-soft font-medium transition hover:brightness-110";
 
 /** The public @handle used in comments and mentions; unique, checked while typing. */
 function UsernameEditor({ username }: { username: string }) {

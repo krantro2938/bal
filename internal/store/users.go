@@ -179,3 +179,29 @@ func (s *Store) DeleteSession(ctx context.Context, token string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE token_hash = ?`, hashToken(token))
 	return err
 }
+
+// ExternalPictures lists users whose picture is still a sign-in provider's address
+// (https://…) rather than a copy on this site.
+func (s *Store) ExternalPictures(ctx context.Context) (map[int64]string, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, picture FROM users WHERE picture LIKE 'https://%'`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int64]string{}
+	for rows.Next() {
+		var id int64
+		var p string
+		if err := rows.Scan(&id, &p); err != nil {
+			return nil, err
+		}
+		out[id] = p
+	}
+	return out, rows.Err()
+}
+
+// ReplacePicture swaps the user's picture for its local copy, unless it changed meanwhile.
+func (s *Store) ReplacePicture(ctx context.Context, userID int64, from, to string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE users SET picture = ? WHERE id = ? AND picture = ?`, to, userID, from)
+	return err
+}

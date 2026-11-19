@@ -149,6 +149,7 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 	go s.runPush(ctx)
 	go s.announceNew(ctx)
+	go s.copyPictures(ctx)
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
@@ -215,6 +216,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("DELETE /api/push", s.requireUser(s.handlePushUnsubscribe))
 
 	mux.Handle("GET /media/", http.StripPrefix("/media/", mediaHandler(s.cfg.MediaDir)))
+	mux.HandleFunc("GET /pictures/{name}", s.handlePicture)
 	mux.HandleFunc("POST /api/pulse", s.handlePulse)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
 	mux.HandleFunc("GET /robots.txt", s.handleRobots)

@@ -384,16 +384,7 @@ export function Dance() {
     );
   }
 
-  if (!dance) {
-    return (
-      <main className="grid gap-8 px-3 pt-2 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:pt-6" aria-busy="true">
-        <div>
-          <div className="aspect-video w-full rounded-[var(--radius-frame)] bg-player" />
-          <div className="mt-5 h-8 w-2/3 rounded-lg bg-surface-2" />
-        </div>
-      </main>
-    );
-  }
+  if (!dance) return <DanceSkeleton />;
 
   const fav = !!state?.favorites.includes(slug);
   const learned = !!state?.learned.includes(slug);
@@ -942,5 +933,90 @@ function Pill({
         <span className="max-sm:hidden">{label}</span>
       )}
     </button>
+  );
+}
+
+/** While the dance loads: the page's own shapes in place (player, controls, title, channel row
+ *  and actions, description, fragments, comments; on computers the scheme, music and the list
+ *  beside), so nothing jumps when it arrives. */
+function DanceSkeleton() {
+  const block = "rounded-lg bg-surface-2";
+  return (
+    <main
+      className="grid gap-x-8 px-3 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:pt-6 2xl:gap-x-10"
+      aria-busy="true"
+      aria-label="Загрузка"
+    >
+      <div className="min-w-0">
+        <div className="-mx-3 aspect-video bg-player sm:mx-0 sm:rounded-[var(--radius-frame)]" />
+        <div className="mt-3 flex gap-2">
+          <div className="h-9 w-24 rounded-full bg-surface-2" />
+          <div className="h-9 w-32 rounded-full bg-surface-2" />
+          <div className="ml-auto size-9 rounded-full bg-surface-2" />
+        </div>
+        <div className={cn(block, "mt-5 h-7 w-3/5 sm:h-8")} />
+        <div className="mt-4 flex items-center gap-3">
+          <div className="size-10 shrink-0 rounded-full bg-surface-2" />
+          <div className="space-y-1.5 max-sm:hidden">
+            <div className={cn(block, "h-4 w-48")} />
+            <div className={cn(block, "h-3 w-24")} />
+          </div>
+          <div className="ml-auto flex gap-2">
+            <div className="h-9 w-28 rounded-full bg-surface-2" />
+            <div className="size-9 rounded-full bg-surface-2" />
+            <div className="size-9 rounded-full bg-surface-2" />
+            <div className="h-9 w-9 rounded-full bg-surface-2 sm:w-44" />
+          </div>
+        </div>
+        <div className="mt-5 h-28 rounded-[var(--radius-sheet)] bg-surface-2" />
+        <div className="mt-8 lg:hidden">
+          <div className={cn(block, "mb-2 h-5 w-28")} />
+          <div className="-mx-3 flex gap-3 overflow-hidden px-3">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="w-[148px] shrink-0">
+                <div className="aspect-video rounded-lg bg-surface-2" />
+                <div className={cn(block, "mt-2 h-3.5 w-24")} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="mt-10 h-24 rounded-[var(--radius-sheet)] bg-surface-2 lg:hidden" />
+        <div className="mt-10 space-y-6 max-lg:hidden">
+          <div className={cn(block, "h-6 w-40")} />
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="flex gap-3">
+              <div className="size-9 shrink-0 rounded-full bg-surface-2" />
+              <div className="flex-1 space-y-2">
+                <div className={cn(block, "h-3.5 w-32")} />
+                <div className={cn(block, "h-4 w-4/5")} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <aside className="space-y-8 max-lg:hidden">
+        <div>
+          <div className={cn(block, "mb-3 h-5 w-32")} />
+          <div className="flex gap-2">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="aspect-[3/4] flex-1 rounded-lg bg-surface-2" />
+            ))}
+          </div>
+        </div>
+        <div className="h-14 rounded-[var(--radius-frame)] bg-surface-2" />
+        <div className="space-y-3">
+          <div className={cn(block, "h-5 w-36")} />
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="flex gap-2.5 p-1">
+              <div className="aspect-video w-[168px] shrink-0 rounded-lg bg-surface-2" />
+              <div className="flex-1 space-y-2 py-0.5">
+                <div className={cn(block, "h-4 w-4/5")} />
+                <div className={cn(block, "h-3 w-1/2")} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
+    </main>
   );
 }

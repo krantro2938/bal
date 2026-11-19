@@ -128,6 +128,14 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		fail("server")
 		return
 	}
+	// The picture is copied here before the page loads, so it shows at once (start-up retries a failure).
+	if claims.Picture != "" {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		if err := s.copyPicture(ctx, u.ID, claims.Picture); err != nil {
+			s.cfg.Log.Printf("pictures: %v", err)
+		}
+		cancel()
+	}
 	if err := s.startSession(w, r, u.ID); err != nil {
 		logErr(err)
 		fail("server")
