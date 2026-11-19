@@ -75,8 +75,17 @@ export function Header() {
 
 /** Profile picture, or the first letter of the name when there is none or it fails to load
  *  (Google's image host is not always reachable from Russia). */
-export function Avatar({ user, size = 32 }: { user: Pick<User, "name" | "picture">; size?: number }) {
+export function Avatar({ user, size = 32 }: { user: Pick<User, "name" | "picture"> & { verified?: boolean }; size?: number }) {
   const [broken, setBroken] = useState(false);
+  // The site's own account wears the logo's star; in the dark theme its circle is lifted a
+  // shade so it doesn't sink into the page.
+  if (user.verified) {
+    return (
+      <span className="grid shrink-0 place-items-center rounded-full bg-[#081028] text-[#e8ddc2] dark:bg-line" style={{ width: size, height: size }} aria-hidden>
+        <Star style={{ width: size * 0.45, height: size * 0.45 }} />
+      </span>
+    );
+  }
   return user.picture && !broken ? (
     <img
       src={user.picture}

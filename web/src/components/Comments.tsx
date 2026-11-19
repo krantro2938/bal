@@ -459,7 +459,7 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
         <p className="flex flex-wrap items-center gap-x-2 text-[13px]">
           {c.pinned ? (
             // One line, not YouTube's separate «Pinned by» row: the pin is nearly always @bal's own comment.
-            <span role="img" className="-mr-0.5 text-ink-3" title={ctx.pinnedBy ? `Закреплено пользователем @${ctx.pinnedBy}` : "Закреплено"} aria-label="Закреплено">
+            <span role="img" className="text-ink-3" title={ctx.pinnedBy ? `Закреплено пользователем @${ctx.pinnedBy}` : "Закреплено"} aria-label="Закреплено">
               <Pin className="size-3.5" />
             </span>
           ) : null}
@@ -480,7 +480,14 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
           {c.status === "held" ? <span className="rounded-md bg-accent-soft px-1.5 text-[12px] font-medium text-accent">на проверке</span> : null}
         </p>
         <p ref={body} className={cn("mt-0.5 text-[15px] leading-normal break-words whitespace-pre-wrap", !expanded && "line-clamp-4")}>
-          {richText(c.body, ctx.duration, ctx.onSeek)}
+          {headed(c) ? (
+            <>
+              <span className="font-medium">{richText(c.body.slice(0, c.body.indexOf("\n")), ctx.duration, ctx.onSeek)}</span>
+              {richText(c.body.slice(c.body.indexOf("\n")), ctx.duration, ctx.onSeek)}
+            </>
+          ) : (
+            richText(c.body, ctx.duration, ctx.onSeek)
+          )}
         </p>
         {long || expanded ? (
           <button
@@ -516,6 +523,9 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
     </div>
   );
 }
+
+/** The site's own notes open with a heading line ending in «:», set in medium weight. */
+const headed = (c: Comment) => !!c.author.verified && /^[^\n]+:\n/.test(c.body);
 
 /**
  * After «Свернуть» on a long comment, the page glides back to where the comment starts if
