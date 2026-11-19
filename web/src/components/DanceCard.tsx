@@ -185,7 +185,6 @@ export function VideoCard({ dance, eager, badge, still }: { dance: DanceSummary;
           <div className="min-w-0">
             <h2 className="line-clamp-2 font-title text-[16px] leading-snug sm:text-[18px]">{dance.title}</h2>
             <p className="tnum mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-ink-3 sm:mt-1 sm:text-[13px]">
-              {dance.kind === "glossary" ? null : <span>Танец {String(dance.order).padStart(2, "0")}</span>}
               <Views n={dance.views} />
               {dance.published ? <span>{ago(dance.published)}</span> : null}
               {badge ? <span className="text-accent">{badge}</span> : null}

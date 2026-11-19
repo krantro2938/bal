@@ -107,7 +107,8 @@ export function Me() {
                   const d = bySlug.get(p.dance)!;
                   const same = d.version === p.version;
                   return (
-                    <li key={p.dance} className="flex gap-1">
+                    <li key={p.dance} className="group relative isolate flex gap-1 hover:z-10 has-[[data-open]]:z-20">
+                      <div className="pointer-events-none absolute -inset-2.5 -z-10 scale-95 rounded-[22px] bg-[var(--card-hover)] opacity-0 transition duration-200 [@media(hover:hover)]:group-hover:scale-100 [@media(hover:hover)]:group-hover:opacity-100" />
                       <Link
                         to={same ? `/dance/${d.slug}?t=${Math.floor(p.position)}` : `/dance/${d.slug}`}
                         state={WATCH}
@@ -172,9 +173,6 @@ export function Me() {
         </div>
 
         <div className="flex flex-col gap-12 lg:col-span-5">
-          {/* Last on phones, first beside the rehearsals on computers. */}
-          <Settings className="order-last lg:order-first" />
-
           <section>
             <Title count={`${learnedCount} из ${dances.length}`}>Выучено</Title>
             <ul className="divide-y divide-line border-y border-line">
@@ -224,6 +222,7 @@ export function Me() {
               })}
             </ul>
           </section>
+          <Settings />
         </div>
       </div>
     </main>
@@ -284,6 +283,35 @@ function MeSkeleton() {
 
       <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-12 lg:gap-10">
         <div className="space-y-12 lg:col-span-7">
+          <div>
+            <div className={cn(block, "mb-3 h-6 w-36")} />
+            <div className="-mx-3 flex gap-3 overflow-hidden px-3 pb-2 sm:-mx-5 sm:gap-4 sm:px-5 lg:mx-0 lg:px-0">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="w-[56vw] max-w-[260px] shrink-0 sm:w-[240px]">
+                  <div className="aspect-video rounded-[var(--radius-frame)] bg-surface-2" />
+                  <div className={cn(block, "mt-2 h-4 w-3/5")} />
+                  <div className={cn(block, "mt-1.5 h-3 w-16")} />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className={cn(block, "mb-3 h-6 w-28")} />
+            <div className="space-y-3 sm:space-y-4">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="flex gap-3 sm:gap-4">
+                  <div className="aspect-video w-[160px] shrink-0 rounded-lg bg-surface-2 sm:w-[246px] sm:rounded-[var(--radius-frame)]" />
+                  <div className="min-w-0 flex-1 space-y-2 py-1">
+                    <div className={cn(block, "h-4 w-3/4 max-w-56 sm:h-5")} />
+                    <div className={cn(block, "h-3 w-24")} />
+                    <div className={cn(block, "h-3 w-12")} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col gap-12 lg:col-span-5">
           <div>
             <div className={cn(block, "mb-3 h-6 w-36")} />
             <div className="-mx-3 flex gap-3 overflow-hidden px-3 pb-2 sm:-mx-5 sm:gap-4 sm:px-5 lg:mx-0 lg:px-0">
