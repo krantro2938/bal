@@ -1,4 +1,4 @@
-import { Link, Outlet, Route, Routes, useLocation, useNavigationType } from "react-router";
+import { Link, Outlet, Route, Routes, useLocation } from "react-router";
 import { useEffect, useLayoutEffect } from "react";
 import { Toaster } from "sonner";
 import { Header } from "@/components/Header";
@@ -16,15 +16,12 @@ import { OgCard } from "@/pages/OgCard";
 import { Profile } from "@/pages/Profile";
 
 function Shell() {
-  const loc = useLocation();
-  const { pathname, search } = loc;
-  const navType = useNavigationType();
-  // A new page starts at the top; back to the feed (the back button, or the video dragged down)
-  // returns to where it was left.
+  const { pathname, search } = useLocation();
+  // A new page starts at the top; the feed, however you come back to it (the back button, the
+  // video dragged down, the logo from another page), is where you left it. A reload starts over.
   useLayoutEffect(() => {
     const feed = feedPlace();
-    const back = navType === "POP" || !!(loc.state as { feed?: boolean } | null)?.feed;
-    window.scrollTo(0, back && feed.href === pathname + search ? feed.y : 0);
+    window.scrollTo(0, feed.href === pathname + search ? feed.y : 0);
     rememberFeed();
     setPage(pathname);
   }, [pathname]);

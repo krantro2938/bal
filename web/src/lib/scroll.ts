@@ -20,8 +20,9 @@ export function backToTop(el: HTMLElement | null) {
 }
 
 /**
- * Where the feed was left, so coming back to it (the video dragged down, the back button) lands
- * on the same row instead of the top. Kept in memory only: a reload starts at the top.
+ * Where the feed was left, so coming back to it (the back button, the video dragged down, the
+ * logo from another page) lands on the same row instead of the top. Kept in memory only: a
+ * reload starts at the top.
  */
 const feed = { href: "/", y: 0 };
 
@@ -32,5 +33,8 @@ export function rememberFeed() {
   feed.y = scrollY;
 }
 addEventListener("scroll", rememberFeed, { passive: true });
+// And at the click that leaves it (before the link navigates), in case the last scroll event
+// hasn't arrived yet.
+addEventListener("click", rememberFeed, { capture: true, passive: true });
 
 export const feedPlace = () => feed;

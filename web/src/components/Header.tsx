@@ -39,7 +39,13 @@ export function Header() {
         </div>
       ) : null}
       <div className={`flex h-16 items-center gap-1 px-3 sm:h-[72px] sm:gap-3 sm:px-6 ${mobileSearch ? "hidden sm:flex" : ""}`}>
-        <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-full py-1 pr-2" aria-label="Звёздная одиссея — все танцы">
+        {/* Back to the feed where you left it; already on it, to its top (like YouTube's logo). */}
+        <Link
+          to="/"
+          onClick={() => loc.pathname === "/" && !loc.search && window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="flex min-w-0 items-center gap-2.5 rounded-full py-1 pr-2"
+          aria-label="Звёздная одиссея — все танцы"
+        >
           <img src="/icons/logo.webp" alt="" className="size-8 shrink-0 rounded-full" />
           <span className="min-w-0 leading-none">
             <span className="block truncate font-display text-[18px] font-semibold italic">Звёздная одиссея</span>

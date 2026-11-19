@@ -89,7 +89,7 @@ export function Dance() {
             play: playing,
           });
           setPull({ dy: h, settle: true });
-          window.setTimeout(() => navigate(feedPlace().href, { state: { feed: true } }), 200);
+          window.setTimeout(() => navigate(feedPlace().href), 200);
         } else {
           setPull({ dy: 0, settle: true });
           window.setTimeout(() => setPull(null), 220);
