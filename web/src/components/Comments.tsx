@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, EllipsisVertical, Flag, Pin, PinOff, ShieldCheck, ThumbsUp, Timer, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, CircleCheck, EllipsisVertical, Flag, Pin, PinOff, ShieldCheck, ThumbsUp, Timer, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { track } from "@/lib/analytics";
@@ -45,6 +45,7 @@ function without(list: Comment[], id: number) {
 export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount, focusId }: Props) {
   const [list, setList] = useState<Comment[] | null>(null);
   const [moderator, setModerator] = useState(false);
+  const [pinnedBy, setPinnedBy] = useState<string>();
   const [pending, setPending] = useState<Comment[]>([]);
   const [sort, setSort] = useState<"top" | "new">("top");
   const [error, setError] = useState(false);
@@ -59,6 +60,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       (r) => {
         setList(r.comments);
         setModerator(r.moderator);
+        setPinnedBy(r.pinnedBy);
         setPending([]);
         setError(false);
       },
@@ -197,7 +199,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
     return out;
   }, [focusId, list]);
 
-  const ctx: ThreadCtx = { user, moderator, duration, now, people, flash, expand, children: replies, onSeek, post, like, act, askLogin };
+  const ctx: ThreadCtx = { user, moderator, pinnedBy, duration, now, people, flash, expand, children: replies, onSeek, post, like, act, askLogin };
   const first = threads[0];
   return (
     <div>
@@ -288,6 +290,8 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
 type ThreadCtx = {
   user: User | null;
   moderator: boolean;
+  /** The site's handle: pins are shown as its, like a channel's on YouTube. */
+  pinnedBy?: string;
   duration: number;
   now: () => number;
   people: Author[];
@@ -418,9 +422,17 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
   const [long, setLong] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const body = useRef<HTMLParagraphElement>(null);
+  const root = useRef<HTMLDivElement>(null);
+  // Measured again whenever the text's box changes: on phones the list starts hidden behind
+  // the teaser card (nothing to measure yet), and widths change with the window.
   useEffect(() => {
     const el = body.current;
-    if (el) setLong(el.scrollHeight > el.clientHeight + 2);
+    if (!el) return;
+    const measure = () => el.clientHeight && setLong(el.scrollHeight > el.clientHeight + 2);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [c.body]);
   if (c.deleted) {
     return (
@@ -438,20 +450,29 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
   if (mine || moderator) items.push({ label: "Удалить", icon: <Trash2 />, run: () => ctx.act(c, "delete"), danger: true });
   return (
     <div
+      ref={root}
       id={`comment-${c.id}`}
       className={cn("group -mx-2 flex scroll-mt-40 gap-3 rounded-xl px-2 transition-colors duration-700", ctx.flash === c.id && "bg-accent-soft")}
     >
       <Avatar user={c.author} size={reply ? 28 : 36} />
       <div className="min-w-0 flex-1">
         {c.pinned ? (
-          <p className="mb-0.5 flex items-center gap-1 text-[12px] text-ink-3">
-            <Pin className="size-3" /> Закреплено организаторами
+          <p className="mb-1 flex items-center gap-1.5 text-[12px] text-ink-3">
+            <Pin className="size-3.5" /> {ctx.pinnedBy ? `Закреплено пользователем @${ctx.pinnedBy}` : "Закреплено"}
           </p>
         ) : null}
-        <p className="flex flex-wrap items-baseline gap-x-2 text-[13px]">
-          <span className="font-medium" title={c.author.name}>
-            @{c.author.username}
-          </span>
+        <p className="flex flex-wrap items-center gap-x-2 text-[13px]">
+          {c.author.verified ? (
+            // The site's own account: its handle in a pill with a check, like a channel owner's on YouTube.
+            <span className="inline-flex h-[22px] items-center gap-1 rounded-full bg-ink-2 pr-1.5 pl-2 font-medium text-bg" title={`${c.author.name} · официальный аккаунт сайта`}>
+              @{c.author.username}
+              <CircleCheck className="size-3.5 fill-current [&_path]:stroke-ink-2" strokeWidth={3} aria-label="Подтверждённый аккаунт" />
+            </span>
+          ) : (
+            <span className="font-medium" title={c.author.name}>
+              @{c.author.username}
+            </span>
+          )}
           <span className="text-ink-3" title={new Date(c.createdAt).toLocaleString("ru-RU")}>
             {since(c.createdAt)}
           </span>
@@ -461,7 +482,14 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
           {richText(c.body, ctx.duration, ctx.onSeek)}
         </p>
         {long || expanded ? (
-          <button type="button" onClick={() => setExpanded((e) => !e)} className="mt-1 text-[14px] font-medium text-ink-2 hover:text-ink">
+          <button
+            type="button"
+            onClick={() => {
+              setExpanded(!expanded);
+              if (expanded) requestAnimationFrame(() => backToTop(root.current));
+            }}
+            className="mt-1 text-[14px] font-medium text-ink-2 hover:text-ink"
+          >
             {expanded ? "Свернуть" : "Читать дальше"}
           </button>
         ) : null}
@@ -486,6 +514,19 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
       {items.length ? <ItemMenu items={items} /> : null}
     </div>
   );
+}
+
+/**
+ * After «Свернуть» on a long comment, the page glides back to where the comment starts if
+ * that is now above the screen (like YouTube), just below the header, or below the player
+ * where it sticks to the top (phones).
+ */
+function backToTop(el: HTMLElement | null) {
+  if (!el) return;
+  const player = document.querySelector<HTMLElement>("[data-sticky-player]");
+  const covered = player && getComputedStyle(player).position === "sticky" ? player.getBoundingClientRect().bottom : 64;
+  const top = el.getBoundingClientRect().top - covered - 12;
+  if (top < 0) window.scrollBy({ top, behavior: "smooth" });
 }
 
 const TOKENS = /(^|[^\p{L}\d_.@:])(?:(\d{1,2}):([0-5]\d)(?![\d:])|@([a-z][a-z0-9_.]{2,29}))/giu;

@@ -126,3 +126,34 @@ func TestEnsureUsernames(t *testing.T) {
 		t.Fatalf("duplicate allowed: %v", err)
 	}
 }
+
+func TestOfficialPinnedComment(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	ctx := context.Background()
+	a, err := s.EnsureOfficial(ctx, "Репетиции бала", "bal", "/icons/icon-192.png")
+	if err != nil || !a.Verified || a.Username != "bal" {
+		t.Fatalf("EnsureOfficial = %+v, %v", a, err)
+	}
+	if again, _ := s.EnsureOfficial(ctx, "Репетиции бала", "bal", ""); again.ID != a.ID {
+		t.Fatalf("second EnsureOfficial made a new account: %d vs %d", again.ID, a.ID)
+	}
+	c, changed, err := s.UpsertOwnComment(ctx, a.ID, "vals", "first")
+	if err != nil || !changed || !c.Pinned || !c.Author.Verified || c.Status != "published" {
+		t.Fatalf("create: %+v changed=%v err=%v", c, changed, err)
+	}
+	if _, changed, _ := s.UpsertOwnComment(ctx, a.ID, "vals", "first"); changed {
+		t.Fatal("same text reported as a change")
+	}
+	// A moderator pins another comment; a text update keeps that choice.
+	other, _ := s.CreateComment(ctx, a.ID, Comment{Dance: "vals", Body: "x", Status: "published"})
+	s.db.Exec(`UPDATE comments SET created_at = created_at + 1000 WHERE id = ?`, other.ID)
+	s.PinComment(ctx, "vals", other.ID, true)
+	c2, changed, _ := s.UpsertOwnComment(ctx, a.ID, "vals", "second")
+	if !changed || c2.ID != c.ID || c2.Body != "second" || c2.Pinned {
+		t.Fatalf("update: %+v changed=%v", c2, changed)
+	}
+}

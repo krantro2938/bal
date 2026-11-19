@@ -138,6 +138,9 @@ CREATE INDEX notifications_user ON notifications(user_id, created_at);`,
 	// 7: a deleted comment that has replies stays as a placeholder («Комментарий удалён»)
 	// so its thread keeps its shape; its text is wiped.
 	`ALTER TABLE comments ADD COLUMN deleted_at INTEGER;`,
+
+	// 8: verified accounts (the site's own) get a badge next to their handle.
+	`ALTER TABLE users ADD COLUMN verified INTEGER NOT NULL DEFAULT 0;`,
 }
 
 // migrate applies pending migrations on one connection with foreign keys

@@ -27,16 +27,17 @@ type Author struct {
 	Name     string `json:"name"`
 	Username string `json:"username"`
 	Picture  string `json:"picture,omitempty"`
+	Verified bool   `json:"verified,omitempty"`
 }
 
-const commentCols = `c.id, c.dance, COALESCE(c.parent_id, 0), u.id, u.name, u.username, u.picture, c.body, c.status, c.score, c.pinned, c.created_at,
+const commentCols = `c.id, c.dance, COALESCE(c.parent_id, 0), u.id, u.name, u.username, u.picture, u.verified, c.body, c.status, c.score, c.pinned, c.created_at,
   c.deleted_at IS NOT NULL,
   (SELECT count(*) FROM comment_likes l WHERE l.comment_id = c.id),
   EXISTS(SELECT 1 FROM comment_likes l WHERE l.comment_id = c.id AND l.user_id = ?)`
 
 func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
 	var c Comment
-	err := row.Scan(&c.ID, &c.Dance, &c.ParentID, &c.Author.ID, &c.Author.Name, &c.Author.Username, &c.Author.Picture, &c.Body, &c.Status,
+	err := row.Scan(&c.ID, &c.Dance, &c.ParentID, &c.Author.ID, &c.Author.Name, &c.Author.Username, &c.Author.Picture, &c.Author.Verified, &c.Body, &c.Status,
 		&c.Score, &c.Pinned, &c.CreatedAt, &c.Deleted, &c.Likes, &c.Liked)
 	if c.Deleted {
 		c.Author, c.Body, c.Likes, c.Liked = Author{}, "", 0, false
@@ -228,7 +229,7 @@ WHERE n.user_id = ? AND c.status = 'published' AND c.deleted_at IS NULL ORDER BY
 		var n Notification
 		c := &n.Comment
 		if err := rows.Scan(&n.ID, &n.Kind, &n.CreatedAt, &n.Read, &c.ID, &c.Dance, &c.ParentID, &c.Author.ID, &c.Author.Name,
-			&c.Author.Username, &c.Author.Picture, &c.Body, &c.Status, &c.Score, &c.Pinned, &c.CreatedAt, &c.Deleted, &c.Likes, &c.Liked); err != nil {
+			&c.Author.Username, &c.Author.Picture, &c.Author.Verified, &c.Body, &c.Status, &c.Score, &c.Pinned, &c.CreatedAt, &c.Deleted, &c.Likes, &c.Liked); err != nil {
 			return nil, 0, err
 		}
 		if !n.Read {

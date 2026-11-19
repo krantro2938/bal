@@ -61,7 +61,11 @@ func (s *Server) handleListComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, http.StatusOK, map[string]any{"comments": list, "moderator": s.isModerator(u)})
+	out := map[string]any{"comments": list, "moderator": s.isModerator(u)}
+	if s.official != nil {
+		out["pinnedBy"] = s.official.Username // pins are the site's, like a channel's on YouTube
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 var blankLines = regexp.MustCompile(`\n{3,}`)

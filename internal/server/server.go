@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log"
 	"mime"
 	"net"
@@ -73,6 +74,8 @@ type Server struct {
 	publicHost      string
 	pulses          *limiter
 	pulseSlots      chan struct{}
+
+	official *store.Author // the site's own (verified) account, from content/pinned.json
 }
 
 const sessionCookie = "bal_session"
@@ -132,6 +135,9 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 	if _, _, err := s.lib.Snapshot(); err != nil {
 		return err
+	}
+	if err := s.syncPinned(ctx); err != nil {
+		return fmt.Errorf("pinned comments: %w", err)
 	}
 
 	srv := &http.Server{
