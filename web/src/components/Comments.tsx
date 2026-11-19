@@ -503,7 +503,8 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
               setExpanded(!expanded);
               if (expanded) requestAnimationFrame(() => backToTop(root.current));
             }}
-            className="mt-1 text-[14px] font-medium text-ink-2 hover:text-ink"
+            // Notes end in grey footnotes, so their toggle sits further down to stand apart.
+            className={cn("text-[14px] font-medium text-ink-2 hover:text-ink", isNote(c) ? "mt-3" : "mt-1")}
           >
             {expanded ? "Свернуть" : "Читать дальше"}
           </button>
