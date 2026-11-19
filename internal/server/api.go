@@ -128,7 +128,7 @@ func withReactions(d *danceSummary, rx map[string]store.Reactions, views map[str
 	d.Views = views[d.Slug]
 }
 
-// handleView counts one view per visitor per dance per day.
+// handleView counts one view per visitor per dance per half hour (see store.AddView).
 func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 	src, _, err := s.lib.Snapshot()
 	if err != nil {

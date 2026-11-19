@@ -1,10 +1,11 @@
-import { Check, NotebookPen, Pencil, X } from "lucide-react";
+import { Check, NotebookPen, Pencil, Play, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate } from "react-router";
 import { toast } from "sonner";
 import { Cover, VideoCard } from "@/components/DanceCard";
 import { Star } from "@/components/Star";
 import { Button } from "@/components/ui/button";
+import { track } from "@/lib/analytics";
 import { api, ApiError } from "@/lib/api";
 import { timecode } from "@/lib/format";
 import { useSession } from "@/lib/session";
@@ -13,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { useCatalog } from "@/lib/catalog";
 
 export function Me() {
-  const { user, ready, state } = useSession();
+  const { user, ready, state, setMark } = useSession();
   const { data } = useCatalog();
 
   useEffect(() => {
@@ -130,13 +131,41 @@ export function Me() {
             <ul className="divide-y divide-line border-y border-line">
               {dances.map((d) => {
                 const done = state.learned.includes(d.slug);
+                const toggle = () =>
+                  setMark("learned", d.slug, !done).then(
+                    () => {
+                      if (!done) track("learned");
+                      toast(done ? "Отметка «Выучено» снята" : "Отмечено как выученное");
+                    },
+                    () => toast("Не удалось сохранить, попробуйте ещё раз"),
+                  );
+                // The row is the checkbox; the video opens from its own button on the right.
                 return (
-                  <li key={d.slug}>
-                    <Link to={`/dance/${d.slug}`} className="flex items-center gap-3 py-2.5 hover:bg-surface">
-                      <span className={cn("grid size-5 shrink-0 place-items-center rounded-full border", done ? "border-accent bg-accent text-accent-ink" : "border-line-strong")}>
+                  <li key={d.slug} className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={done}
+                      onClick={toggle}
+                      className="group -ml-2 flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-surface"
+                    >
+                      <span
+                        className={cn(
+                          "grid size-5 shrink-0 place-items-center rounded-full border transition-colors",
+                          done ? "border-accent bg-accent text-accent-ink" : "border-line-strong group-hover:border-accent",
+                        )}
+                      >
                         {done ? <Check className="size-3.5" /> : null}
                       </span>
-                      <span className={cn("text-[15px]", !done && "text-ink-2")}>{d.title}</span>
+                      <span className={cn("min-w-0 text-[15px]", !done && "text-ink-2")}>{d.title}</span>
+                    </button>
+                    <Link
+                      to={`/dance/${d.slug}`}
+                      aria-label={`Открыть видео «${d.title}»`}
+                      title="Открыть видео"
+                      className="grid size-9 shrink-0 place-items-center rounded-full text-ink-3 transition-colors hover:bg-surface hover:text-ink"
+                    >
+                      <Play className="size-4" />
                     </Link>
                   </li>
                 );
