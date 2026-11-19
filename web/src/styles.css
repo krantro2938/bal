@@ -163,6 +163,11 @@
     transform: scale(1.25);
   }
 }
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
 @keyframes draw {
   from {
     transform: scaleX(0);

@@ -207,6 +207,8 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   const sheet = open && phone;
   const [sheetTop, setSheetTop] = useState(0);
   const [keyboard, setKeyboard] = useState(0);
+  // Typing in the drawer's comment box: it sits on the keyboard, the rest is dimmed.
+  const [writing, setWriting] = useState(false);
   // enter: sliding up; idle; drag: following a finger (no transition); settle: easing back to
   // the top; leave: sliding away, then the drawer unmounts.
   const [phase, setPhase] = useState<"enter" | "idle" | "drag" | "settle" | "leave">("enter");
@@ -244,6 +246,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       vv?.removeEventListener("resize", lift);
       vv?.removeEventListener("scroll", lift);
       setKeyboard(0);
+      setWriting(false);
     };
   }, [sheet]);
   // Should a transitionend never arrive (a backgrounded tab), the drawer still goes.
@@ -393,8 +396,8 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
             className="fixed inset-x-0 bottom-0 z-[45] flex flex-col bg-bg shadow-[var(--shadow-pop)]"
             style={{
               top: sheetTop,
-              bottom: keyboard,
-              transform: phase === "leave" ? "translateY(100%)" : `translateY(${drag}px)`,
+              // None at rest: a transformed drawer would trap the fixed comment box (while typing) inside it.
+              transform: phase === "leave" ? "translateY(100%)" : drag ? `translateY(${drag}px)` : undefined,
               transition: phase === "settle" || phase === "leave" ? "transform 220ms cubic-bezier(.2,.7,.2,1)" : "none",
               animation: phase === "enter" ? "sheet-up 260ms cubic-bezier(.2,.7,.2,1)" : undefined,
             }}
@@ -425,7 +428,29 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
               </div>
             </div>
             {body}
-            <div className="shrink-0 border-t border-line bg-bg px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))]">{composer}</div>
+            {writing ? (
+              // Over everything but the box: a tap here puts the keyboard away (the draft stays).
+              <div
+                className="fixed inset-0 z-[46] touch-none bg-black/60"
+                style={{ animation: "fade 150ms both" }}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  (document.activeElement as HTMLElement | null)?.blur();
+                }}
+                aria-hidden
+              />
+            ) : null}
+            <div
+              className={cn(
+                "shrink-0 border-t border-line bg-bg px-4 pt-3",
+                writing ? "fixed inset-x-0 z-[47] max-h-[45dvh] overflow-y-auto overscroll-contain pb-3" : "pb-[calc(12px+env(safe-area-inset-bottom))]",
+              )}
+              style={writing ? { bottom: keyboard } : undefined}
+              onFocus={() => setWriting(true)}
+              onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setWriting(false)}
+            >
+              {composer}
+            </div>
           </div>,
           document.body,
         )
@@ -748,6 +773,9 @@ function tokens(text: string, duration: number) {
 }
 
 // Chips get their padding from a box-shadow so they keep the text's exact width (the composer's mirror depends on it).
+/** On a composer's buttons: the tap doesn't take focus from the text, so the keyboard (and the box above it) stay put. */
+const keepFocus = (e: { preventDefault: () => void }) => e.preventDefault();
+
 const timeChip = "tnum rounded-[4px] bg-accent-soft text-accent shadow-[0_0_0_3px_var(--accent-soft)]";
 
 /** A posted comment: timecodes are chips that seek the video; @mentions are blue, like YouTube's. */
@@ -873,6 +901,7 @@ function Composer({
   const cancel = () => {
     setText("");
     setActive(false);
+    input.current?.blur(); // the buttons keep focus (keepFocus), so letting go of it is done here
     onCancel?.();
   };
   const putAt = (from: number, to: number, insert: string) => {
@@ -971,6 +1000,7 @@ function Composer({
           <div className="mt-2 flex items-center gap-2">
             <button
               type="button"
+              onPointerDown={keepFocus}
               onClick={insertTime}
               className="tnum flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium text-accent hover:bg-accent-soft"
               title="Вставить текущее время видео — оно станет ссылкой"
@@ -979,10 +1009,10 @@ function Composer({
               <span className="leading-none">{timecode(now())}</span>
             </button>
             <span className="flex-1" />
-            <Button type="button" variant="ghost" size="sm" onClick={cancel}>
+            <Button type="button" variant="ghost" size="sm" onPointerDown={keepFocus} onClick={cancel}>
               Отмена
             </Button>
-            <Button type="submit" variant="primary" size="sm" disabled={!text.trim() || busy}>
+            <Button type="submit" variant="primary" size="sm" disabled={!text.trim() || busy} onPointerDown={keepFocus}>
               {small ? "Ответить" : "Отправить"}
             </Button>
           </div>
