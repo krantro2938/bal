@@ -99,7 +99,7 @@ export function Me() {
           ) : null}
 
           {history.length ? (
-            <section className="max-lg:order-2">
+            <section className="max-lg:order-3">
               <Title>История</Title>
               {/* Phones and tablets: a sideways row of the latest, like «Избранное». */}
               <div className="lg:hidden">
@@ -203,7 +203,7 @@ export function Me() {
         </div>
 
         <div className="flex flex-col gap-12 max-lg:contents lg:col-span-5">
-          <section className="max-lg:order-3">
+          <section className="max-lg:order-2">
             <Title count={`${learnedCount} из ${dances.length}`}>Выучено</Title>
             <ul className="divide-y divide-line border-y border-line">
               {dances.map((d) => {
@@ -317,7 +317,7 @@ function MeSkeleton() {
             <div className={cn(block, "mb-3 h-6 w-36")} />
             <SkelShelf />
           </div>
-          <div className="max-lg:order-2">
+          <div className="max-lg:order-3">
             <div className={cn(block, "mb-3 h-6 w-28")} />
             <div className="lg:hidden">
               <SkelShelf />
@@ -337,7 +337,7 @@ function MeSkeleton() {
           </div>
         </div>
         <div className="flex flex-col gap-12 max-lg:contents lg:col-span-5">
-          <div className="max-lg:order-3">
+          <div className="max-lg:order-2">
             <div className={cn(block, "mb-3 h-6 w-36")} />
             <div className="divide-y divide-line border-y border-line">
               {Array.from({ length: 8 }, (_, i) => (
