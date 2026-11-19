@@ -110,6 +110,8 @@ SKIP_MEDIA=1 deploy/deploy.sh timeweb-ru   # code-only release
 
 The image is built locally and streamed with `docker save | ssh docker load`, because the VPS has only 2 GB of RAM. Alternatives in `deploy/`: `compose.yaml`, `nginx.conf`, `bal.service` (systemd without Docker).
 
+Telegram links use **https://go.bal.aansl.com**, configured with `BAL_SHARE_URL`. Install `deploy/share.Caddyfile` on the Caddy server for that host. It serves lightweight preview pages and poster images to link fetchers and forwards browser navigations to the main site with their query string intact. For a live check, paste a fresh `go.bal.aansl.com` link into Telegram's composer and confirm the card appears.
+
 **Google sign-in in production** needs `https://bal.aansl.com/auth/google/callback` added to the OAuth client's authorized redirect URIs in Google Cloud Console.
 
 **Backups:** `sqlite3 /srv/bal/db/bal.db ".backup /srv/bal/db/backup-$(date +%F).db"`. Keep `var/raw` on the laptop; it holds the originals.

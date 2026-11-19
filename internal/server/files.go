@@ -61,7 +61,11 @@ func (s *Server) spaHandler(dir string) http.Handler {
 				return
 			}
 		}
-		page, err := s.renderIndex(dir, clean, r.Header.Get("X-Bal-Share") != "")
+		if s.cfg.ShareURL != "" && r.Header.Get("X-Bal-Share") == "1" {
+			s.serveSharePage(w, r, clean)
+			return
+		}
+		page, err := s.renderIndex(dir, clean)
 		if err != nil {
 			http.Error(w, "frontend not built: run `npm --prefix web run build`", http.StatusServiceUnavailable)
 			return

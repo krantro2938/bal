@@ -3,7 +3,9 @@ package server
 import (
 	"fmt"
 	"html"
+	"html/template"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +18,28 @@ const defaultDescription = "Видео-инструкции, схемы и му�
 type pageMeta struct {
 	Title, Description, Image, Path string
 }
+
+var sharePage = template.Must(template.New("share").Parse(`<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}}</title>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Звёздная одиссея · Репетиции">
+  <meta property="og:title" content="{{.Title}}">
+  <meta property="og:description" content="{{.Description}}">
+  <meta property="og:image" content="{{.Image}}">
+  <meta property="og:url" content="{{.URL}}">
+</head>
+<body>
+  <main>
+    <h1>{{.Title}}</h1>
+    <p>{{.Description}}</p>
+    <a href="{{.Destination}}">Открыть сайт репетиций</a>
+  </main>
+</body>
+</html>`))
 
 func (s *Server) metaFor(path string) pageMeta {
 	m := pageMeta{Title: "Звёздная одиссея · Репетиции бала", Description: defaultDescription, Image: "/og.png", Path: path}
@@ -30,33 +54,46 @@ func (s *Server) metaFor(path string) pageMeta {
 	if d := src.Find(slug); d != nil {
 		m.Title = d.Title + " · Звёздная одиссея"
 		m.Description = d.Description
-		if md := metas[slug]; md != nil {
-			m.Image = mediaURL(slug + "/poster.jpg")
+		if metas[slug] != nil {
+			poster := slug + "/poster.jpg"
+			if info, err := os.Stat(filepath.Join(s.cfg.MediaDir, poster)); err == nil && info.Mode().IsRegular() {
+				m.Image = mediaURL(poster)
+			}
 		}
 	}
 	return m
 }
 
+func (s *Server) serveSharePage(w http.ResponseWriter, r *http.Request, path string) {
+	m := s.metaFor(path)
+	base := strings.TrimRight(s.cfg.ShareURL, "/")
+	requestURL := (&url.URL{Path: path, RawQuery: r.URL.RawQuery}).String()
+	m.Image = base + m.Image
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	if err := sharePage.Execute(w, struct {
+		pageMeta
+		URL, Destination string
+	}{m, base + requestURL, strings.TrimRight(s.cfg.PublicURL, "/") + requestURL}); err != nil {
+		s.cfg.Log.Printf("serve share page: %v", err)
+	}
+}
+
 // renderIndex fills the meta tags in index.html for this page.
-func (s *Server) renderIndex(dir, path string, share bool) ([]byte, error) {
+func (s *Server) renderIndex(dir, path string) ([]byte, error) {
 	b, err := os.ReadFile(filepath.Join(dir, "index.html"))
 	if err != nil {
 		return nil, err
 	}
 	m := s.metaFor(path)
 	base := strings.TrimRight(s.cfg.PublicURL, "/")
-	// Previews requested through the share host point their image there too.
-	shared := base
-	if share && s.cfg.ShareURL != "" {
-		shared = strings.TrimRight(s.cfg.ShareURL, "/")
-	}
 	page := string(b)
 	attr := func(v string) string { return html.EscapeString(v) }
 	repl := []string{
 		"<title>Звёздная одиссея · Репетиции</title>", "<title>" + attr(m.Title) + "</title>",
 		`<meta property="og:title" content="Звёздная одиссея · Репетиции бала" />`, `<meta property="og:title" content="` + attr(m.Title) + `" />`,
-		`<meta property="og:image" content="/og.png" />`, `<meta property="og:image" content="` + attr(shared+m.Image) + `" />`,
-		`<meta property="og:url" content="/" />`, `<meta property="og:url" content="` + attr(shared+m.Path) + `" />` +
+		`<meta property="og:image" content="/og.png" />`, `<meta property="og:image" content="` + attr(base+m.Image) + `" />`,
+		`<meta property="og:url" content="/" />`, `<meta property="og:url" content="` + attr(base+m.Path) + `" />` +
 			"\n    " + `<link rel="canonical" href="` + attr(base+m.Path) + `" />`,
 	}
 	if m.Description != defaultDescription {

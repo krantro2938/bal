@@ -31,8 +31,8 @@ type Config struct {
 	SourcesPath string
 	PublicURL   string
 	FrontendURL string // defaults to PublicURL
-	// ShareURL is a host outside Russia that link-preview bots can reach (Telegram cannot reach
-	// Russian servers). It proxies bots here with X-Bal-Share and redirects people to PublicURL.
+	// ShareURL is a public host for links shared in messengers. Its proxy sets X-Bal-Share
+	// on requests for share pages and sends browser navigations to PublicURL.
 	ShareURL string
 
 	GoogleClientID     string
@@ -67,6 +67,7 @@ func Run(ctx context.Context, cfg Config) error {
 	mime.AddExtensionType(".vtt", "text/vtt; charset=utf-8")
 	mime.AddExtensionType(".webp", "image/webp")
 	mime.AddExtensionType(".mp4", "video/mp4")
+	mime.AddExtensionType(".webmanifest", "application/manifest+json")
 
 	st, err := store.Open(cfg.DBPath)
 	if err != nil {

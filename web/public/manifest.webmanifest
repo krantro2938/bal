@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "Звёздная одиссея · Репетиции бала",
+  "short_name": "Бал",
+  "description": "Видео-инструкции, схемы и музыка танцев 14-го Традиционного бала РТУ МИРЭА.",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070c1f",
+  "theme_color": "#070c1f",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -2,6 +2,7 @@ import { Link, Outlet, Route, Routes, useLocation } from "react-router";
 import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { Header } from "@/components/Header";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { StateBlock } from "@/components/StateBlock";
 import { Catalog } from "@/pages/Catalog";
 import { Dance } from "@/pages/Dance";
@@ -23,6 +24,7 @@ function Shell() {
       <div id="main">
         <Outlet />
       </div>
+      <InstallPrompt />
       <Toaster
         position="bottom-center"
         offset={16}

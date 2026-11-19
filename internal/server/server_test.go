@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
@@ -56,6 +57,56 @@ func newTestServer(t *testing.T) *httptest.Server {
 	ts := httptest.NewServer(s.routes())
 	t.Cleanup(ts.Close)
 	return ts
+}
+
+func TestSharePage(t *testing.T) {
+	ts := newTestServer(t)
+	s := lastServer
+	s.cfg.ShareURL = "https://share.example.test"
+	poster := filepath.Join(s.cfg.MediaDir, "demo", "poster.jpg")
+	if err := os.WriteFile(poster, []byte("test poster"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	check := func(path string, expected ...string) {
+		t.Helper()
+		req, err := http.NewRequest(http.MethodGet, ts.URL+path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("X-Bal-Share", "1")
+		resp, err := ts.Client().Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.StatusCode != http.StatusOK || resp.Header.Get("Content-Type") != "text/html; charset=utf-8" {
+			t.Fatalf("share page returned %s with content type %q", resp.Status, resp.Header.Get("Content-Type"))
+		}
+		for _, value := range expected {
+			if !strings.Contains(string(body), value) {
+				t.Errorf("share page %s missing %q", path, value)
+			}
+		}
+		if strings.Contains(string(body), "<script") {
+			t.Errorf("share page %s loads a script", path)
+		}
+	}
+
+	check("/", `property="og:image" content="https://share.example.test/og.png"`)
+	check("/dance/demo?t=42&v=2",
+		`property="og:title" content="Демо · Звёздная одиссея"`,
+		`property="og:image" content="https://share.example.test/media/demo/poster.jpg"`,
+		`property="og:url" content="https://share.example.test/dance/demo?t=42&amp;v=2"`,
+		`href="http://example.test/dance/demo?t=42&amp;v=2"`)
+	if err := os.Remove(poster); err != nil {
+		t.Fatal(err)
+	}
+	check("/dance/demo", `property="og:image" content="https://share.example.test/og.png"`)
 }
 
 type client struct {

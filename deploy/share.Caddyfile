@@ -1,0 +1,38 @@
+# Install on the Caddy host that serves go.bal.aansl.com.
+go.bal.aansl.com {
+	header X-Robots-Tag noindex
+	@image {
+		method GET HEAD
+		path /og.png /media/*/poster.jpg
+	}
+	@browser {
+		header Sec-Fetch-Mode navigate
+		header Sec-Fetch-Dest document
+	}
+	@page {
+		method GET HEAD
+		path / /dance/*
+	}
+	route {
+		handle @image {
+			reverse_proxy https://bal.aansl.com {
+				header_up Host bal.aansl.com
+			}
+		}
+		handle @browser {
+			header Vary "Sec-Fetch-Mode, Sec-Fetch-Dest"
+			redir https://bal.aansl.com{uri} 302
+		}
+		handle @page {
+			header +Vary "Sec-Fetch-Mode, Sec-Fetch-Dest"
+			reverse_proxy https://bal.aansl.com {
+				header_up Host bal.aansl.com
+				header_up X-Bal-Share 1
+				header_up Accept-Encoding identity
+			}
+		}
+		handle {
+			redir https://bal.aansl.com{uri} 302
+		}
+	}
+}
