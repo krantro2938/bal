@@ -1,7 +1,7 @@
 import type { MediaPlayerInstance } from "@vidstack/react";
 import { Bookmark, ChevronDown, ExternalLink, Film, GraduationCap, Maximize2, Music, NotebookPen, Pencil, ScrollText, Share2, Trash2, X } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AudioTrack } from "@/components/AudioTrack";
 import { ChaptersCarousel, ChaptersPanel } from "@/components/ChaptersPanel";
@@ -10,7 +10,9 @@ import { Badge, CompactCard, Cover, isNew, NewBadge, Views } from "@/components/
 import { Avatar } from "@/components/Header";
 import { ReactionPill } from "@/components/ReactionPill";
 import { SchemeViewer } from "@/components/SchemeViewer";
-import type { Loop } from "@/components/RehearsalPlayer";
+import type { Loop, Pull } from "@/components/RehearsalPlayer";
+import { Catalog } from "@/pages/Catalog";
+import { openMini } from "@/lib/mini";
 import { Tip } from "@/components/Tip";
 import { TelegramIcon } from "@/components/TelegramIcon";
 import { StateBlock } from "@/components/StateBlock";
@@ -32,6 +34,9 @@ const RehearsalBar = lazy(() => import("@/components/RehearsalPlayer").then((m) 
 
 const guestPosKey = (slug: string) => `bal-pos:${slug}`;
 
+/** The sticky header's height (the player pins under it at top-16). */
+const HEADER = 64;
+
 export function Dance() {
   const { slug = "" } = useParams();
   const [params] = useSearchParams();
@@ -49,6 +54,47 @@ export function Dance() {
   const player = useRef<MediaPlayerInstance>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const startAt = useMemo(() => parseTime(params.get("t")), [params]);
+  // Back from the mini player: keep playing.
+  const autoPlay = !!(useLocation().state as { play?: boolean } | null)?.play;
+
+  // Phones: dragging the video down slides this page away over the feed and hands the dance
+  // to the mini player, like YouTube's app. Only the part below the header moves.
+  const mainRef = useRef<HTMLElement>(null);
+  const [pull, setPull] = useState<{ dy: number; settle?: boolean } | null>(null);
+  const pullClip = useRef(0);
+  const danceRef = useRef(dance);
+  danceRef.current = dance;
+  const pullHandlers = useMemo<Pull>(
+    () => ({
+      move(dy) {
+        setPull((p) => {
+          if (!p) pullClip.current = Math.max(0, HEADER - (mainRef.current?.getBoundingClientRect().top ?? HEADER));
+          return { dy };
+        });
+      },
+      end(dy, v) {
+        const p = player.current;
+        const d = danceRef.current;
+        const h = window.innerHeight;
+        if (p && d?.video && (dy > h * 0.2 || (v > 0.5 && dy > 40))) {
+          const at = p.currentTime;
+          const playing = !p.paused;
+          p.pause();
+          openMini({ slug: d.slug, title: d.title, order: d.order, kind: d.kind, url: d.video.url, poster: d.posterSmall ?? d.poster }, at, {
+            volume: p.volume,
+            muted: p.muted,
+            play: playing,
+          });
+          setPull({ dy: h, settle: true });
+          window.setTimeout(() => navigate("/"), 200);
+        } else {
+          setPull({ dy: 0, settle: true });
+          window.setTimeout(() => setPull(null), 220);
+        }
+      },
+    }),
+    [navigate],
+  );
   const focusComment = Number(params.get("c")) || undefined;
   const [tab, setTab] = useState<"comments" | "notes">(() => {
     try {
@@ -341,7 +387,26 @@ export function Dance() {
   return (
     // Large screens: the player is its own grid cell so theatre mode can span both columns;
     // the 1fr row keeps the side column's height from stretching the player's row.
-    <main className="grid gap-x-8 px-3 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:grid-rows-[auto_1fr] lg:pt-6 2xl:gap-x-10">
+    <>
+      {pull ? (
+        <div inert className="fixed inset-x-0 top-16 bottom-0 overflow-hidden">
+          <Catalog peek />
+        </div>
+      ) : null}
+    <main
+      ref={mainRef}
+      className={cn("grid gap-x-8 px-3 pb-24 sm:px-6 sm:pt-2 lg:grid-cols-[minmax(0,1fr)_420px] lg:grid-rows-[auto_1fr] lg:pt-6 2xl:gap-x-10", pull && "relative z-10 bg-bg")}
+      style={
+        pull
+          ? {
+              transform: `translateY(${pull.dy}px)`,
+              // The page moves as an opaque sheet with rounded top corners; the feed shows above it.
+              clipPath: `inset(${pullClip.current}px 0 0 0 round ${Math.min(16, pull.dy / 4)}px ${Math.min(16, pull.dy / 4)}px 0 0)`,
+              transition: pull.settle ? "transform .2s ease-out" : "none",
+            }
+          : undefined
+      }
+    >
         <div data-sticky-player className={cn("sticky top-16 z-20 -mx-3 min-w-0 bg-bg sm:static sm:mx-0 lg:col-start-1 lg:row-start-1", theatre && "lg:col-span-2 lg:-mt-6")}>
           {dance.video ? (
             <Suspense fallback={<div className="aspect-video w-full bg-player sm:rounded-[var(--radius-frame)]" />}>
@@ -357,6 +422,8 @@ export function Dance() {
                 onTheatre={toggleTheatre}
                 next={upNext}
                 prev={upNext[upNext.length - 1]}
+                pull={pullHandlers}
+                autoPlay={autoPlay}
               />
             </Suspense>
           ) : (
@@ -763,6 +830,7 @@ export function Dance() {
       ) : null}
 
     </main>
+    </>
   );
 }
 

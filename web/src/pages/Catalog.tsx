@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 
 type Filter = "all" | "waltz" | "favorites" | "learned" | "todo";
 
-export function Catalog() {
+/** `peek`: drawn behind a dance page being dragged down on phones; no title change or previews. */
+export function Catalog({ peek }: { peek?: boolean } = {}) {
   const { data, error, retry } = useCatalog();
   const { user, state } = useSession();
   const [params, setParams] = useSearchParams();
@@ -20,8 +21,9 @@ export function Catalog() {
   const filter = (params.get("f") as Filter) || "all";
 
   useEffect(() => {
+    if (peek) return;
     document.title = q ? `${q} · Звёздная одиссея` : "Звёздная одиссея · Репетиции";
-  }, [q]);
+  }, [q, peek]);
 
   const chips: { id: Filter; label: string; show: boolean }[] = [
     { id: "all", label: "Все", show: true },
@@ -130,6 +132,7 @@ export function Catalog() {
               key={d.slug}
               dance={d}
               eager={i < 4}
+              still={peek}
               badge={d.kind === "glossary" ? glossaryHit(d) : state?.learned.includes(d.slug) ? "выучено" : undefined}
             />
           ))}

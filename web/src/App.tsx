@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { Header } from "@/components/Header";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { MiniPlayer } from "@/components/MiniPlayer";
 import { StateBlock } from "@/components/StateBlock";
 import { Catalog } from "@/pages/Catalog";
 import { Dance } from "@/pages/Dance";
@@ -25,6 +26,7 @@ function Shell() {
         <Outlet />
       </div>
       <InstallPrompt />
+      <MiniPlayer />
       <Toaster
         position="bottom-center"
         offset={16}

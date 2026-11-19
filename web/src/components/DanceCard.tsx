@@ -130,13 +130,13 @@ function pickCard() {
 }
 const schedule = () => (frame ||= requestAnimationFrame(pickCard));
 
-function usePreview() {
+function usePreview(still?: boolean) {
   const ref = useRef<HTMLDivElement>(null);
   const [on, setOn] = useState(false);
   const timer = useRef<number>(0);
   useEffect(() => {
     const el = ref.current;
-    if (!el || !matchMedia("(hover: none)").matches) return;
+    if (!el || still || !matchMedia("(hover: none)").matches) return;
     cards.set(el, setOn);
     if (cards.size === 1) {
       window.addEventListener("scroll", schedule, { passive: true });
@@ -150,7 +150,7 @@ function usePreview() {
         window.removeEventListener("resize", schedule);
       }
     };
-  }, []);
+  }, [still]);
   const handlers = {
     onPointerEnter: (e: React.PointerEvent) => {
       if (e.pointerType !== "mouse") return;
@@ -166,8 +166,8 @@ function usePreview() {
   return { ref, on, handlers };
 }
 
-export function VideoCard({ dance, eager, badge }: { dance: DanceSummary; eager?: boolean; badge?: string }) {
-  const { ref, on, handlers } = usePreview();
+export function VideoCard({ dance, eager, badge, still }: { dance: DanceSummary; eager?: boolean; badge?: string; still?: boolean }) {
+  const { ref, on, handlers } = usePreview(still);
   const to = `/dance/${dance.slug}`;
   return (
     <div ref={ref} className="group relative isolate hover:z-10 has-[[data-open]]:z-20" {...handlers}>
