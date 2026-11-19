@@ -456,12 +456,13 @@ function CommentItem({ c, ctx, onReply }: { c: Comment; ctx: ThreadCtx; onReply:
     >
       <Avatar user={c.author} size={reply ? 28 : 36} />
       <div className="min-w-0 flex-1">
-        {c.pinned ? (
-          <p className="mb-1 flex items-center gap-1.5 text-[12px] text-ink-3">
-            <Pin className="size-3.5" /> {ctx.pinnedBy ? `Закреплено пользователем @${ctx.pinnedBy}` : "Закреплено"}
-          </p>
-        ) : null}
         <p className="flex flex-wrap items-center gap-x-2 text-[13px]">
+          {c.pinned ? (
+            // One line, not YouTube's separate «Pinned by» row: the pin is nearly always @bal's own comment.
+            <span role="img" className="-mr-0.5 text-ink-3" title={ctx.pinnedBy ? `Закреплено пользователем @${ctx.pinnedBy}` : "Закреплено"} aria-label="Закреплено">
+              <Pin className="size-3.5" />
+            </span>
+          ) : null}
           {c.author.verified ? (
             // The site's own account: its handle in a pill with a check, like a channel owner's on YouTube.
             <span className="inline-flex h-[22px] items-center gap-1 rounded-full bg-ink-2 pr-1.5 pl-2 font-medium text-bg" title={`${c.author.name} · официальный аккаунт сайта`}>
