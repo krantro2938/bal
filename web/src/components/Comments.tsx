@@ -10,6 +10,7 @@ import type { Author, Comment, CommentEvent, User } from "@/lib/types";
 import { backToTop } from "@/lib/scroll";
 import { cn } from "@/lib/utils";
 import { Avatar } from "./Header";
+import { AnimatedCount } from "./AnimatedCount";
 import { NoteInput } from "./NoteInput";
 import { Button } from "./ui/button";
 
@@ -21,6 +22,7 @@ type Props = {
   onSeek: (t: number) => void;
   askLogin: (why: string) => void;
   onCount?: (n: number) => void;
+  onViews?: (n: number) => void;
   /** A comment to scroll to and highlight (from a notification link). */
   focusId?: number;
   /** Opened from a card's comments button: phones open the drawer at once. */
@@ -47,7 +49,7 @@ function without(list: Comment[], id: number) {
  * arrive live over SSE; top-level ones wait behind a "show" pill so the list doesn't
  * jump while someone is reading.
  */
-export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount, focusId, startOpen }: Props) {
+export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount, onViews, focusId, startOpen }: Props) {
   const [list, setList] = useState<Comment[] | null>(null);
   const [moderator, setModerator] = useState(false);
   const [pinnedBy, setPinnedBy] = useState<string>();
@@ -83,7 +85,9 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
     es.onopen = () => opened++ && load();
     es.onmessage = (m) => {
       const e = JSON.parse(m.data) as CommentEvent;
-      if (e.type === "comment") {
+      if (e.type === "views") {
+        onViews?.(e.views);
+      } else if (e.type === "comment") {
         const c = e.comment;
         setList((l) => {
           if (!l) return l;
@@ -104,7 +108,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       }
     };
     return () => es.close();
-  }, [slug, load, userId]);
+  }, [slug, load, userId, onViews]);
 
   const replies = useMemo(() => {
     const m = new Map<number, Comment[]>();
@@ -125,8 +129,15 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
     return [...seen.values()];
   }, [list, userId]);
 
-  const count = (list ?? []).filter((c) => c.status === "published" && !c.deleted).length;
-  useEffect(() => onCount?.(count), [count, onCount]);
+  const count = useMemo(() => {
+    const visible = new Map(pending.map((c) => [c.id, c]));
+    for (const c of list ?? []) visible.set(c.id, c);
+    return [...visible.values()].filter((c) => c.status === "published" && !c.deleted).length;
+  }, [list, pending]);
+  const loaded = list !== null;
+  useEffect(() => {
+    if (loaded) onCount?.(count);
+  }, [loaded, count, onCount]);
 
   // Notification links: open the thread, scroll to the comment, flash it.
   const [flash, setFlash] = useState<number | null>(null);
@@ -406,7 +417,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
         <button type="button" onClick={openSheet} className="block w-full touch-manipulation rounded-[var(--radius-sheet)] bg-surface-2 p-3.5 text-left lg:hidden">
           <span className="flex items-baseline gap-2">
             <span className="text-[15px] font-semibold">Комментарии</span>
-            {list ? <span className="tnum text-[14px] text-ink-3">{count}</span> : null}
+            <AnimatedCount className="tnum text-[14px] text-ink-3" value={loaded ? String(count) : ""} />
           </span>
           <span className="mt-2 flex items-start gap-2.5 text-[14px]">
             {first ? (
@@ -456,7 +467,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
               <span className="mx-auto mb-1.5 block h-1 w-9 rounded-full bg-line-strong" aria-hidden />
               <div className="flex items-center gap-2">
                 <h2 className="text-[17px] font-semibold">Комментарии</h2>
-                <span className="tnum text-[15px] text-ink-3">{count}</span>
+                <AnimatedCount className="tnum text-[15px] text-ink-3" value={loaded ? String(count) : ""} />
                 <button type="button" onClick={closeSheet} className="-mr-2 ml-auto grid size-10 place-items-center rounded-full hover:bg-hover" aria-label="Закрыть комментарии">
                   <X className="size-5" />
                 </button>

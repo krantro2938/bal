@@ -12,6 +12,7 @@ import { shareLink } from "@/lib/share";
 import type { DanceSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AuthPrompt } from "./AuthPrompt";
+import { AnimatedCount } from "./AnimatedCount";
 import { Star } from "./Star";
 
 export function Cover({
@@ -91,7 +92,7 @@ export function Views({ n }: { n: number }) {
   return (
     <span className="inline-flex items-center gap-1" aria-label={viewsLabel(n)} title={viewsLabel(n)}>
       <Play className="size-3 shrink-0" strokeWidth={2.25} aria-hidden />
-      {compactCount(n)}
+      <AnimatedCount value={compactCount(n)} />
     </span>
   );
 }
@@ -232,7 +233,7 @@ function CardActions({ dance }: { dance: DanceSummary }) {
       </button>
       <Link to={`/dance/${dance.slug}?comments`} className={pill} title="Комментарии" aria-label={`Комментарии: ${dance.comments}`}>
         <MessageSquare />
-        {dance.comments ? compactCount(dance.comments) : null}
+        <AnimatedCount value={dance.comments ? compactCount(dance.comments) : ""} />
       </Link>
       {ask ? <AuthPrompt reason={ask} returnTo={() => location.pathname + location.search} onClose={() => setAsk(null)} /> : null}
     </div>

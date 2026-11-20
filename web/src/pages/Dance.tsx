@@ -4,6 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AudioTrack } from "@/components/AudioTrack";
+import { AnimatedCount } from "@/components/AnimatedCount";
 import { ChaptersCarousel, ChaptersPanel } from "@/components/ChaptersPanel";
 import { Comments } from "@/components/Comments";
 import { Badge, CompactCard, Cover, isNew, NewBadge, Views } from "@/components/DanceCard";
@@ -127,7 +128,14 @@ export function Dance() {
     const t = setTimeout(() => document.getElementById("comments")?.scrollIntoView({ behavior: "smooth" }), 150);
     return () => clearTimeout(t);
   }, [toComments, loaded]);
-  const [commentCount, setCommentCount] = useState(0);
+  const [liveViews, setLiveViews] = useState<{ slug: string; count: number } | null>(null);
+  const [liveComments, setLiveComments] = useState<{ slug: string; count: number } | null>(null);
+  const onViews = useCallback((count: number) => {
+    setLiveViews((prev) => prev?.slug === slug && prev.count >= count ? prev : { slug, count });
+  }, [slug]);
+  const onCommentCount = useCallback((count: number) => setLiveComments({ slug, count }), [slug]);
+  const viewCount = liveViews?.slug === slug ? Math.max(liveViews.count, dance?.views ?? 0) : dance?.views ?? 0;
+  const commentCount = liveComments?.slug === slug ? liveComments.count : dance?.comments ?? 0;
   const [theatreOn, setTheatre] = useState(() => readFlag(THEATRE_KEY));
   // Theatre mode only exists on large screens; phones keep the stored choice for later.
   const [wide, setWide] = useState(() => matchMedia(WIDE).matches);
@@ -498,7 +506,7 @@ export function Dance() {
           <h1 className="font-title mt-3 text-[24px] leading-tight sm:mt-6 lg:text-[30px]">{dance.title}</h1>
           {/* Phones: views and date under the title, like YouTube's app; the description card drops them. */}
           <p className="tnum mt-1 flex flex-wrap gap-x-2 text-[13px] text-ink-3 sm:hidden">
-            <Views n={dance.views} />
+            <Views n={viewCount} />
             {dance.published ? <span>{ago(dance.published)}</span> : null}
             {facts.map((f) => (
               <span key={f}>{f}</span>
@@ -594,7 +602,7 @@ export function Dance() {
             onClick={() => !more && setMore(true)}
           >
             <p className={cn("tnum flex flex-wrap gap-x-2.5 text-[14px] font-semibold", !more && "max-sm:hidden")}>
-              <Views n={dance.views} />
+              <Views n={viewCount} />
               {dance.published ? <span title={fullDate(dance.published)}>{more ? fullDate(dance.published) : ago(dance.published)}</span> : null}
               {isNew(dance) ? (
                 <span className="self-center">
@@ -685,19 +693,23 @@ export function Dance() {
                   )}
                 >
                   {label}
-                  {n ? <span className="tnum ml-1.5 font-normal text-ink-3">{n}</span> : null}
+                  {id === "comments" ? (
+                    <AnimatedCount className="tnum ml-1.5 font-normal text-ink-3" value={n ? String(n) : ""} />
+                  ) : n ? <span className="tnum ml-1.5 font-normal text-ink-3">{n}</span> : null}
                 </button>
               ))}
             </div>
             <div className={cn(tab !== "comments" && "hidden")}>
               <Comments
+                key={slug}
                 slug={slug}
                 user={user}
                 duration={dance.video?.duration ?? dance.duration ?? 0}
                 now={currentTime}
                 onSeek={seekFromComment}
                 askLogin={askLogin}
-                onCount={setCommentCount}
+                onCount={onCommentCount}
+                onViews={onViews}
                 focusId={focusComment}
                 startOpen={toComments}
               />

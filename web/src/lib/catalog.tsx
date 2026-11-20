@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useLocation } from "react-router";
 import { api } from "./api";
 import { useSession } from "./session";
 import type { Catalog, DanceSummary } from "./types";
@@ -15,6 +16,7 @@ const Ctx = createContext<CatalogState | null>(null);
 
 export function CatalogProvider({ children }: { children: ReactNode }) {
   const { user } = useSession();
+  const { pathname } = useLocation();
   const [data, setData] = useState<Catalog | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -30,6 +32,40 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     };
     // refetch when the signed-in user changes: "my reaction" differs
   }, [attempt, user?.id]);
+  useEffect(() => {
+    if (pathname !== "/") return;
+    let active = true;
+    let inFlight = false;
+    const refreshCounts = async () => {
+      if (!active || inFlight || document.visibilityState !== "visible") return;
+      inFlight = true;
+      try {
+        const latest = await api.catalog();
+        if (!active) return;
+        const counts = new Map(latest.dances.map((d) => [d.slug, d]));
+        setData((current) => {
+          if (!current) return current;
+          const dances = current.dances.map((d) => {
+            const fresh = counts.get(d.slug);
+            if (!fresh || (fresh.views === d.views && fresh.comments === d.comments)) return d;
+            return { ...d, views: fresh.views, comments: fresh.comments };
+          });
+          return dances.some((d, i) => d !== current.dances[i]) ? { ...current, dances } : current;
+        });
+      } catch {
+        // Keep the last confirmed counts until the next refresh.
+      } finally {
+        inFlight = false;
+      }
+    };
+    const timer = window.setInterval(refreshCounts, 20_000);
+    document.addEventListener("visibilitychange", refreshCounts);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshCounts);
+    };
+  }, [pathname]);
   const patch = useCallback((slug: string, p: Partial<DanceSummary>) => {
     setData((c) => (c ? { ...c, dances: c.dances.map((d) => (d.slug === slug ? { ...d, ...p } : d)) } : c));
   }, []);

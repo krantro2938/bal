@@ -157,9 +157,18 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 		m.Write([]byte(s.clientIP(r) + "|" + r.UserAgent()))
 		visitor = "g" + hex.EncodeToString(m.Sum(nil))[:24]
 	}
-	if err := s.store.AddView(r.Context(), slug, visitor); err != nil {
+	added, err := s.store.AddView(r.Context(), slug, visitor)
+	if err != nil {
 		httpError(w, err)
 		return
+	}
+	if added {
+		n, err := s.store.ViewCount(r.Context(), slug)
+		if err != nil {
+			logErr(err)
+		} else {
+			s.events.publish(slug, event{Type: "views", Views: &n})
+		}
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

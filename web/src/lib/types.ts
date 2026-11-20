@@ -80,6 +80,7 @@ export type Comment = {
 };
 
 export type CommentEvent =
+  | { type: "views"; views: number }
   | { type: "comment"; comment: Comment }
   | { type: "removed"; id: number }
   | { type: "likes"; id: number; likes: number }

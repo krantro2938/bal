@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -326,13 +327,37 @@ func TestReactionAPI(t *testing.T) {
 	}
 }
 
-func TestViewsDedupePerVisitorPerDay(t *testing.T) {
+func TestLiveViewsDedupePerVisitor(t *testing.T) {
 	ts := newTestServer(t)
 	a, b := newClient(t, ts), newClient(t, ts)
+	stream, err := a.http.Get(ts.URL + "/api/dances/demo/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stream.Body.Close()
+	lines := bufio.NewScanner(stream.Body)
+	wantViews := func(want int) {
+		t.Helper()
+		for lines.Scan() {
+			payload, ok := strings.CutPrefix(lines.Text(), "data: ")
+			if !ok {
+				continue
+			}
+			var e event
+			if err := json.Unmarshal([]byte(payload), &e); err != nil || e.Type != "views" || e.Views == nil || *e.Views != want {
+				t.Fatalf("want views event %d, got %s (%v)", want, payload, err)
+			}
+			return
+		}
+		t.Fatalf("missing views event %d: %v", want, lines.Err())
+	}
+	wantViews(0)
 	a.do("POST", "/api/dances/demo/view", "")
-	a.do("POST", "/api/dances/demo/view", "") // same guest, same day
+	wantViews(1)
+	a.do("POST", "/api/dances/demo/view", "") // same guest, same half-hour slot
 	b.do("POST", "/api/auth/dev", `{"name":"Анна"}`)
 	b.do("POST", "/api/dances/demo/view", "")
+	wantViews(2)
 	if _, body := a.do("GET", "/api/catalog", ""); !strings.Contains(body, `"views":2`) {
 		t.Fatalf("views: %s", body)
 	}

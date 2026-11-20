@@ -49,10 +49,20 @@ FROM reactions GROUP BY dance`, userID)
 // the same visitor within the same half hour are ignored, so coming back to rehearse later the
 // same day counts again but reloads don't. The day column holds that half-hour slot
 // ("2026-11-19T10:30"); rows from before hold just a date (one per day) and still count.
-func (s *Store) AddView(ctx context.Context, dance, visitor string) error {
-	_, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO views(dance, visitor, day) VALUES (?,?,?)`,
+func (s *Store) AddView(ctx context.Context, dance, visitor string) (bool, error) {
+	result, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO views(dance, visitor, day) VALUES (?,?,?)`,
 		dance, visitor, time.Now().UTC().Truncate(30*time.Minute).Format("2006-01-02T15:04"))
-	return err
+	if err != nil {
+		return false, err
+	}
+	n, err := result.RowsAffected()
+	return n > 0, err
+}
+
+func (s *Store) ViewCount(ctx context.Context, dance string) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, `SELECT count(*) FROM views WHERE dance = ?`, dance).Scan(&n)
+	return n, err
 }
 
 func (s *Store) ViewCounts(ctx context.Context) (map[string]int, error) {

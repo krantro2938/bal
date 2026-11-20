@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"slices"
@@ -308,6 +309,7 @@ type event struct {
 	Comment *store.Comment `json:"comment,omitempty"`
 	ID      int64          `json:"id,omitempty"`
 	Likes   int            `json:"likes"`
+	Views   *int           `json:"views,omitempty"`
 }
 
 const maxWatchers = 2000
@@ -358,24 +360,24 @@ func (h *hub) publish(slug string, e event) {
 	}
 }
 
-// handleEvents streams a dance page's comment events (Server-Sent Events).
+// handleEvents streams a dance page's comment events and view totals.
 func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if ok, err := s.danceExists(slug); err != nil || !ok {
 		http.NotFound(w, r)
 		return
 	}
-	s.stream(w, r, slug)
+	s.stream(w, r, slug, true)
 }
 
 // handleMyEvents streams the signed-in user's own events (new notifications).
 func (s *Server) handleMyEvents(w http.ResponseWriter, r *http.Request, u *store.User) {
-	s.stream(w, r, userChannel(u.ID))
+	s.stream(w, r, userChannel(u.ID), false)
 }
 
 func userChannel(id int64) string { return "user:" + strconv.FormatInt(id, 10) }
 
-func (s *Server) stream(w http.ResponseWriter, r *http.Request, key string) {
+func (s *Server) stream(w http.ResponseWriter, r *http.Request, key string, withViews bool) {
 	ch, done, ok := s.events.subscribe(key)
 	if !ok {
 		w.Header().Set("Retry-After", "60")
@@ -390,6 +392,14 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request, key string) {
 	h.Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("retry: 5000\n\n"))
+	if withViews {
+		n, err := s.store.ViewCount(r.Context(), key)
+		if err != nil {
+			logErr(err)
+		} else {
+			fmt.Fprintf(w, "data: {\"type\":\"views\",\"views\":%d}\n\n", n)
+		}
+	}
 	rc.Flush()
 	ping := time.NewTicker(25 * time.Second)
 	defer ping.Stop()

@@ -35,7 +35,7 @@ func TestComments(t *testing.T) {
 	mod.do("POST", "/api/auth/dev", `{"name":"Модератор"}`)
 
 	// Live updates: a guest watching the page sees Anna's comment arrive.
-	resp, err := http.Get(ts.URL + "/api/dances/demo/events")
+	resp, err := guest.http.Get(ts.URL + "/api/dances/demo/events")
 	if err != nil || resp.StatusCode != 200 {
 		t.Fatalf("events: %v %v", err, resp)
 	}
@@ -51,13 +51,10 @@ func TestComments(t *testing.T) {
 	}
 	var created struct{ Comment store.Comment }
 	json.Unmarshal([]byte(body), &created)
-	for lines.Scan() {
-		if strings.HasPrefix(lines.Text(), "data: ") {
-			if !strings.Contains(lines.Text(), "поворот налево") {
-				t.Fatalf("event: %s", lines.Text())
-			}
-			break
-		}
+	for lines.Scan() && !strings.HasPrefix(lines.Text(), `data: {"type":"comment"`) {
+	}
+	if !strings.Contains(lines.Text(), "поворот налево") {
+		t.Fatalf("comment event: %s (%v)", lines.Text(), lines.Err())
 	}
 
 	if code, body := boris.do("POST", "/api/dances/demo/comments", `{"body":"бля, сложно"}`); code != 422 || !strings.Contains(body, "нецензурные") {
