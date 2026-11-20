@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -94,6 +95,45 @@ func ffprobe(ctx context.Context, path string) (*Probe, error) {
 		}
 	}
 	return p, nil
+}
+
+// Packet timestamps let us check remux candidates without decoding the video.
+func hasShortKeyframeGaps(ctx context.Context, path string, duration float64) bool {
+	out, err := exec.CommandContext(ctx, "ffprobe", "-v", "error", "-select_streams", "v:0",
+		"-show_packets", "-show_entries", "packet=pts_time,flags", "-of", "json", path).Output()
+	if err != nil {
+		return false
+	}
+	var data struct {
+		Packets []struct {
+			PTS   string `json:"pts_time"`
+			Flags string `json:"flags"`
+		} `json:"packets"`
+	}
+	if json.Unmarshal(out, &data) != nil {
+		return false
+	}
+	var times []float64
+	for _, packet := range data.Packets {
+		if strings.Contains(packet.Flags, "K") {
+			t, err := strconv.ParseFloat(packet.PTS, 64)
+			if err != nil {
+				return false
+			}
+			times = append(times, t)
+		}
+	}
+	if len(times) == 0 {
+		return false
+	}
+	sort.Float64s(times)
+	const limit = SeekKeyframeSeconds + 0.05 // tolerate one frame of container rounding
+	for i := 1; i < len(times); i++ {
+		if times[i]-times[i-1] > limit {
+			return false
+		}
+	}
+	return duration-times[len(times)-1] <= limit
 }
 
 // decodeCheck fully decodes a file and fails on any decoder error.

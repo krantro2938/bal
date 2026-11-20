@@ -28,7 +28,8 @@ const (
 	// file is re-encoded at the same resolution and frame rate: the 1080p
 	// tutorials arrive at ~17 Mbit/s (345 MB for 2:51), which stalls on
 	// phone connections and costs guests hundreds of megabytes per dance.
-	MaxRemuxBitrate = 6_000_000
+	MaxRemuxBitrate     = 6_000_000
+	SeekKeyframeSeconds = 2
 
 	ThumbInterval = 2.0 // seconds between timeline previews
 	ThumbWidth    = 192
@@ -127,7 +128,7 @@ func Prepare(ctx context.Context, d *content.Source, cfg Config) (*content.Meta,
 	// generation too, because media URLs are cached as immutable: new bytes need a new URL.
 	// (Notes and progress follow Version, the source hash, so they survive a re-encode.)
 	mode := "remux"
-	if !canRemux(sp) {
+	if !canRemux(sp) || !hasShortKeyframeGaps(ctx, srcPath, sp.Duration) {
 		mode = "transcode"
 	}
 	videoName := "video-" + version + ".mp4"
@@ -142,7 +143,7 @@ func Prepare(ctx context.Context, d *content.Source, cfg Config) (*content.Meta,
 			return nil, err
 		}
 	}
-	removeStale(outDir, "video-", ".mp4", videoName)
+	// Keep older immutable video URLs available to players opened before a media update.
 	vp, err := ffprobe(ctx, videoPath)
 	if err != nil {
 		return nil, err
@@ -270,7 +271,8 @@ func canRemux(p *Probe) bool {
 // e2: x264 "slower" at CRF 22. Measured with VMAF against the camera originals it matches the
 // first encode ("medium", CRF 21) within 0.3 points (95.6 vs 95.9, 96.7 vs 97.0), well under
 // what anyone can see, at about 20% fewer bytes.
-const EncodeGeneration = "e2"
+// e3 keeps the e2 settings and caps the distance between keyframes at two seconds.
+const EncodeGeneration = "e3"
 
 func buildVideo(ctx context.Context, in, out string, p *Probe, mode string) error {
 	tmp := out + ".part.mp4"
@@ -278,13 +280,17 @@ func buildVideo(ctx context.Context, in, out string, p *Probe, mode string) erro
 	if mode == "remux" {
 		args = append(args, "-c", "copy")
 	} else {
+		keyframes := int(math.Floor(SeekKeyframeSeconds * p.Video.FPS()))
+		if keyframes < 1 {
+			return fmt.Errorf("%s: invalid frame rate %q", in, p.Video.FrameRate)
+		}
 		maxrate := "5M"
 		if p.Video.FPS() > 31 {
 			maxrate = "7M"
 		}
 		args = append(args,
 			"-c:v", "libx264", "-preset", "slower", "-crf", "22",
-			"-maxrate", maxrate, "-bufsize", "10M",
+			"-maxrate", maxrate, "-bufsize", "10M", "-g", fmt.Sprint(keyframes),
 			"-profile:v", "high", "-pix_fmt", "yuv420p",
 			"-fps_mode", "passthrough", "-tag:v", "avc1")
 		if p.Audio != nil && p.Audio.Codec == "aac" {

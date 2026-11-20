@@ -70,7 +70,7 @@ For each dance, `bal prepare` writes `var/media/<slug>/`:
 
 | Output | How |
 |---|---|
-| `video-<sha12>.mp4` | H.264/AAC sources at ≤ 6 Mbit/s are **remuxed** (`-c copy -movflags +faststart`). Sources above that, or not H.264, are re-encoded with libx264 CRF 21 at the **same resolution and frame rate** (`-fps_mode passthrough`). The 1080p originals were 17–31 Mbit/s; measured SSIM against the source is 0.990–0.994. The pipeline checks that `moov` comes before `mdat`, that duration matches within 0.25 s, and that width and fps are unchanged. |
+| `video-<sha12>[-e3].mp4` | Compatible H.264 sources at ≤ 6 Mbit/s with short keyframe gaps are **remuxed**. Other sources are encoded with libx264 CRF 22 at the same resolution and frame rate, with a keyframe interval of up to about two seconds for faster seeking. Both paths use `+faststart`. Transcodes use versioned URLs, and older files stay available to open players. |
 | `poster.webp`, `poster-640.webp` | The real frame at `coverAt`, chosen by hand from a contact sheet. |
 | `preview.mp4` | 8 s muted 480p loop from the cover frame (40–200 KB) for the hover preview in the catalog. |
 | `thumbs/sprite-NN.webp` + `thumbs.vtt` | One frame every 2 s, 192×108 tiles in 8×8 sheets, WebVTT `#xywh` cues. |
