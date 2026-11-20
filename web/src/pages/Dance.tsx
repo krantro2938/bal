@@ -198,6 +198,18 @@ export function Dance() {
     if (window.matchMedia("(max-width: 1023px)").matches) window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  const seekFromComment = useCallback((t: number) => {
+    const video = player.current?.el;
+    if (video && window.matchMedia("(min-width: 1024px)").matches) {
+      const { top, bottom } = video.getBoundingClientRect();
+      if (top < HEADER || bottom > window.innerHeight) {
+        // Jump before playing so the timestamped moment doesn't pass during the scroll.
+        window.scrollTo({ top: window.scrollY + top - HEADER, behavior: "instant" });
+      }
+    }
+    seek(t);
+  }, [seek]);
+
   // Resume position: server for signed-in users, this browser for guests.
   const resumeAt = useMemo(() => {
     if (!dance?.video || startAt !== null) return null;
@@ -682,7 +694,7 @@ export function Dance() {
                 user={user}
                 duration={dance.video?.duration ?? dance.duration ?? 0}
                 now={currentTime}
-                onSeek={(t) => seek(t)}
+                onSeek={seekFromComment}
                 askLogin={askLogin}
                 onCount={setCommentCount}
                 focusId={focusComment}
