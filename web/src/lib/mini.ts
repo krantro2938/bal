@@ -12,6 +12,7 @@ export type MiniDance = { slug: string; title: string; order: number; kind: "dan
  *  back from this bar. The page then starts playing at once (where you stopped, on a card);
  *  shared links, comment links and the 💬 button don't carry it. */
 export const WATCH = { play: true };
+export const WATCH_FROM_START = { ...WATCH, fromStart: true };
 
 let current: MiniDance | null = null;
 let video: HTMLVideoElement | null = null;

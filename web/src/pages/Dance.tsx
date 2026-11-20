@@ -58,7 +58,8 @@ export function Dance() {
   const [playerReady, setPlayerReady] = useState(false);
   const startAt = useMemo(() => parseTime(params.get("t")), [params]);
   // Opened from a card or the end screen (or back from the mini player): start playing at once.
-  const autoPlay = !!(useLocation().state as { play?: boolean } | null)?.play;
+  const watch = useLocation().state as { play?: boolean; fromStart?: boolean } | null;
+  const autoPlay = !!watch?.play;
 
   // Phones: dragging the video down slides this page away over the feed and hands the dance
   // to the mini player, like YouTube's app. Only the part below the header moves.
@@ -230,8 +231,8 @@ export function Dance() {
     return pos !== null && pos > 5 && pos < dance.video.duration - 5 ? pos : null;
   }, [dance, state, user, startAt]);
   const [resumeDismissed, setResumeDismissed] = useState(false);
-  // Playing at once picks up where you stopped, like YouTube; the banner then offers the start.
-  const resumeStart = autoPlay && startAt === null ? resumeAt : null;
+  // Catalog cards start fresh and offer the saved position in the banner.
+  const resumeStart = autoPlay && !watch?.fromStart ? resumeAt : null;
 
   // Save position every 15 s of playback, on pause and when leaving.
   useEffect(() => {

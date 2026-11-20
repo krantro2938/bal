@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { track } from "@/lib/analytics";
 import { api } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
-import { WATCH } from "@/lib/mini";
+import { WATCH, WATCH_FROM_START } from "@/lib/mini";
 import { ago, compactCount, timecode, viewsLabel } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { shareLink } from "@/lib/share";
@@ -176,11 +176,11 @@ export function VideoCard({ dance, eager, badge, still }: { dance: DanceSummary;
     <div ref={ref} className="group relative isolate hover:z-10 has-[[data-open]]:z-20" {...handlers}>
       {/* YouTube-style backdrop that grows out of the card on hover */}
       <div className="pointer-events-none absolute -inset-2.5 -z-10 scale-95 rounded-[22px] bg-[var(--card-hover)] opacity-0 shadow-[var(--card-hover-shadow)] transition duration-200 [@media(hover:hover)]:group-hover:scale-100 [@media(hover:hover)]:group-hover:opacity-100" />
-      <Link to={to} state={WATCH} tabIndex={-1} aria-hidden className="block rounded-[var(--radius-frame)]">
+      <Link to={to} state={WATCH_FROM_START} tabIndex={-1} aria-hidden className="block rounded-[var(--radius-frame)]">
         <Cover dance={dance} eager={eager} playing={on && dance.available} />
       </Link>
       <div className="mt-3 flex gap-1">
-        <Link to={to} state={WATCH} className="flex min-w-0 flex-1 gap-3 rounded-lg focus-visible:outline-offset-4">
+        <Link to={to} state={WATCH_FROM_START} className="flex min-w-0 flex-1 gap-3 rounded-lg focus-visible:outline-offset-4">
           <Badge dance={dance} />
           <div className="min-w-0">
             <h2 className="line-clamp-2 font-title text-[16px] leading-snug sm:text-[18px]">{dance.title}</h2>
