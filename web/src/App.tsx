@@ -3,7 +3,8 @@ import { useEffect, useLayoutEffect } from "react";
 import { Toaster } from "sonner";
 import { Header } from "@/components/Header";
 import { InstallPrompt } from "@/components/InstallPrompt";
-import { setPage } from "@/lib/analytics";
+import { setPage, trackOnce } from "@/lib/analytics";
+import { parseTime } from "@/lib/format";
 import { feedPlace, rememberFeed } from "@/lib/scroll";
 import { MiniPlayer } from "@/components/MiniPlayer";
 import { StateBlock } from "@/components/StateBlock";
@@ -26,6 +27,10 @@ function Shell() {
     setPage(pathname);
   }, [pathname]);
   useEffect(rememberFeed, [search]);
+  useEffect(() => {
+    const at = parseTime(new URLSearchParams(search).get("t"));
+    if (pathname.startsWith("/dance/") && at !== null && Number.isFinite(at)) trackOnce("timestamp-opened");
+  }, [pathname, search]);
   return (
     <>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-bg focus:px-3 focus:py-2">

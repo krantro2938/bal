@@ -208,6 +208,7 @@ export function Dance() {
   }, []);
 
   const seekFromComment = useCallback((t: number) => {
+    trackOnce("comment-timestamp");
     const video = player.current?.el;
     if (video && window.matchMedia("(min-width: 1024px)").matches) {
       const { top, bottom } = video.getBoundingClientRect();

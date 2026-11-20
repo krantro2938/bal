@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -99,8 +100,26 @@ func TestPulseForwardsCheckedReports(t *testing.T) {
 		t.Fatal("a valid report was not forwarded")
 	}
 
-	// Unknown pages, unknown events, our own site as referrer and junk are dropped.
+	post(`{"url":"/dance/demo","name":"video-seek","data":{"ms":180,"frame":"presented","comment":"private"}}`)
+	select {
+	case <-got:
+		p := (<-bodies)["payload"].(map[string]any)
+		want := map[string]any{"ms": float64(180), "frame": "presented"}
+		if p["name"] != "video-seek" || !reflect.DeepEqual(p["data"], want) {
+			t.Fatalf("unexpected playback payload: %v", p)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("playback timing was not forwarded")
+	}
+
+	// Invalid playback data, unknown pages or events, and junk are dropped.
 	for _, body := range []string{
+		`{"url":"/dance/demo","name":"video-startup"}`,
+		`{"url":"/dance/demo","name":"video-failure","data":{"phase":"seek","reason":"raw media error"}}`,
+		`{"url":"/dance/demo","name":"video-seek","data":{"ms":15001,"frame":"presented"}}`,
+		`{"url":"/dance/demo","name":"video-session","data":{"stalls":-1,"stall_ms":0}}`,
+		`{"url":"/","name":"video-session","data":{"stalls":0,"stall_ms":0}}`,
+		`{"url":"/dance/demo","name":"play","data":{"ms":100}}`,
 		`{"url":"/dance/demo?t=5"}`,
 		`{"url":"/admin"}`,
 		`{"url":"/","name":"bought-a-car"}`,

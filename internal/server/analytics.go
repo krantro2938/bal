@@ -23,22 +23,28 @@ import (
 
 // analyticsEvents is every event that exists; keep in step with EVENTS in web/src/lib/analytics.ts.
 var analyticsEvents = map[string]bool{
-	"play":          true, // a dance video started playing (once per page view)
-	"finished":      true, // it was watched to the end (once per page view)
-	"loop":          true, // a fragment repeat was turned on
-	"slowed":        true, // playback speed set below 1×
-	"scheme-opened": true, // a scheme page was opened
-	"mini-player":   true, // the dance went on in the mini player
-	"note-saved":    true, // a new private note
-	"comment":       true, // a comment or reply was posted
-	"reaction":      true, // like or dislike
-	"favorite":      true, // saved to favorites
-	"learned":       true, // marked as learned
-	"share":         true, // a link was shared or copied
-	"signup":        true, // an account was created
-	"login":         true, // signed in with email and password
-	"install":       true, // installed as an app
-	"push-on":       true, // turned on notifications on a device
+	"play":              true, // a dance video started playing (once per page view)
+	"video-startup":     true,
+	"video-seek":        true,
+	"video-failure":     true,
+	"video-session":     true,
+	"finished":          true, // it was watched to the end (once per page view)
+	"loop":              true, // a fragment repeat was turned on
+	"slowed":            true, // playback speed set below 1×
+	"scheme-opened":     true, // a scheme page was opened
+	"mini-player":       true, // the dance went on in the mini player
+	"timestamp-opened":  true, // a timestamp link was opened
+	"comment-timestamp": true, // a timestamp in a comment was clicked
+	"note-saved":        true, // a new private note
+	"comment":           true, // a comment or reply was posted
+	"reaction":          true, // like or dislike
+	"favorite":          true, // saved to favorites
+	"learned":           true, // marked as learned
+	"share":             true, // a link was shared or copied
+	"signup":            true, // an account was created
+	"login":             true, // signed in with email and password
+	"install":           true, // installed as an app
+	"push-on":           true, // turned on notifications on a device
 }
 
 var (
@@ -69,11 +75,46 @@ func analyticsOrigin(rawURL, siteID string) (string, error) {
 }
 
 type pulse struct {
-	URL      string `json:"url"`
-	Name     string `json:"name,omitempty"`
-	Referrer string `json:"referrer,omitempty"`
-	Language string `json:"language,omitempty"`
-	Screen   string `json:"screen,omitempty"`
+	URL      string          `json:"url"`
+	Name     string          `json:"name,omitempty"`
+	Referrer string          `json:"referrer,omitempty"`
+	Language string          `json:"language,omitempty"`
+	Screen   string          `json:"screen,omitempty"`
+	Data     json.RawMessage `json:"data,omitempty"`
+}
+
+// playbackData forwards only bounded timing values and fixed labels to Umami.
+func playbackData(name string, raw json.RawMessage) (map[string]any, bool) {
+	var d struct {
+		MS      *int   `json:"ms"`
+		Frame   string `json:"frame"`
+		Phase   string `json:"phase"`
+		Reason  string `json:"reason"`
+		Stalls  *int   `json:"stalls"`
+		StallMS *int   `json:"stall_ms"`
+	}
+	if !strings.HasPrefix(name, "video-") {
+		return nil, len(raw) == 0
+	}
+	if err := json.Unmarshal(raw, &d); err != nil {
+		return nil, false
+	}
+	bounded := func(n *int, max int) bool { return n != nil && *n >= 0 && *n <= max }
+	switch name {
+	case "video-startup", "video-seek":
+		if bounded(d.MS, 15000) && (d.Frame == "presented" || d.Frame == "ready") {
+			return map[string]any{"ms": *d.MS, "frame": d.Frame}, true
+		}
+	case "video-failure":
+		if (d.Phase == "startup" || d.Phase == "seek" || d.Phase == "playback") && (d.Reason == "error" || d.Reason == "timeout") {
+			return map[string]any{"phase": d.Phase, "reason": d.Reason}, true
+		}
+	case "video-session":
+		if bounded(d.Stalls, 100) && bounded(d.StallMS, 600000) {
+			return map[string]any{"stalls": *d.Stalls, "stall_ms": *d.StallMS}, true
+		}
+	}
+	return nil, false
 }
 
 // umamiPayload checks a report from the page and turns it into Umami's /api/send payload,
@@ -85,9 +126,16 @@ func (s *Server) umamiPayload(p pulse) map[string]any {
 	if p.Name != "" && !analyticsEvents[p.Name] {
 		return nil
 	}
+	data, ok := playbackData(p.Name, p.Data)
+	if !ok || (data != nil && !analyticsDance.MatchString(p.URL)) {
+		return nil
+	}
 	out := map[string]any{"website": s.cfg.AnalyticsSiteID, "hostname": s.publicHost, "url": p.URL}
 	if p.Name != "" {
 		out["name"] = p.Name
+	}
+	if data != nil {
+		out["data"] = data
 	}
 	if analyticsLanguage.MatchString(p.Language) {
 		out["language"] = p.Language

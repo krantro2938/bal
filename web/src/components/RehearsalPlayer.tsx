@@ -9,6 +9,7 @@ import { SplitPill, splitHalf } from "@/components/SplitPill";
 import { Tip } from "@/components/Tip";
 import { timecode } from "@/lib/format";
 import { WATCH } from "@/lib/mini";
+import { playbackMetrics } from "@/lib/playbackMetrics";
 import type { DanceDetail, DanceSummary, Note } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -116,6 +117,20 @@ export function RehearsalPlayer({
   const loopRef = useRef(loop);
   loopRef.current = loop;
   const started = useRef(false);
+  const metrics = useMemo(
+    () => playbackMetrics(dance.slug, () => player.current?.el?.querySelector("video")),
+    [dance.slug, player, video.url],
+  );
+
+  useEffect(() => {
+    window.addEventListener("pagehide", metrics.flush);
+    document.addEventListener("visibilitychange", metrics.visibilityChanged);
+    return () => {
+      window.removeEventListener("pagehide", metrics.flush);
+      document.removeEventListener("visibilitychange", metrics.visibilityChanged);
+      metrics.dispose();
+    };
+  }, [metrics]);
 
   // When playback crosses the end of the fragment, jump back to its start.
   useEffect(() => {
@@ -123,9 +138,12 @@ export function RehearsalPlayer({
     if (!p) return;
     return p.subscribe(({ currentTime }) => {
       const l = loopRef.current;
-      if (l && currentTime >= l.b && currentTime < l.b + 1.5) p.currentTime = l.a;
+      if (l && currentTime >= l.b && currentTime < l.b + 1.5) {
+        metrics.ignoreSeek(l.a);
+        p.currentTime = l.a;
+      }
     });
-  }, [player]);
+  }, [player, metrics]);
 
   // Once a video has ended, Vidstack ignores timeline seeks in its state and restarts from 0 on
   // play. Remember where the viewer asked to go, hide the end screen, and continue from there.
@@ -159,6 +177,15 @@ export function RehearsalPlayer({
         onVolumeChange={(d) => saveVolume(d.volume, d.muted)}
         keyShortcuts={{ togglePaused: "k Space", seekBackward: "j J ArrowLeft", seekForward: "l L ArrowRight", toggleFullscreen: "f" }}
         onLoadedMetadata={onReady}
+        onMediaPlayRequest={metrics.play}
+        onPlaying={metrics.playing}
+        onPlayFail={metrics.playRejected}
+        onSeeking={metrics.seeking}
+        onSeeked={metrics.seeked}
+        onWaiting={metrics.waiting}
+        onPause={metrics.pause}
+        onEnded={metrics.flush}
+        onError={metrics.error}
         onMediaSeekRequest={(t, e) => {
           const p = player.current;
           // Playing then sends Vidstack's own "seek to 0", which must not replace the choice.
@@ -181,6 +208,7 @@ export function RehearsalPlayer({
           }
         }}
         onPlay={() => {
+          metrics.play();
           const t = afterEnd.current;
           const p = player.current;
           afterEnd.current = null;
@@ -197,10 +225,17 @@ export function RehearsalPlayer({
         onCanPlay={() => {
           if (!started.current && (startAt !== null || autoPlay) && player.current) {
             started.current = true;
-            if (startAt !== null) player.current.currentTime = Math.min(startAt, video.duration - 0.5);
+            if (startAt !== null) {
+              const target = Math.min(startAt, video.duration - 0.5);
+              metrics.ignoreSeek(target);
+              player.current.currentTime = target;
+            }
             // Opened from a card (or back from the mini player): play at once. A browser that wants
             // a tap first (iPhones, often) refuses quietly and the play button stays.
-            if (autoPlay) player.current.play().catch(() => {});
+            if (autoPlay) {
+              metrics.play();
+              player.current.play().catch(metrics.playRejected);
+            }
           }
         }}
       >
