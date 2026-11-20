@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, CircleCheck, EllipsisVertical, Flag, Pin, PinOff, ShieldCheck, ThumbsUp, Timer, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent } from "react";
+import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref, type TouchEvent } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { toast } from "sonner";
@@ -207,6 +207,7 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   // Phones: the list opens as a drawer over everything below the video, like YouTube's app.
   const phone = usePhone();
   const sheet = open && phone;
+  const footerReply = useRef<StartReply>(null);
   const [sheetTop, setSheetTop] = useState(0);
   const [keyboard, setKeyboard] = useState(0);
   // Typing in the drawer's comment box: it sits on the keyboard, the rest is dimmed.
@@ -319,11 +320,13 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
   const sheetY = Math.min(Math.max(restTop + drag, 0), sheetTop);
   const below = Math.max(0, restTop + drag - sheetTop);
 
-  const ctx: ThreadCtx = { user, moderator, pinnedBy, duration, now, people, flash, expand, children: replies, onSeek, post, like, act, askLogin };
+  const onPhoneReply: StartReply | undefined = sheet ? (comment, onPosted) => footerReply.current?.(comment, onPosted) : undefined;
+  const ctx: ThreadCtx = { user, moderator, pinnedBy, duration, now, people, flash, expand, children: replies, onSeek, onPhoneReply, post, like, act, askLogin };
   const first = threads[0];
   // On computers the comment box heads the list; in the phone drawer it sits at the bottom, like YouTube's.
   const composer = (
     <Composer
+      key={slug}
       user={user}
       now={now}
       duration={duration}
@@ -331,7 +334,8 @@ export function Comments({ slug, user, duration, now, onSeek, askLogin, onCount,
       placeholder="Напишите комментарий…"
       onGuest={() => askLogin("Чтобы писать комментарии. Пишите уважительно — грубые комментарии не публикуются.")}
       dropUp={sheet}
-      onSubmit={(b) => post(b)}
+      replyRef={sheet ? footerReply : undefined}
+      onSubmit={post}
     />
   );
   // The list itself: in the page on computers, inside the drawer on phones.
@@ -506,6 +510,8 @@ function usePhone() {
   return on;
 }
 
+type StartReply = (comment: Comment, onPosted: () => void) => void;
+
 type ThreadCtx = {
   user: User | null;
   moderator: boolean;
@@ -518,6 +524,7 @@ type ThreadCtx = {
   expand: Set<number>;
   children: Map<number, Comment[]>;
   onSeek: (t: number) => void;
+  onPhoneReply?: StartReply;
   post: (body: string, parentId?: number) => Promise<boolean>;
   like: (c: Comment) => void;
   act: (c: Comment, a: Action) => void;
@@ -528,7 +535,7 @@ type ThreadCtx = {
  * A comment and its replies, recursively, joined YouTube-style by a line from the
  * comment's avatar with a rounded elbow into each row. Replies stay folded behind
  * "N ответов"; unfolded, a "Скрыть ответы" row closes the branch. The reply box
- * opens right under the comment being answered.
+ * opens under the comment on desktop and in the drawer footer on phones.
  */
 function Thread({ c, depth, ctx }: { c: Comment; depth: number; ctx: ThreadCtx }) {
   const replies = ctx.children.get(c.id) ?? [];
@@ -539,6 +546,7 @@ function Thread({ c, depth, ctx }: { c: Comment; depth: number; ctx: ThreadCtx }
   const [replying, setReplying] = useState(false);
   const startReply = () => {
     if (!ctx.user) return ctx.askLogin("Чтобы отвечать на комментарии.");
+    if (ctx.onPhoneReply) return ctx.onPhoneReply(c, () => setShow(true));
     setReplying(true);
   };
   // At the deepest level a reply lands beside this comment, so it names whom it answers.
@@ -549,7 +557,7 @@ function Thread({ c, depth, ctx }: { c: Comment; depth: number; ctx: ThreadCtx }
   const trunk = avatar / 2 - 1; // x of the line under this comment's avatar
 
   const rows: { key: string; node: ReactNode; elbow: number }[] = [];
-  if (replying) {
+  if (replying && !ctx.onPhoneReply) {
     rows.push({
       key: "composer",
       elbow: 14,
@@ -906,6 +914,7 @@ function Composer({
   small,
   autoFocus,
   dropUp,
+  replyRef,
   initial = "",
   onGuest,
   onCancel,
@@ -920,18 +929,45 @@ function Composer({
   autoFocus?: boolean;
   /** At the bottom of the screen (the phone drawer): @-suggestions open upwards. */
   dropUp?: boolean;
+  replyRef?: Ref<StartReply>;
   initial?: string;
   onGuest: () => void;
   onCancel?: () => void;
-  onSubmit: (body: string) => Promise<boolean>;
+  onSubmit: (body: string, parentId?: number) => Promise<boolean>;
 }) {
-  const [text, setText] = useState(initial);
+  const [draft, setDraft] = useState(initial);
+  const [reply, setReply] = useState<{ id: number; mention: string; onPosted: () => void } | null>(null);
+  const [replyText, setReplyText] = useState("");
   const [caret, setCaret] = useState(initial.length);
   const [active, setActive] = useState(!!autoFocus);
   const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
   const input = useRef<HTMLTextAreaElement>(null);
+  const text = reply ? replyText : draft;
+  const setText = reply ? setReplyText : setDraft;
+
+  useImperativeHandle(replyRef, () => (comment, onPosted) => {
+    if (submitting.current) return;
+    if (reply?.id !== comment.id) {
+      const mention = `@${comment.author.username}`;
+      setReply({ id: comment.id, mention, onPosted });
+      setReplyText(mention + " ");
+      setCaret(mention.length + 1);
+    }
+    // Focus inside the tap so iOS opens the keyboard.
+    input.current?.focus({ preventScroll: true });
+  }, [reply]);
+
+  useLayoutEffect(() => {
+    if (!reply) return;
+    const end = reply.mention.length + 1;
+    input.current?.setSelectionRange(end, end);
+  }, [reply]);
+
   const cancel = () => {
+    if (submitting.current) return;
     setText("");
+    setReply(null);
     setActive(false);
     input.current?.blur(); // the buttons keep focus (keepFocus), so letting go of it is done here
     onCancel?.();
@@ -969,11 +1005,16 @@ function Composer({
       className="flex gap-3"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (!text.trim() || busy) return;
+        if (!text.trim() || submitting.current) return;
+        submitting.current = true;
         setBusy(true);
-        const ok = await onSubmit(text.trim());
+        const ok = await onSubmit(text.trim(), reply?.id);
+        submitting.current = false;
         setBusy(false);
-        if (ok) cancel();
+        if (ok) {
+          reply?.onPosted();
+          cancel();
+        }
       }}
     >
       <Avatar user={user} size={small ? 28 : 36} />
@@ -983,6 +1024,7 @@ function Composer({
         onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
         onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
       >
+        {reply ? <p className="mb-1 truncate text-[13px] text-ink-3">Ответ для {reply.mention}</p> : null}
         {/* The text is drawn by a mirror behind the (transparent-text) textarea, so timecodes and
             @mentions are highlighted while typing exactly as in a posted comment. */}
         <div className="relative">
@@ -999,7 +1041,7 @@ function Composer({
               setCaret(input.current?.selectionStart ?? v.length);
             }}
             onCancel={cancel}
-            placeholder={placeholder}
+            placeholder={reply ? "Ваш ответ…" : placeholder}
             className="relative text-transparent caret-ink"
           />
         </div>
@@ -1041,11 +1083,11 @@ function Composer({
               <span className="leading-none">{timecode(now())}</span>
             </button>
             <span className="flex-1" />
-            <Button type="button" variant="ghost" size="sm" onPointerDown={keepFocus} onClick={cancel}>
+            <Button type="button" variant="ghost" size="sm" disabled={busy} onPointerDown={keepFocus} onClick={cancel}>
               Отмена
             </Button>
             <Button type="submit" variant="primary" size="sm" disabled={!text.trim() || busy} onPointerDown={keepFocus}>
-              {small ? "Ответить" : "Отправить"}
+              {small || reply ? "Ответить" : "Отправить"}
             </Button>
           </div>
         ) : null}
