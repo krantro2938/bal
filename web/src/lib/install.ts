@@ -26,9 +26,39 @@ addEventListener("appinstalled", () => {
 export const isStandalone = () =>
   matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
 
-// Safari on iPhone/iPad has no install dialog: people add the site from the share sheet.
+export const isIos = () =>
+  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+// In Safari on iPhone/iPad, the Share menu offers installation.
 export const isIosSafari = () =>
-  /iPhone|iPad|iPod/.test(navigator.userAgent) && /Safari\//.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+  isIos() && /Safari\//.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+
+function showHint() {
+  hintOpen = true;
+  emit();
+}
+
+async function openInstall() {
+  const e = offer;
+  if (e) {
+    offer = null;
+    try {
+      await e.prompt();
+      const { outcome } = await e.userChoice;
+      hintOpen = false;
+      if (outcome === "accepted") {
+        installed = true;
+        track("install");
+      }
+      emit();
+      return outcome;
+    } catch {
+      // A browser can revoke its offer before the user taps.
+    }
+  }
+  showHint();
+}
 
 export function useInstall() {
   const [, rerender] = useReducer((x: number) => x + 1, 0);
@@ -37,28 +67,15 @@ export function useInstall() {
     return () => void subscribers.delete(rerender);
   }, []);
   const native = !!offer;
+  const canShowHint = !installed && !isStandalone();
   return {
-    /** Installing is possible here: a browser offer, or instructions on iPhone. */
-    available: !installed && !isStandalone() && (native || isIosSafari()),
+    canShowHint,
+    /** The automatic card only appears when we have a browser offer or Safari instructions. */
+    available: canShowHint && (native || isIosSafari()),
     native,
     hintOpen,
-    /** Opens the browser's dialog; true if the person installed. */
-    install: async () => {
-      const e = offer;
-      if (!e) return false;
-      await e.prompt();
-      const { outcome } = await e.userChoice;
-      if (outcome === "accepted") {
-        offer = null;
-        track("install");
-      }
-      emit();
-      return outcome === "accepted";
-    },
-    showHint: () => {
-      hintOpen = true;
-      emit();
-    },
+    openInstall,
+    showHint,
     hideHint: () => {
       hintOpen = false;
       emit();

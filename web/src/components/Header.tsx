@@ -14,7 +14,7 @@ export function Header() {
   const install = useInstall();
   // Phones, guests: an install button takes the theme switch's place, which moves to the
   // bottom of the page. On computers and when signed in, installing is on the account page.
-  const installHere = ready && !user && install.available;
+  const installHere = ready && !user && install.canShowHint;
   const loc = useLocation();
   const [mobileSearch, setMobileSearch] = useState(false);
   const loginHref = `/login?return=${encodeURIComponent(loc.pathname + loc.search)}`;
@@ -77,7 +77,7 @@ export function Header() {
           {installHere ? (
             <button
               type="button"
-              onClick={() => (install.native ? install.install() : install.showHint())}
+              onClick={install.openInstall}
               className="grid size-10 shrink-0 place-items-center rounded-full text-ink hover:bg-hover sm:hidden"
               aria-label="Установить приложение"
               title="Установить приложение"

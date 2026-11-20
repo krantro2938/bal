@@ -28,7 +28,7 @@ export function FooterThemeToggle() {
   const install = useInstall();
   const mini = useMini();
   const [theme, toggle] = useTheme();
-  if (!ready || user || !install.available) return null;
+  if (!ready || user || !install.canShowHint) return null;
   const dark = theme === "dark";
   return (
     <div className={cn("flex justify-center pt-2 pb-[max(24px,env(safe-area-inset-bottom))] sm:hidden", mini && "pb-[calc(88px+env(safe-area-inset-bottom))]")}>

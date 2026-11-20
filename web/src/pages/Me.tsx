@@ -399,8 +399,8 @@ function Settings({ className }: { className?: string }) {
           </span>
         </button>
         <PushSwitch className="px-0 py-3 hover:bg-transparent" />
-        {install.available ? (
-          <button type="button" onClick={() => (install.native ? install.install() : install.showHint())} className={action}>
+        {install.canShowHint ? (
+          <button type="button" onClick={install.openInstall} className={cn(action, !install.available && "sm:hidden")}>
             <Smartphone className="size-5 shrink-0 text-ink-2 sm:hidden" />
             <MonitorDown className="size-5 shrink-0 text-ink-2 max-sm:hidden" />
             Установить приложение

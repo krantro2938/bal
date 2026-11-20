@@ -1,6 +1,6 @@
-import { Share, X } from "lucide-react";
+import { Ellipsis, Share, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useInstall } from "@/lib/install";
+import { isIos, useInstall } from "@/lib/install";
 import { useMini } from "@/lib/mini";
 import { cn } from "@/lib/utils";
 
@@ -16,9 +16,9 @@ function dismissedRecently() {
   }
 }
 
-/** «Установить приложение»: the browser's install dialog where there is one, instructions on iPhone. */
+/** An install offer or a short guide to the browser's menu. */
 export function InstallPrompt() {
-  const { available, native, install, hintOpen, hideHint } = useInstall();
+  const { available, canShowHint, native, openInstall, hintOpen, hideHint } = useInstall();
   const [ready, setReady] = useState(false);
   const [dismissed, setDismissed] = useState(dismissedRecently);
   const mini = useMini();
@@ -39,7 +39,7 @@ export function InstallPrompt() {
   };
 
   // Opened from the account menu it shows right away, even after an earlier ✕.
-  if (!available || !(hintOpen || (ready && !dismissed))) return null;
+  if (!canShowHint || !(hintOpen || (available && ready && !dismissed))) return null;
   return (
     <div
       role="dialog"
@@ -59,17 +59,20 @@ export function InstallPrompt() {
             <button
               type="button"
               onClick={async () => {
-                if (!(await install())) close();
-                else hideHint();
+                if ((await openInstall()) === "dismissed") close();
               }}
               className="mt-2.5 h-9 rounded-full bg-accent px-4 text-[14px] font-medium text-accent-ink"
             >
               Установить
             </button>
           </>
+        ) : isIos() ? (
+          <p className="mt-0.5 text-[13px] leading-snug text-ink-2">
+            Откройте <Share className="inline size-4 -translate-y-px" /> «Поделиться» или меню браузера и выберите «На экран „Домой“».
+          </p>
         ) : (
           <p className="mt-0.5 text-[13px] leading-snug text-ink-2">
-            Нажмите <Share className="inline size-4 -translate-y-px" /> «Поделиться» внизу экрана, затем «На экран „Домой“».
+            В меню браузера <Ellipsis className="inline size-4 -translate-y-px" /> найдите «Установить приложение» или «Добавить на главный экран».
           </p>
         )}
       </div>
