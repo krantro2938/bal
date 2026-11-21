@@ -1,6 +1,5 @@
 // Service worker: makes the site installable as an app and shows a small offline page
-// instead of the browser's error when there is no connection. Nothing else is cached —
-// videos and data always come fresh from the server.
+// instead of the browser's error when there is no connection.
 const CACHE = "bal-offline-v1";
 const OFFLINE = "/offline.html";
 
@@ -18,9 +17,77 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// One short-lived, in-memory prefix, available only to the tab that warmed it.
+const PREFIX = 512 * 1024;
+let warm;
+self.addEventListener("message", (event) => {
+  const { type, url, bytes, total } = event.data ?? {};
+  if (type !== "bal-video-prefix" || !event.source?.id ||
+      typeof url !== "string" || !/^\/media\/vals-gavot\/video-[a-z0-9-]+\.mp4$/.test(url) ||
+      !(bytes instanceof ArrayBuffer) || bytes.byteLength !== PREFIX ||
+      !Number.isSafeInteger(total) || total <= PREFIX) return;
+  warm = { url: self.location.origin + url, client: event.source.id, bytes: new Uint8Array(bytes), total, expires: Date.now() + 30_000 };
+});
+
+async function warmedRange(request, entry, start, end) {
+  const cut = Math.min(end + 1, PREFIX);
+  const prefix = entry.bytes.subarray(start, cut);
+  let tail;
+  if (cut <= end) {
+    const headers = new Headers(request.headers);
+    headers.set("Range", `bytes=${cut}-${end}`);
+    try {
+      const response = await fetch(new Request(request, { headers }));
+      if (response.status !== 206 || !response.body ||
+          response.headers.get("Content-Range") !== `bytes ${cut}-${end}/${entry.total}`) {
+        await response.body?.cancel();
+        return fetch(request);
+      }
+      tail = response.body.getReader();
+    } catch {
+      return fetch(request);
+    }
+  }
+  let sent = false;
+  const body = new ReadableStream({
+    async pull(controller) {
+      if (!sent) {
+        sent = true;
+        controller.enqueue(prefix);
+        if (!tail) controller.close();
+        return;
+      }
+      const next = await tail.read();
+      if (next.done) controller.close();
+      else controller.enqueue(next.value);
+    },
+    cancel(reason) { return tail?.cancel(reason); },
+  });
+  return new Response(body, { status: 206, headers: {
+    "Accept-Ranges": "bytes",
+    "Content-Type": "video/mp4",
+    "Content-Range": `bytes ${start}-${end}/${entry.total}`,
+    "Content-Length": String(end - start + 1),
+    "Cache-Control": "no-store",
+    "X-Bal-Warmed-Bytes": String(prefix.length),
+  } });
+}
+
 self.addEventListener("fetch", (event) => {
-  if (event.request.mode !== "navigate") return;
-  event.respondWith(fetch(event.request).catch(() => caches.match(OFFLINE)));
+  const request = event.request;
+  if (request.mode === "navigate") {
+    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE)));
+    return;
+  }
+  if (warm && Date.now() >= warm.expires) warm = undefined;
+  if (!warm || event.clientId !== warm.client || request.url !== warm.url ||
+      request.method !== "GET" || request.destination !== "video" ||
+      request.headers.has("If-Range")) return;
+  const range = /^bytes=(\d+)-(\d*)$/.exec(request.headers.get("Range") ?? "");
+  if (!range) return;
+  const start = Number(range[1]);
+  const end = range[2] ? Math.min(Number(range[2]), warm.total - 1) : warm.total - 1;
+  if (start < PREFIX && end >= start) event.respondWith(warmedRange(request, warm, start, end));
 });
 
 // Push notifications (internal/server/push.go): a reply, a mention or a new video.

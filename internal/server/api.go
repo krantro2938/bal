@@ -34,6 +34,7 @@ type danceSummary struct {
 	SourcePost  string       `json:"sourcePost"`
 	Version     string       `json:"version,omitempty"`
 	Preview     string       `json:"preview,omitempty"`
+	VideoURL    string       `json:"videoUrl,omitempty"`
 	Likes       int          `json:"likes"`
 	Dislikes    int          `json:"dislikes"`
 	MyReaction  int          `json:"myReaction"`
@@ -96,6 +97,9 @@ func summarize(d *content.Source, m *content.Meta) danceSummary {
 		out.Poster = mediaURL(m.Poster.Path)
 		out.PosterSmall = mediaURL(m.Poster.Small)
 		out.Version = m.Version
+		if m.Video.Path != "" {
+			out.VideoURL = mediaURL(m.Video.Path)
+		}
 		if m.Preview != "" {
 			out.Preview = mediaURL(m.Preview)
 		}

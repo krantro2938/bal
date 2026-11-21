@@ -7,6 +7,8 @@
 export const EVENTS = [
   "play", // a dance video started playing (once per page view)
   "video-startup",
+  "video-open",
+  "video-warm",
   "video-seek",
   "video-failure",
   "video-session",
@@ -30,6 +32,8 @@ export const EVENTS = [
 ] as const;
 export type AnalyticsEvent = (typeof EVENTS)[number];
 type PlaybackMetrics = {
+  "video-open": { ms: number; frame: "presented" | "ready"; group: "control" | "warm" };
+  "video-warm": { bytes: number };
   "video-startup": { ms: number; frame: "presented" | "ready" };
   "video-seek": { ms: number; frame: "presented" | "ready" };
   "video-failure": { phase: "startup" | "seek" | "playback"; reason: "error" | "timeout" };
