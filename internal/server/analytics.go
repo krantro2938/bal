@@ -25,6 +25,7 @@ import (
 var analyticsEvents = map[string]bool{
 	"play":              true, // a dance video started playing (once per page view)
 	"video-startup":     true,
+	"video-open":        true,
 	"video-seek":        true,
 	"video-failure":     true,
 	"video-session":     true,
@@ -88,6 +89,7 @@ func playbackData(name string, raw json.RawMessage) (map[string]any, bool) {
 	var d struct {
 		MS      *int   `json:"ms"`
 		Frame   string `json:"frame"`
+		Entry   string `json:"entry"`
 		Phase   string `json:"phase"`
 		Reason  string `json:"reason"`
 		Stalls  *int   `json:"stalls"`
@@ -101,6 +103,10 @@ func playbackData(name string, raw json.RawMessage) (map[string]any, bool) {
 	}
 	bounded := func(n *int, max int) bool { return n != nil && *n >= 0 && *n <= max }
 	switch name {
+	case "video-open":
+		if bounded(d.MS, 30000) && (d.Frame == "presented" || d.Frame == "ready") && (d.Entry == "catalog" || d.Entry == "recommendation") {
+			return map[string]any{"ms": *d.MS, "frame": d.Frame, "entry": d.Entry}, true
+		}
 	case "video-startup", "video-seek":
 		if bounded(d.MS, 15000) && (d.Frame == "presented" || d.Frame == "ready") {
 			return map[string]any{"ms": *d.MS, "frame": d.Frame}, true

@@ -1,4 +1,4 @@
-import { trackPlayback } from "./analytics";
+import { takeVideoOpen, trackPlayback } from "./analytics";
 
 const LIMIT_MS = 15_000;
 const MAX_SEEKS = 3;
@@ -58,7 +58,7 @@ export function playbackMetrics(slug: string, getVideo: () => HTMLVideoElement |
   // labeled fallback for older browsers and browsers that skip callbacks while paused.
   const firstFrame = (since: number, accept: (timing: Timing) => void, target?: number) => {
     const video = getVideo();
-    const elapsed = () => Math.min(LIMIT_MS, Math.max(0, Math.round(performance.now() - since)));
+    const elapsed = () => Math.max(0, Math.round(performance.now() - since));
     const ready = elapsed();
     if (!video?.requestVideoFrameCallback) {
       accept({ ms: ready, frame: "ready" });
@@ -111,9 +111,16 @@ export function playbackMetrics(slug: string, getVideo: () => HTMLVideoElement |
       started = true;
       const since = startup;
       clearStartup();
-      if (since !== undefined) {
-        cancelStartupFrame = firstFrame(since, (timing) => {
-          if (visible()) trackPlayback(slug, "video-startup", timing);
+      const opening = takeVideoOpen(slug);
+      const from = since ?? opening?.at;
+      if (from !== undefined) {
+        cancelStartupFrame = firstFrame(from, (timing) => {
+          if (!visible()) return;
+          if (since !== undefined) trackPlayback(slug, "video-startup", { ...timing, ms: Math.min(LIMIT_MS, timing.ms) });
+          if (opening) {
+            const ms = Math.round(timing.ms + from - opening.at);
+            if (ms >= 0 && ms <= 30_000) trackPlayback(slug, "video-open", { ...timing, ms, entry: opening.entry });
+          }
         });
       }
     },
@@ -146,7 +153,7 @@ export function playbackMetrics(slug: string, getVideo: () => HTMLVideoElement |
         sendSeekTimer = window.setTimeout(() => {
           if (!visible()) return;
           seeks++;
-          trackPlayback(slug, "video-seek", timing);
+          trackPlayback(slug, "video-seek", { ...timing, ms: Math.min(LIMIT_MS, timing.ms) });
         }, 250);
       }, target);
     },

@@ -7,6 +7,7 @@
 export const EVENTS = [
   "play", // a dance video started playing (once per page view)
   "video-startup",
+  "video-open",
   "video-seek",
   "video-failure",
   "video-session",
@@ -29,7 +30,9 @@ export const EVENTS = [
   "push-on", // turned on notifications on a device
 ] as const;
 export type AnalyticsEvent = (typeof EVENTS)[number];
+type VideoEntry = "catalog" | "recommendation";
 type PlaybackMetrics = {
+  "video-open": { ms: number; frame: "presented" | "ready"; entry: VideoEntry };
   "video-startup": { ms: number; frame: "presented" | "ready" };
   "video-seek": { ms: number; frame: "presented" | "ready" };
   "video-failure": { phase: "startup" | "seek" | "playback"; reason: "error" | "timeout" };
@@ -114,4 +117,17 @@ export function trackOnce(name: AnalyticsEvent) {
   if (fired.has(name)) return;
   fired.add(name);
   send(name);
+}
+
+let pendingOpen: { slug: string; at: number; entry: VideoEntry } | undefined;
+
+export function markVideoOpen(event: Pick<MouseEvent, "button" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey" | "defaultPrevented">, slug: string, entry: VideoEntry) {
+  if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  pendingOpen = { slug, at: performance.now(), entry };
+}
+
+export function takeVideoOpen(slug: string) {
+  const opening = pendingOpen;
+  pendingOpen = undefined;
+  if (opening?.slug === slug && performance.now() - opening.at < 30_000) return opening;
 }
