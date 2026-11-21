@@ -30,7 +30,7 @@ export const EVENTS = [
   "push-on", // turned on notifications on a device
 ] as const;
 export type AnalyticsEvent = (typeof EVENTS)[number];
-type VideoEntry = "catalog" | "recommendation";
+export type VideoEntry = "catalog" | "recommendation";
 type PlaybackMetrics = {
   "video-open": { ms: number; frame: "presented" | "ready"; entry: VideoEntry };
   "video-startup": { ms: number; frame: "presented" | "ready" };
@@ -121,8 +121,7 @@ export function trackOnce(name: AnalyticsEvent) {
 
 let pendingOpen: { slug: string; at: number; entry: VideoEntry } | undefined;
 
-export function markVideoOpen(event: Pick<MouseEvent, "button" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey" | "defaultPrevented">, slug: string, entry: VideoEntry) {
-  if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+export function markVideoOpen(slug: string, entry: VideoEntry) {
   pendingOpen = { slug, at: performance.now(), entry };
 }
 

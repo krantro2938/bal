@@ -29,11 +29,12 @@ import { shareLink } from "@/lib/share";
 import { useThumbs } from "@/lib/thumbs";
 import type { Chapter, DanceDetail, Note } from "@/lib/types";
 import { backToTop, feedPlace } from "@/lib/scroll";
+import { loadRehearsalPlayer } from "@/lib/openVideo";
 import { cn } from "@/lib/utils";
 
-// The player bundle (Vidstack) is only fetched when a dance page opens.
-const RehearsalPlayer = lazy(() => import("@/components/RehearsalPlayer").then((m) => ({ default: m.RehearsalPlayer })));
-const RehearsalBar = lazy(() => import("@/components/RehearsalPlayer").then((m) => ({ default: m.RehearsalBar })));
+// The video-card click can start this same bundle while the dance details load.
+const RehearsalPlayer = lazy(() => loadRehearsalPlayer().then((m) => ({ default: m.RehearsalPlayer })));
+const RehearsalBar = lazy(() => loadRehearsalPlayer().then((m) => ({ default: m.RehearsalBar })));
 
 const guestPosKey = (slug: string) => `bal-pos:${slug}`;
 
