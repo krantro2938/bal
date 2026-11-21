@@ -25,8 +25,6 @@ import (
 var analyticsEvents = map[string]bool{
 	"play":              true, // a dance video started playing (once per page view)
 	"video-startup":     true,
-	"video-open":        true,
-	"video-warm":        true,
 	"video-seek":        true,
 	"video-failure":     true,
 	"video-session":     true,
@@ -88,8 +86,6 @@ type pulse struct {
 // playbackData forwards only bounded timing values and fixed labels to Umami.
 func playbackData(name string, raw json.RawMessage) (map[string]any, bool) {
 	var d struct {
-		Bytes   int    `json:"bytes"`
-		Group   string `json:"group"`
 		MS      *int   `json:"ms"`
 		Frame   string `json:"frame"`
 		Phase   string `json:"phase"`
@@ -105,14 +101,6 @@ func playbackData(name string, raw json.RawMessage) (map[string]any, bool) {
 	}
 	bounded := func(n *int, max int) bool { return n != nil && *n >= 0 && *n <= max }
 	switch name {
-	case "video-warm":
-		if d.Bytes == 512*1024 {
-			return map[string]any{"bytes": d.Bytes}, true
-		}
-	case "video-open":
-		if bounded(d.MS, 15000) && (d.Frame == "presented" || d.Frame == "ready") && (d.Group == "control" || d.Group == "warm") {
-			return map[string]any{"ms": *d.MS, "frame": d.Frame, "group": d.Group}, true
-		}
 	case "video-startup", "video-seek":
 		if bounded(d.MS, 15000) && (d.Frame == "presented" || d.Frame == "ready") {
 			return map[string]any{"ms": *d.MS, "frame": d.Frame}, true

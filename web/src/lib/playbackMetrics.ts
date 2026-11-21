@@ -1,5 +1,4 @@
 import { trackPlayback } from "./analytics";
-import { takePreviewOpen } from "./previewWarm";
 
 const LIMIT_MS = 15_000;
 const MAX_SEEKS = 3;
@@ -112,16 +111,9 @@ export function playbackMetrics(slug: string, getVideo: () => HTMLVideoElement |
       started = true;
       const since = startup;
       clearStartup();
-      const opening = takePreviewOpen(slug);
-      const from = since ?? opening?.at;
-      if (from !== undefined) {
-        cancelStartupFrame = firstFrame(from, (timing) => {
-          if (!visible()) return;
-          if (since !== undefined) trackPlayback(slug, "video-startup", timing);
-          if (opening) {
-            const ms = Math.min(LIMIT_MS, Math.max(0, Math.round(timing.ms + from - opening.at)));
-            trackPlayback(slug, "video-open", { ...timing, ms, group: opening.group });
-          }
+      if (since !== undefined) {
+        cancelStartupFrame = firstFrame(since, (timing) => {
+          if (visible()) trackPlayback(slug, "video-startup", timing);
         });
       }
     },

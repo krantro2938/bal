@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { track } from "@/lib/analytics";
-import { markPreviewOpen, warmPreview } from "@/lib/previewWarm";
 import { api } from "@/lib/api";
 import { useCatalog } from "@/lib/catalog";
 import { WATCH, WATCH_FROM_START } from "@/lib/mini";
@@ -33,9 +32,6 @@ export function Cover({
   useEffect(() => {
     if (!playing) setShown(false);
   }, [playing]);
-  useEffect(() => {
-    if (playing && shown && dance.videoUrl) return warmPreview(dance.slug, dance.videoUrl);
-  }, [dance.slug, dance.videoUrl, playing, shown]);
   return (
     <div className={cn("relative aspect-video overflow-hidden rounded-[var(--radius-frame)] bg-player", className)}>
       {dance.posterSmall ? (
@@ -177,16 +173,15 @@ function usePreview(still?: boolean) {
 export function VideoCard({ dance, eager, badge, still }: { dance: DanceSummary; eager?: boolean; badge?: string; still?: boolean }) {
   const { ref, on, handlers } = usePreview(still);
   const to = `/dance/${dance.slug}`;
-  const onOpen = (e: React.MouseEvent) => markPreviewOpen(e, dance.slug);
   return (
     <div ref={ref} className="group relative isolate hover:z-10 has-[[data-open]]:z-20" {...handlers}>
       {/* YouTube-style backdrop that grows out of the card on hover */}
       <div className="pointer-events-none absolute -inset-2.5 -z-10 scale-95 rounded-[22px] bg-[var(--card-hover)] opacity-0 shadow-[var(--card-hover-shadow)] transition duration-200 [@media(hover:hover)]:group-hover:scale-100 [@media(hover:hover)]:group-hover:opacity-100" />
-      <Link to={to} onClick={onOpen} state={WATCH_FROM_START} tabIndex={-1} aria-hidden className="block rounded-[var(--radius-frame)]">
+      <Link to={to} state={WATCH_FROM_START} tabIndex={-1} aria-hidden className="block rounded-[var(--radius-frame)]">
         <Cover dance={dance} eager={eager} playing={on && dance.available} />
       </Link>
       <div className="mt-3 flex gap-1">
-        <Link to={to} onClick={onOpen} state={WATCH_FROM_START} className="flex min-w-0 flex-1 gap-3 rounded-lg focus-visible:outline-offset-4">
+        <Link to={to} state={WATCH_FROM_START} className="flex min-w-0 flex-1 gap-3 rounded-lg focus-visible:outline-offset-4">
           <Badge dance={dance} />
           <div className="min-w-0">
             <h2 className="line-clamp-2 font-title text-[16px] leading-snug sm:text-[18px]">{dance.title}</h2>
@@ -315,7 +310,6 @@ export function CompactCard({ dance, current, note }: { dance: DanceSummary; cur
       <Link
         to={`/dance/${dance.slug}`}
         state={WATCH}
-        onClick={(e) => markPreviewOpen(e, dance.slug)}
         aria-current={current ? "page" : undefined}
         className={cn("flex gap-2.5 rounded-[var(--radius-frame)] p-1 hover:bg-hover", current && "bg-hover")}
       >

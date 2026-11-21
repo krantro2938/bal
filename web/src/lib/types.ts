@@ -14,7 +14,6 @@ export type DanceSummary = {
   sourcePost: string;
   version?: string;
   preview?: string;
-  videoUrl?: string;
   likes: number;
   dislikes: number;
   myReaction: -1 | 0 | 1;
