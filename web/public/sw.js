@@ -34,10 +34,12 @@ async function warmedRange(request, entry, start, end) {
   const prefix = entry.bytes.subarray(start, cut);
   let tail;
   if (cut <= end) {
-    const headers = new Headers(request.headers);
-    headers.set("Range", `bytes=${cut}-${end}`);
     try {
-      const response = await fetch(new Request(request, { headers }));
+      // Rebuilding a native no-cors media request can strip the Range header.
+      const response = await fetch(request.url, {
+        headers: { Range: `bytes=${cut}-${end}` },
+        signal: request.signal,
+      });
       if (response.status !== 206 || !response.body ||
           response.headers.get("Content-Range") !== `bytes ${cut}-${end}/${entry.total}`) {
         await response.body?.cancel();

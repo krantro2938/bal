@@ -15,7 +15,8 @@ function setup(supportTail = true) {
   runInNewContext(source, {
     self: { location: { origin }, addEventListener: (name, fn) => events.set(name, fn) },
     ArrayBuffer, Uint8Array, Headers, Request, Response, ReadableStream,
-    fetch: async (request) => {
+    fetch: async (input, init) => {
+      const request = new Request(input, init);
       const range = request.headers.get("Range");
       requests.push(range);
       const start = Number(range.split("-")[0].slice(6));
